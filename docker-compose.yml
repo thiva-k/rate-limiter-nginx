@@ -1,0 +1,28 @@
+
+services:
+  nginxlb:
+    build:
+      context: ./nginx-lb
+    ports:
+      - "8080:8080"
+    depends_on:
+        - redis
+
+  server1:
+    build:
+      context: ./nginx_server1
+    ports:
+      - "8081:8080"
+
+  server2:
+    build:
+      context: ./nginx_server2
+    ports:
+      - "8082:8080"
+
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+
