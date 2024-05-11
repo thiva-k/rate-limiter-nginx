@@ -1,24 +1,62 @@
 
 services:
-  nginxlb:
+
+  reverse_proxy:
     build:
-      context: ./nginx-lb
+      context: ./reverse_proxy
+    ports:
+      - "80:80"
+    depends_on:
+      - load_balancer1
+      - load_balancer2
+
+  load_balancer1:
+    build:
+      context: ./nginx-lb1
     ports:
       - "8080:8080"
     depends_on:
-        - redis
+      - server1
+      - server2
+      - redis
+
+  load_balancer2:
+    build:
+      context: ./nginx-lb2
+    ports:
+      - "8081:8080"
+    depends_on:
+      - server3
+      - server4
+      - redis
 
   server1:
     build:
       context: ./nginx_server1
     ports:
-      - "8081:8080"
+      - "8082:8080"
 
   server2:
     build:
       context: ./nginx_server2
     ports:
-      - "8082:8080"
+      - "8083:8080"
+
+  server3:
+    build:
+      context: ./nginx_server3
+    ports:
+      - "8084:8080"
+    depends_on:
+      - redis
+
+  server4:
+      build:
+        context: ./nginx_server4
+      ports:
+        - "8085:8080"
+      depends_on:
+        - redis
 
   redis:
     image: redis/redis-stack:latest
