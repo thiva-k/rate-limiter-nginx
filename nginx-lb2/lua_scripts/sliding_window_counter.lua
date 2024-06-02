@@ -1,4 +1,3 @@
-local upstream_servers = { "server3:8080", "server4:8080" }
 local redis = require "resty.redis"
 local cjson = require "cjson"
 
@@ -14,12 +13,22 @@ if not ok then
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
-local ip_key = ngx.var.remote_addr
+local token_param_name = "token" -- Name of the URL parameter containing the token
 local rate_limit_field = "rate_limit"
 local rate_timestamps_field = "rate_timestamps"
 
--- Fetch the specific rate limit for this IP address from Redis
-local rate_limit, err = red:hget(ip_key, rate_limit_field)
+-- Fetch the token from the URL parameter
+local token = ngx.var.arg_token
+if not token then
+    ngx.log(ngx.ERR, "Token not provided")
+    ngx.exit(ngx.HTTP_BAD_REQUEST)
+end
+
+-- Construct the Redis key using the token
+local token_key = "token:" .. token
+
+-- Fetch the specific rate limit for this token from Redis
+local rate_limit, err = red:hget(token_key, rate_limit_field)
 if err then
     ngx.log(ngx.ERR, "Failed to get rate limit from Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
@@ -31,8 +40,8 @@ else
     rate_limit = tonumber(rate_limit)
 end
 
--- Fetch the timestamps of the requests for this IP address
-local timestamps_json, err = red:hget(ip_key, rate_timestamps_field)
+-- Fetch the timestamps of the requests for this token
+local timestamps_json, err = red:hget(token_key, rate_timestamps_field)
 if err then
     ngx.log(ngx.ERR, "Failed to get request timestamps from Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
@@ -64,24 +73,24 @@ end
 
 -- Save the updated timestamps back to Redis
 local new_timestamps_json = cjson.encode(new_timestamps)
-local _, err = red:hset(ip_key, rate_timestamps_field, new_timestamps_json)
+local _, err = red:hset(token_key, rate_timestamps_field, new_timestamps_json)
 if err then
     ngx.log(ngx.ERR, "Failed to set request timestamps in Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- Set the expiration time for the IP key in Redis (window size + buffer)
-local _, err = red:expire(ip_key, window_size + 10)
+-- Set the expiration time for the token key in Redis (window size + buffer)
+local _, err = red:expire(token_key, window_size + 10)
 if err then
     ngx.log(ngx.ERR, "Failed to set expiration for rate key in Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
 -- Set the proxy_pass directive dynamically
-local last_used_server_index = ngx.shared.round_robin:get("last_used_server_index") or 0
-local next_server_index = (last_used_server_index % 2) + 1
-ngx.shared.round_robin:set("last_used_server_index", next_server_index)
+local upstream_servers = { "server3:8080", "server4:8080" }
+local last_used_server_index = ngx.shared.round_robin:get(token_key) or 0
+local next_server_index = (last_used_server_index % #upstream_servers) + 1
+ngx.shared.round_robin:set(token_key, next_server_index)
 
 local next_server = upstream_servers[next_server_index]
 ngx.var.proxy = next_server -- Correctly set the proxy variable
-
