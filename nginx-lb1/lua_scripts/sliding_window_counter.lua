@@ -1,13 +1,10 @@
 local upstream_servers = { "server1:8080", "server2:8080" }
-
--- Import the Redis client library
 local redis = require "resty.redis"
+local cjson = require "cjson"
 
--- Define the Redis host and port
 local redis_host = "redis"
 local redis_port = 6379
 
--- Connect to Redis
 local red = redis:new()
 red:set_timeout(1000) -- 1 second timeout
 
@@ -17,58 +14,74 @@ if not ok then
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- Define the key for rate limiting (you may want to use a more specific key)
-local key = "rate_limit:" .. ngx.var.remote_addr
+local ip_key = ngx.var.remote_addr
+local rate_limit_field = "rate_limit"
+local rate_timestamps_field = "rate_timestamps"
 
--- Define the sliding window size in seconds
-local window_size = 60  -- 1 minute window
--- Define the rate limit threshold
-local rate_limit = 10
-
--- Get the current timestamp in seconds
-local current_time = ngx.now()
-
--- Calculate the start and end of the sliding window for the current minute
-local window_start_current = math.floor(current_time / 60) * 60
-local window_end_current = window_start_current + window_size
-
--- Calculate the start and end of the sliding window for the previous minute
-local window_start_previous = window_start_current - window_size
-local window_end_previous = window_start_current
-
--- Retrieve the counts from Redis for the current and previous minutes
-local counts_current, err_current = red:zrangebyscore(key, window_start_current, window_end_current, "WITHSCORES")
-local counts_previous, err_previous = red:zrangebyscore(key, window_start_previous, window_end_previous, "WITHSCORES")
-
-if err_current or err_previous then
-    ngx.log(ngx.ERR, "Failed to get counts from Redis: ", err_current or err_previous)
+-- Fetch the specific rate limit for this IP address from Redis
+local rate_limit, err = red:hget(ip_key, rate_limit_field)
+if err then
+    ngx.log(ngx.ERR, "Failed to get rate limit from Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- Count the number of requests within the current and previous minutes
-local request_count_current = counts_current and #counts_current / 2 or 0
-local request_count_previous = counts_previous and #counts_previous / 2 or 0
-
--- Calculate the sliding window factor
-local sliding_factor = request_count_current + request_count_previous
-
--- Check if the sliding window factor exceeds the rate limit
-if sliding_factor > rate_limit then
-    ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
-    return  -- Exit the Lua script immediately
+if rate_limit == ngx.null then
+    rate_limit = 10 -- Default rate limit if not found in Redis
+else
+    rate_limit = tonumber(rate_limit)
 end
 
--- Increment the count for the current request
-red:zadd(key, current_time, current_time)
-red:expire(key, window_size)  -- Set expiration for the key
+-- Fetch the timestamps of the requests for this IP address
+local timestamps_json, err = red:hget(ip_key, rate_timestamps_field)
+if err then
+    ngx.log(ngx.ERR, "Failed to get request timestamps from Redis: ", err)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
 
--- Get the last used server index from shared memory
+local timestamps = {}
+if timestamps_json ~= ngx.null then
+    timestamps = cjson.decode(timestamps_json)
+end
+
+local current_time = ngx.now()
+local window_size = 60 -- 1 minute window
+
+-- Remove timestamps outside the current window
+local new_timestamps = {}
+for _, timestamp in ipairs(timestamps) do
+    if current_time - timestamp < window_size then
+        table.insert(new_timestamps, timestamp)
+    end
+end
+
+-- Add the current request timestamp
+table.insert(new_timestamps, current_time)
+
+-- Check if the number of requests exceeds the rate limit
+if #new_timestamps > rate_limit then
+    ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+end
+
+-- Save the updated timestamps back to Redis
+local new_timestamps_json = cjson.encode(new_timestamps)
+local _, err = red:hset(ip_key, rate_timestamps_field, new_timestamps_json)
+if err then
+    ngx.log(ngx.ERR, "Failed to set request timestamps in Redis: ", err)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
+
+-- Set the expiration time for the IP key in Redis (window size + buffer)
+local _, err = red:expire(ip_key, window_size + 10)
+if err then
+    ngx.log(ngx.ERR, "Failed to set expiration for rate key in Redis: ", err)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
+
+-- Set the proxy_pass directive dynamically
 local last_used_server_index = ngx.shared.round_robin:get("last_used_server_index") or 0
-
--- Calculate the next server index in round-robin fashion
 local next_server_index = (last_used_server_index % 2) + 1
 ngx.shared.round_robin:set("last_used_server_index", next_server_index)
 
--- Set the proxy_pass directive dynamically
 local next_server = upstream_servers[next_server_index]
-ngx.var.proxy = next_server
+ngx.var.proxy = next_server -- Correctly set the proxy variable
+

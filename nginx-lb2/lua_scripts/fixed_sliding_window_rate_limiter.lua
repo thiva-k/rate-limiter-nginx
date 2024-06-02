@@ -1,4 +1,4 @@
-local upstream_servers = { "server1:8080", "server2:8080" }
+local upstream_servers = { "server3:8080", "server4:8080" }
 
 -- Import the Redis client library
 local redis = require "resty.redis"
