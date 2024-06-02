@@ -1,5 +1,5 @@
-local upstream_servers = { "server3:8080", "server4:8080" }
-                
+local upstream_servers = { "server1:8080", "server2:8080" }
+
 -- Import the Redis client library
 local redis = require "resty.redis"
 
@@ -17,35 +17,48 @@ if not ok then
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- Define the key for rate limiting (you may want to use a more specific key)
-local key = ngx.var.remote_addr
+-- Define the key for rate limiting
+local ip_key = ngx.var.remote_addr
+local rate_limit_field = "rate_limit"
+local rate_field = "rate"
 
--- Check the current rate from Redis
-local current_rate, err = red:get(key)
+-- Fetch the specific rate limit and current rate for this IP address from Redis
+local rate_limit, err = red:hget(ip_key, rate_limit_field)
 if err then
-    ngx.log(ngx.ERR, "Failed to get rate from Redis: ", err)
+    ngx.log(ngx.ERR, "Failed to get rate limit from Redis: ", err)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
+
+if rate_limit == ngx.null then
+    rate_limit = 10 -- Default rate limit if not found in Redis
+else
+    rate_limit = tonumber(rate_limit)
+end
+
+local current_rate, err = red:hget(ip_key, rate_field)
+if err then
+    ngx.log(ngx.ERR, "Failed to get current rate from Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
 if current_rate == ngx.null then
     current_rate = 0
+else
+    current_rate = tonumber(current_rate)
 end
 
 ngx.log(ngx.INFO, "Current rate: ", current_rate)
 
--- Define the rate limit threshold
-local rate_limit = 10
-
 -- Increment the rate in Redis
 local new_rate = current_rate + 1
-local _, err = red:set(key, new_rate)
+local _, err = red:hset(ip_key, rate_field, new_rate)
 if err then
     ngx.log(ngx.ERR, "Failed to set rate in Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- Set the expiration time for the key in Redis (1 minute)
-local _, err = red:expire(key, 60)
+-- Set the expiration time for the rate field in Redis (1 minute)
+local _, err = red:expire(ip_key, 60)
 if err then
     ngx.log(ngx.ERR, "Failed to set expiration for rate key in Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
