@@ -31,19 +31,19 @@ services:
 
   server1:
     build:
-      context: ./nginx_server1
+      context: ./backend-server1
     ports:
       - "8082:8080"
 
   server2:
     build:
-      context: ./nginx_server2
+      context: ./backend-server2
     ports:
       - "8083:8080"
 
   server3:
     build:
-      context: ./nginx_server3
+      context: ./backend-server3
     ports:
       - "8084:8080"
     depends_on:
@@ -51,7 +51,7 @@ services:
 
   server4:
     build:
-      context: ./nginx_server4
+      context: ./backend-server4
     ports:
       - "8085:8080"
     depends_on:
