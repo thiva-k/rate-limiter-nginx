@@ -1,60 +1,32 @@
 services:
-
-  reverse_proxy:
-    build:
-      context: ./reverse_proxy
-    ports:
-      - "80:80"
-    depends_on:
-      - load_balancer1
-      - load_balancer2
-
   load_balancer1:
     build:
       context: ./nginx-lb1
     ports:
-      - "8080:8080"
+      - "8081:8080"
     depends_on:
-      - server1
-      - server2
+      - registry
+      - db
+      - persistence
+      - auth
+      - image
+      - recommender
+      - webui
       - redis
 
   load_balancer2:
     build:
       context: ./nginx-lb2
     ports:
-      - "8081:8080"
-    depends_on:
-      - server3
-      - server4
-      - redis
-
-  server1:
-    build:
-      context: ./backend-server1
-    ports:
       - "8082:8080"
-
-  server2:
-    build:
-      context: ./backend-server2
-    ports:
-      - "8083:8080"
-
-  server3:
-    build:
-      context: ./backend-server3
-    ports:
-      - "8084:8080"
     depends_on:
-      - redis
-
-  server4:
-    build:
-      context: ./backend-server4
-    ports:
-      - "8085:8080"
-    depends_on:
+      - registry
+      - db
+      - persistence
+      - auth
+      - image
+      - recommender
+      - webui
       - redis
 
   redis:
@@ -68,3 +40,71 @@ services:
       context: ./redis-init
     depends_on:
       - redis
+
+  registry:
+    image: descartesresearch/teastore-registry
+    expose:
+      - "8080"
+    ports:
+      - "8083:8080"
+
+  db:
+    image: descartesresearch/teastore-db
+    expose:
+      - "3306"
+    ports:
+      - "3306:3306"
+
+  persistence:
+    image: descartesresearch/teastore-persistence
+    expose:
+      - "8080"
+    ports:
+      - "8084:8080"
+    environment:
+      HOST_NAME: "persistence"
+      REGISTRY_HOST: "registry"
+      DB_HOST: "db"
+      DB_PORT: "3306"
+
+  auth:
+    image: descartesresearch/teastore-auth
+    expose:
+      - "8080"
+    ports:
+      - "8085:8080"
+    environment:
+      HOST_NAME: "auth"
+      REGISTRY_HOST: "registry"
+
+  image:
+    image: descartesresearch/teastore-image
+    expose:
+      - "8080"
+    ports:
+      - "8086:8080"
+    environment:
+      HOST_NAME: "image"
+      REGISTRY_HOST: "registry"
+
+  recommender:
+    image: descartesresearch/teastore-recommender
+    expose:
+      - "8080"
+    ports:
+      - "8087:8080"
+    environment:
+      HOST_NAME: "recommender"
+      REGISTRY_HOST: "registry"
+
+  webui:
+    image: descartesresearch/teastore-webui
+    expose:
+      - "8080"
+    ports:
+      - "8080:8080"
+    environment:
+      HOST_NAME: "webui"
+      REGISTRY_HOST: "registry"
+
+

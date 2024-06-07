@@ -7,8 +7,6 @@ local redis_port = 6379
 local red = redis:new()
 red:set_timeout(1000) -- 1 second timeout
 
-local upstream_servers = { "server1:8080", "server2:8080" }
-
 local ok, err = red:connect(redis_host, redis_port)
 if not ok then
     ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
@@ -160,11 +158,3 @@ if err then
     ngx.log(ngx.ERR, "Failed to set expiration for throttle count key in Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
-
--- Set the proxy_pass directive dynamically
-local last_used_server_index = ngx.shared.round_robin:get(timestamps_key) or 0
-local next_server_index = (last_used_server_index % #upstream_servers) + 1
-ngx.shared.round_robin:set(timestamps_key, next_server_index)
-
-local next_server = upstream_servers[next_server_index]
-ngx.var.backend = next_server -- Correctly set the proxy variable
