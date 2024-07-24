@@ -51,9 +51,9 @@ services:
       - "5672"
       - "8080"
     ports:
-      - "15672:15672"  # RabbitMQ management interface
-      - "5672:5672"     # AMQP protocol
-      - "8088:8080"     # Kieker logs access
+      - "15672:15672" 
+      - "5672:5672"    
+      - "8088:8080"     
 
   registry:
     image: descartesresearch/teastore-registry
