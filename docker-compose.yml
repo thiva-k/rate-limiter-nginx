@@ -54,6 +54,9 @@ services:
       - "15672:15672" 
       - "5672:5672"    
       - "8088:8080"     
+    depends_on:
+      - db
+      - registry
 
   registry:
     image: descartesresearch/teastore-registry
@@ -81,6 +84,8 @@ services:
       DB_HOST: "db"
       DB_PORT: "3306"
       RABBITMQ_HOST: "rabbitmq"
+    depends_on:
+      - rabbitmq
 
   auth:
     image: descartesresearch/teastore-auth
@@ -92,6 +97,8 @@ services:
       HOST_NAME: "auth"
       REGISTRY_HOST: "registry"
       RABBITMQ_HOST: "rabbitmq"
+    depends_on:
+      - rabbitmq
 
   image:
     image: descartesresearch/teastore-image
@@ -103,6 +110,8 @@ services:
       HOST_NAME: "image"
       REGISTRY_HOST: "registry"
       RABBITMQ_HOST: "rabbitmq"
+    depends_on:
+      - rabbitmq
 
   recommender:
     image: descartesresearch/teastore-recommender
@@ -114,6 +123,8 @@ services:
       HOST_NAME: "recommender"
       REGISTRY_HOST: "registry"
       RABBITMQ_HOST: "rabbitmq"
+    depends_on:
+      - rabbitmq
 
   webui:
     image: descartesresearch/teastore-webui
@@ -125,6 +136,8 @@ services:
       HOST_NAME: "webui"
       REGISTRY_HOST: "registry"
       RABBITMQ_HOST: "rabbitmq"
+    depends_on:
+      - rabbitmq
 
 networks:
   default:
