@@ -35,12 +35,14 @@ services:
     ports:
       - "6379:6379"
       - "8001:8001"
+    
 
   redis-init:
     build:
       context: ./redis-init
     depends_on:
       - redis
+    command: ["sh", "-c", "while ! redis-cli -h redis -p 6379 ping; do echo 'Waiting for Redis...'; sleep 1; done; sh /redis-init.sh; exit 0"]
 
   registry:
     image: descartesresearch/teastore-registry
