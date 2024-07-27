@@ -54,7 +54,7 @@ if err then
 end
 
 if rate_limit == ngx.null then
-    rate_limit = 2 -- Default rate limit if not found in Redis
+    rate_limit = 10 -- Default rate limit if not found in Redis
 else
     rate_limit = tonumber(rate_limit)
 end
