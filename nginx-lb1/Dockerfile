@@ -4,6 +4,6 @@ FROM openresty/openresty:alpine
 RUN mkdir -p /usr/local/openresty/nginx/lua_scripts
 
 # Copy the Lua script to the container
-COPY lua_scripts/sliding_window_counter.lua /usr/local/openresty/nginx/lua_scripts/sliding_window_counter.lua
+COPY lua_scripts/fixed_window_counter.lua /usr/local/openresty/nginx/lua_scripts/fixed_window_counter.lua
 # Copy the nginx configuration file
 COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
