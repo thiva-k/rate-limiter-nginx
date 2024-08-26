@@ -19,7 +19,7 @@ if not token then
     ngx.exit(ngx.HTTP_BAD_REQUEST)
 end
 
-local rate_limit = 500 -- 5000 requests per minute
+local rate_limit = 50 -- 50 requests per minute
 local window_size = 60 -- 60 second window
 
 -- Construct the Redis key using only the token

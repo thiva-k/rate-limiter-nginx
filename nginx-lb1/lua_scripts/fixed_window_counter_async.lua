@@ -51,11 +51,15 @@ local function fetch_batch_quota()
     count = tonumber(count) or 0
     ttl = tonumber(ttl) or 0
     
+    -- Ensure ttl is non-negative
+    ttl = math.max(0, ttl)
+    
     -- Calculate remaining quota and batch size
     local remaining = math.max(0, rate_limit - count)
     local batch_size = math.floor(remaining * batch_percent)
     
     -- Store batch quota in shared memory
+    ngx.log(ngx.DEBUG, "Setting shared dict with key: ", redis_key, ", value: ", batch_size, ", ttl: ", ttl)
     ok, err = shared_dict:set(redis_key, batch_size, ttl)
     if not ok then
         ngx.log(ngx.ERR, "Failed to set batch quota in shared memory: ", err)

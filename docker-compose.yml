@@ -74,7 +74,7 @@ services:
       - ./logs/persistence:/kieker/logs/
 
   auth:
-    image: descartesresearch/teastore-auth
+    image: thiva-auth
     expose:
       - "8080"
     ports:
@@ -102,7 +102,7 @@ services:
       - ./logs/image:/kieker/logs/
 
   recommender:
-    image: descartesresearch/teastore-recommender
+    image: thiva-recommender
     expose:
       - "8080"
     ports:
