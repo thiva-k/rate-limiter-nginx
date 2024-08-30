@@ -1,0 +1,128 @@
+version: '3'
+
+services:
+  load_balancer1:
+    build:
+      context: ./nginx-lb1
+    ports:
+      - "8090:8080"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == load-balancer1
+
+  load_balancer2:
+    build:
+      context: ./nginx-lb2
+    ports:
+      - "8091:8080"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == load-balancer2
+
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == manager-redis
+
+  registry:
+    image: descartesresearch/teastore-registry
+    ports:
+      - "8083:8080"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == teastore
+
+  db:
+    image: descartesresearch/teastore-db
+    ports:
+      - "3306:3306"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == teastore
+
+  persistence:
+    image: descartesresearch/teastore-persistence
+    environment:
+      HOST_NAME: "persistence"
+      REGISTRY_HOST: "registry"
+      DB_HOST: "db"
+      DB_PORT: "3306"
+      LOG_TO_FILE: "true"
+      LOG_PARAMETERS: "true"
+    volumes:
+      - ./logs/persistence:/kieker/logs/
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == teastore
+
+  auth:
+    image: descartesresearch/teastore-auth
+    environment:
+      HOST_NAME: "auth"
+      REGISTRY_HOST: "registry"
+      LOG_TO_FILE: "true"
+      LOG_PARAMETERS: "true"
+    volumes:
+      - ./logs/auth:/kieker/logs/
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == teastore
+
+  image:
+    image: descartesresearch/teastore-image
+    environment:
+      HOST_NAME: "image"
+      REGISTRY_HOST: "registry"
+      LOG_TO_FILE: "true"
+      LOG_PARAMETERS: "true"
+    volumes:
+      - ./logs/image:/kieker/logs/
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == teastore
+
+  recommender:
+    image: descartesresearch/teastore-recommender
+    environment:
+      HOST_NAME: "recommender"
+      REGISTRY_HOST: "registry"
+      LOG_TO_FILE: "true"
+      LOG_PARAMETERS: "true"
+    volumes:
+      - ./logs/recommender:/kieker/logs/
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == teastore
+
+  webui:
+    image: descartesresearch/teastore-webui
+    ports:
+      - "8080:8080"
+    environment:
+      HOST_NAME: "webui"
+      REGISTRY_HOST: "registry"
+      LOG_TO_FILE: "true"
+      LOG_PARAMETERS: "true"
+    volumes:
+      - ./logs/webui:/kieker/logs/
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == teastore
+
+networks:
+  default:
+    driver: overlay
