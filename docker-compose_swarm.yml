@@ -2,8 +2,7 @@ version: '3'
 
 services:
   load_balancer1:
-    build:
-      context: ./nginx-lb1
+    image: thivaharan/nginx-lb1
     ports:
       - "8090:8080"
     deploy:
@@ -12,8 +11,7 @@ services:
           - node.hostname == load-balancer1
 
   load_balancer2:
-    build:
-      context: ./nginx-lb2
+    image: thivaharan/nginx-lb2
     ports:
       - "8091:8080"
     deploy:
