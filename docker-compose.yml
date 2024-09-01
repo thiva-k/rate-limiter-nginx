@@ -2,7 +2,7 @@ version: '3'
 services:
   load_balancer1:
     build:
-      context: ./nginx-lb1
+      context: ./nginx
     ports:
       - "8090:8080"
     depends_on:
@@ -17,7 +17,7 @@ services:
 
   load_balancer2:
     build:
-      context: ./nginx-lb2
+      context: ./nginx
     ports:
       - "8091:8080"
     depends_on:
