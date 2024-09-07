@@ -14,6 +14,8 @@ services:
       - recommender
       - webui
       - redis
+    volumes:
+      - ./logs/nginx/load_balancer1:/var/log/nginx
 
   load_balancer2:
     build:
@@ -29,6 +31,8 @@ services:
       - recommender
       - webui
       - redis
+    volumes:
+      - ./logs/nginx/load_balancer2:/var/log/nginx
 
   redis:
     image: redis/redis-stack:latest
