@@ -19,42 +19,43 @@ if not token then
     ngx.exit(ngx.HTTP_BAD_REQUEST) -- 400
 end
 
-local capacity = 10 -- Maximum number of tokens in the bucket
-local rate = 1 -- Rate of token generation (tokens/second)
+local capacity = 20 -- Maximum number of tokens in the bucket
+local leak_rate = 1 -- Rate of token leakage (tokens/second)
 local now = ngx.now() * 1000000 -- Current timestamp in microseconds
 local requested = 1 -- Number of tokens requested for the operation
-local ttl = 60 -- Time-to-live for the token bucket state
+local ttl = 60 -- Time-to-live for the bucket state
 
--- Define keys for the token counter and last access time
+-- Define keys for the token counter and last leak time
 local tokens_key = token .. ":tokens"
 local last_access_key = token .. ":last_access"
 
 -- Fetch the current token count
 local last_tokens = tonumber(red:get(tokens_key))
 if last_tokens == nil then
-    last_tokens = capacity
+    last_tokens = 0
 end
 
--- Fetch the last access time
-local last_access = tonumber(red:get(last_access_key))
-if last_access == nil then
+-- Fetch the last leak time
+local last_leak = tonumber(red:get(last_access_key))
+if last_leak == nil then
     -- Initialize to current time if not found in Redis
-    last_access = now
+    last_leak = now
 end
 
--- Calculate the number of tokens to be added due to the elapsed time since the last access
-local elapsed = math.max(0, now - last_access)
-local add_tokens = math.floor(elapsed * rate / 1000000)
-local new_tokens = math.min(capacity, last_tokens + add_tokens)
+-- Calculate the number of tokens that have leaked due to the elapsed time since the last leak
+local elapsed = math.max(0, now - last_leak)
+local leaked_tokens = math.floor(elapsed * leak_rate / 1000000)
+local bucket_level = math.max(0, last_tokens - leaked_tokens)
+ngx.log(ngx.ERR, "elapsed: ", elapsed, " leaked_tokens: ", leaked_tokens, " bucket_level: ", bucket_level)
 
--- Check if enough tokens have been accumulated
-local allowed = new_tokens >= requested
+-- Check if current token level less than capacity
+local allowed = bucket_level < capacity
 if allowed then
-    new_tokens = new_tokens - requested
+    bucket_level = bucket_level + requested
 end
 
 -- Update state in Redis
-red:setex(tokens_key, ttl, new_tokens)
+red:setex(tokens_key, ttl, bucket_level)
 red:setex(last_access_key, ttl, now)
 
 if allowed then

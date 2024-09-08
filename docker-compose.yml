@@ -16,7 +16,7 @@ services:
       - redis
     volumes:
       - ./logs/nginx/load_balancer1:/var/log/nginx
-
+      - ./docker/lua_scripts:/usr/local/openresty/nginx/lua_scripts
   load_balancer2:
     build:
       context: ./nginx
