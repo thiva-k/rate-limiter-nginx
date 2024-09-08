@@ -19,9 +19,9 @@ if not token then
     ngx.exit(ngx.HTTP_BAD_REQUEST) -- 400
 end
 
-local capacity = 10 -- Maximum number of tokens in the bucket
-local rate = 1 -- Rate of token generation (tokens/second)
-local now = ngx.now() * 1000000 -- Current timestamp in microseconds
+local bucket_capacity = 10 -- Maximum number of tokens in the bucket
+local refil_rate = 1 -- Rate of token generation (tokens/second)
+local now = ngx.now() * 1000 -- Current timestamp in microseconds
 local requested = 1 -- Number of tokens requested for the operation
 local ttl = 60 -- Time-to-live for the token bucket state
 
@@ -32,7 +32,7 @@ local last_access_key = token .. ":last_access"
 -- Fetch the current token count
 local last_tokens = tonumber(red:get(tokens_key))
 if last_tokens == nil then
-    last_tokens = capacity
+    last_tokens = bucket_capacity
 end
 
 -- Fetch the last access time
@@ -44,18 +44,19 @@ end
 
 -- Calculate the number of tokens to be added due to the elapsed time since the last access
 local elapsed = math.max(0, now - last_access)
-local add_tokens = math.floor(elapsed * rate / 1000000)
-local new_tokens = math.min(capacity, last_tokens + add_tokens)
+local add_tokens = math.floor(elapsed * refil_rate / 1000)
+local new_tokens = math.min(bucket_capacity, last_tokens + add_tokens)
 
 -- Check if enough tokens have been accumulated
 local allowed = new_tokens >= requested
 if allowed then
     new_tokens = new_tokens - requested
+    last_access = now
 end
 
 -- Update state in Redis
-red:setex(tokens_key, ttl, new_tokens)
-red:setex(last_access_key, ttl, now)
+red:set(tokens_key, new_tokens, "EX", ttl)
+red:set(last_access_key, last_access, "EX", ttl)
 
 if allowed then
     ngx.say("Request allowed")

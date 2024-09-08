@@ -19,7 +19,7 @@ if not token then
     ngx.exit(ngx.HTTP_BAD_REQUEST) -- 400
 end
 
-local capacity = 20 -- Maximum number of tokens in the bucket
+local bucket_capacity = 10 -- Maximum number of tokens in the bucket
 local leak_rate = 1 -- Rate of token leakage (tokens/second)
 local now = ngx.now() * 1000000 -- Current timestamp in microseconds
 local requested = 1 -- Number of tokens requested for the operation
@@ -36,27 +36,28 @@ if last_tokens == nil then
 end
 
 -- Fetch the last leak time
-local last_leak = tonumber(red:get(last_access_key))
-if last_leak == nil then
+local last_access = tonumber(red:get(last_access_key))
+if last_access == nil then
     -- Initialize to current time if not found in Redis
-    last_leak = now
+    last_access = now
 end
 
 -- Calculate the number of tokens that have leaked due to the elapsed time since the last leak
-local elapsed = math.max(0, now - last_leak)
+local elapsed = math.max(0, now - last_access)
 local leaked_tokens = math.floor(elapsed * leak_rate / 1000000)
 local bucket_level = math.max(0, last_tokens - leaked_tokens)
 ngx.log(ngx.ERR, "elapsed: ", elapsed, " leaked_tokens: ", leaked_tokens, " bucket_level: ", bucket_level)
 
 -- Check if current token level less than capacity
-local allowed = bucket_level < capacity
+local allowed = bucket_level < bucket_capacity
 if allowed then
     bucket_level = bucket_level + requested
+    last_access = now
 end
 
 -- Update state in Redis
-red:setex(tokens_key, ttl, bucket_level)
-red:setex(last_access_key, ttl, now)
+red:set(tokens_key, bucket_level, "EX", ttl)
+red:set(last_access_key, last_access, "EX", ttl)
 
 if allowed then
     ngx.say("Request allowed")
