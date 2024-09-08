@@ -1,5 +1,4 @@
 local redis = require "resty.redis"
-local cjson = require "cjson"
 
 local redis_host = "redis"
 local redis_port = 6379
@@ -24,54 +23,46 @@ end
 local rate_limit = 100 -- 100 requests per minute
 local window_size = 60 -- 1 minute window
 
+-- Construct the Redis key using the token
+local key = "rate_limit:" .. token
+
+-- Get the current timestamp
 local current_time = ngx.now()
 
--- Lua script
-local script = [[
--- ARGV[1] = token
--- ARGV[2] = rate_limit
--- ARGV[3] = window_size
--- ARGV[4] = current_time
+-- Start a Redis transaction
+red:multi()
 
-local token = ARGV[1]
-local rate_limit = tonumber(ARGV[2])
-local window_size = tonumber(ARGV[3])
-local current_time = tonumber(ARGV[4])
+-- Remove elements outside the current window
+red:zremrangebyscore(key, 0, current_time - window_size)
 
-local timestamps_key = "rate_limit:" .. token
-local timestamps_json = redis.call("GET", timestamps_key)
-local timestamps = cjson.decode(timestamps_json or "[]")
+-- Count the number of elements in the current window
+red:zcard(key)
 
--- Remove timestamps outside the current window
-local new_timestamps = {}
-for _, timestamp in ipairs(timestamps) do
-    if current_time - tonumber(timestamp) < window_size then
-        table.insert(new_timestamps, timestamp)
-    end
-end
-
--- Add the current request timestamp
-table.insert(new_timestamps, current_time)
-
--- Check if the number of requests exceeds the rate limit
-if #new_timestamps > rate_limit then
-    return { err = "Too Many Requests" }
-end
-
--- Save the updated timestamps back to Redis
-redis.call("SET", timestamps_key, cjson.encode(new_timestamps))
-redis.call("EXPIRE", timestamps_key, window_size + 10)
-
-return { ok = "Request allowed" }
-]]
-
--- Execute the Lua script
-local res, err = red:eval(script, 0, token, rate_limit, window_size, current_time)
-if not res then
-    ngx.log(ngx.ERR, "Failed to execute Lua script: ", err)
+-- Execute the transaction
+local results, err = red:exec()
+if not results then
+    ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
-if res[1] == "Too Many Requests" then
+-- Check the results
+local removed = results[1]
+local count = results[2]
+
+-- Check if the number of requests exceeds the rate limit
+if count >= rate_limit then
     ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
 end
+
+-- If we're here, we're under the limit. Now we can add the new element and set expiration atomically
+red:multi()
+red:zadd(key, current_time, current_time)
+red:expire(key, window_size)
+results, err = red:exec()
+
+if not results then
+    ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
+
+-- Request is allowed, continue processing

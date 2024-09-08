@@ -25,6 +25,19 @@ local window_size = 60 -- 60 second window
 -- Construct the Redis key using only the token
 local redis_key = "rate_limit:" .. token
 
+local count, err = red:get(redis_key)
+if err then
+    ngx.log(ngx.ERR, "Failed to get counter from Redis: ", err)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
+
+-- Convert count to number or set to 0 if it doesn't exist
+count = tonumber(count) or 0
+
+if count >= rate_limit then
+    ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+end
+
 -- Use Redis MULTI to begin a transaction
 local ok, err = red:multi()
 if not ok then
@@ -51,12 +64,4 @@ local results, err = red:exec()
 if not results then
     ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-end
-
--- Get the incremented count from the transaction results
-local count = results[1]  -- First result is from the INCR command
-
--- Check if the number of requests exceeds the rate limit
-if tonumber(count) > rate_limit then
-    ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
 end

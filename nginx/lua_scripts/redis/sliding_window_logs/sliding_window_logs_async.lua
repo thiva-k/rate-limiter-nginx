@@ -1,5 +1,6 @@
 local redis = require "resty.redis"
 local resty_lock = require "resty.lock"
+local cjson = require "cjson"
 
 local redis_host = "redis"
 local redis_port = 6379
@@ -24,7 +25,7 @@ if not token then
     ngx.exit(ngx.HTTP_BAD_REQUEST)
 end
 
--- Construct the Redis key using only the token
+-- Construct the Redis key using the token
 local redis_key = "rate_limit:" .. token
 
 -- Initialize shared memory
@@ -36,66 +37,57 @@ end
 
 -- Function to fetch batch quota from Redis
 local function fetch_batch_quota()
-    -- Get current count and TTL
-    local count, err = red:get(redis_key)
+    local current_time = ngx.now()
+    local window_start = current_time - window_size
+
+    -- Remove old entries and count current entries
+    local removed, err = red:zremrangebyscore(redis_key, 0, window_start)
     if err then
-        ngx.log(ngx.ERR, "Failed to get counter from Redis: ", err)
-        return nil, nil
-    end
-    
-    local ttl, err = red:ttl(redis_key)
-    if err then
-        ngx.log(ngx.ERR, "Failed to get TTL from Redis: ", err)
+        ngx.log(ngx.ERR, "Failed to remove old entries: ", err)
         return nil, nil
     end
 
-    -- If key does not exist in Redis (TTL == -2), reset for a new window
-    if ttl == -2 then
-        ngx.log(ngx.DEBUG, "TTL expired, resetting counter for new window")
-        count = 0
-        ttl = window_size
-        
-        -- Reset the counter in Redis for the new window
-        local ok, err = red:set(redis_key, 0)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to reset counter in Redis: ", err)
-            return nil, nil
-        end
-        
-        ok, err = red:expire(redis_key, window_size)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to set expiration for reset counter in Redis: ", err)
-            return nil, nil
-        end
+    local count, err = red:zcard(redis_key)
+    if err then
+        ngx.log(ngx.ERR, "Failed to count entries: ", err)
+        return nil, nil
     end
 
-    count = tonumber(count) or 0
-    ttl = tonumber(ttl) or 0
-    
-    -- Ensure ttl is non-negative
-    ttl = math.max(0, ttl)
-    
     -- Calculate remaining quota and batch size
     local remaining = math.max(0, rate_limit - count)
     if remaining == 0 then
-        return 0, ttl  -- No more requests allowed in this window
+        return 0, window_size  -- No more requests allowed in this window
     end
-    
+
     local batch_size = math.floor(remaining * batch_percent)
     batch_size = math.max(math.min(batch_size, remaining), min_batch_size)
-    
-    -- We don't update Redis here anymore, we'll do it when the batch is exhausted
-    
-    return batch_size, ttl
+
+    return batch_size, window_size
 end
 
 -- Function to update Redis with the exhausted batch
-local function update_redis_with_exhausted_batch(exhausted_batch_size)
-    local new_count, err = red:incrby(redis_key, exhausted_batch_size)
-    if err then
-        ngx.log(ngx.ERR, "Failed to update counter in Redis with exhausted batch: ", err)
+local function update_redis_with_exhausted_batch(timestamps)
+    local multi_result, err = red:multi()
+    if not multi_result then
+        ngx.log(ngx.ERR, "Failed to start Redis transaction: ", err)
         return false
     end
+
+    for _, ts in ipairs(timestamps) do
+        local ok, err = red:zadd(redis_key, ts, ts)
+        if not ok then
+            ngx.log(ngx.ERR, "Failed to add timestamp to Redis: ", err)
+            red:discard()
+            return false
+        end
+    end
+
+    local exec_result, err = red:exec()
+    if not exec_result then
+        ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
+        return false
+    end
+
     return true
 end
 
@@ -109,25 +101,26 @@ end
 
 -- Check if we need to fetch a new batch quota
 local batch_quota, err = shared_dict:get(redis_key .. ":batch")
-local batch_used, err_used = shared_dict:get(redis_key .. ":used")
+local timestamps_json, err_ts = shared_dict:get(redis_key .. ":timestamps")
+local timestamps = timestamps_json and cjson.decode(timestamps_json) or {}
 
-if not batch_quota or batch_quota == 0 or not batch_used then
+if not batch_quota or batch_quota == 0 or not timestamps_json then
     -- Update Redis with the previously exhausted batch if it exists
-    if batch_used and batch_used > 0 then
-        local success = update_redis_with_exhausted_batch(batch_used)
+    if #timestamps > 0 then
+        local success = update_redis_with_exhausted_batch(timestamps)
         if not success then
             lock:unlock()
             ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
         end
     end
-    
+
     -- Fetch new batch quota
     batch_quota, ttl = fetch_batch_quota()
     if batch_quota == nil then
         lock:unlock()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
-    
+
     if batch_quota > 0 then
         -- Store new batch quota in shared memory
         ok, err = shared_dict:set(redis_key .. ":batch", batch_quota, ttl)
@@ -136,46 +129,59 @@ if not batch_quota or batch_quota == 0 or not batch_used then
             lock:unlock()
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
-        -- Reset the used count for the new batch
-        ok, err = shared_dict:set(redis_key .. ":used", 0, ttl)
+        -- Reset the timestamps for the new batch
+        ok, err = shared_dict:set(redis_key .. ":timestamps", cjson.encode({}), ttl)
         if not ok then
-            ngx.log(ngx.ERR, "Failed to reset used count in shared memory: ", err)
+            ngx.log(ngx.ERR, "Failed to reset timestamps in shared memory: ", err)
             lock:unlock()
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
+        timestamps = {}
     end
 end
 
 local allowed = false
 if batch_quota > 0 then
-    -- Increment the used count
-    local new_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
-    if err then
-        ngx.log(ngx.ERR, "Failed to increment used count: ", err)
+    -- Add current timestamp to the batch
+    local current_time = ngx.now()
+    table.insert(timestamps, current_time)
+    
+    -- Update timestamps in shared memory
+    ok, err = shared_dict:set(redis_key .. ":timestamps", cjson.encode(timestamps))
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to update timestamps in shared memory: ", err)
         lock:unlock()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
     
-    if new_used <= batch_quota then
+    -- Decrement the batch quota
+    local new_quota, err = shared_dict:incr(redis_key .. ":batch", -1, 0)
+    if err then
+        ngx.log(ngx.ERR, "Failed to decrement batch quota: ", err)
+        lock:unlock()
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+    
+    if new_quota >= 0 then
         allowed = true
     else
         -- Batch is exhausted, update Redis and fetch a new batch
-        local success = update_redis_with_exhausted_batch(batch_quota)
+        local success = update_redis_with_exhausted_batch(timestamps)
         if success then
             -- Fetch new batch quota
             batch_quota, ttl = fetch_batch_quota()
             if batch_quota and batch_quota > 0 then
                 -- Store new batch quota in shared memory
-                ok, err = shared_dict:set(redis_key .. ":batch", batch_quota, ttl)
+                ok, err = shared_dict:set(redis_key .. ":batch", batch_quota - 1, ttl)
                 if not ok then
                     ngx.log(ngx.ERR, "Failed to set new batch quota in shared memory: ", err)
                     lock:unlock()
                     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
                 end
-                -- Reset the used count for the new batch
-                ok, err = shared_dict:set(redis_key .. ":used", 1, ttl)
+                -- Reset the timestamps for the new batch, including the current request
+                ok, err = shared_dict:set(redis_key .. ":timestamps", cjson.encode({current_time}), ttl)
                 if not ok then
-                    ngx.log(ngx.ERR, "Failed to reset used count in shared memory: ", err)
+                    ngx.log(ngx.ERR, "Failed to reset timestamps in shared memory: ", err)
                     lock:unlock()
                     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
                 end
