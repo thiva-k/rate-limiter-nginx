@@ -38,12 +38,6 @@ red:zremrangebyscore(key, 0, current_time - window_size)
 -- Count the number of elements in the current window
 red:zcard(key)
 
--- Add the new element
-red:zadd(key, current_time, current_time)
-
--- Set expiration
-red:expire(key, window_size)
-
 -- Execute the transaction
 local results, err = red:exec()
 if not results then
@@ -54,12 +48,21 @@ end
 -- Check the results
 local removed = results[1]
 local count = results[2]
-local added = results[3]
-local expired = results[4]
 
 -- Check if the number of requests exceeds the rate limit
 if count >= rate_limit then
     ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+end
+
+-- If we're here, we're under the limit. Now we can add the new element and set expiration atomically
+red:multi()
+red:zadd(key, current_time, current_time)
+red:expire(key, window_size)
+results, err = red:exec()
+
+if not results then
+    ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
 -- Request is allowed, continue processing
