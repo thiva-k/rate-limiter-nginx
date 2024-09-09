@@ -20,46 +20,41 @@ if not token then
 end
 
 local bucket_capacity = 10 -- Maximum number of tokens in the bucket
-local leak_rate = 1 -- Rate of token leakage (tokens/second)
-local now = ngx.now() * 1000000 -- Current timestamp in microseconds
+local refil_rate = 1 -- Rate of token generation (tokens/second)
+local now = ngx.now() * 1000 -- Current timestamp in milliseconds
 local requested = 1 -- Number of tokens requested for the operation
-local ttl = 60 -- Time-to-live for the bucket state
+local ttl = 60 -- Time-to-live for the token bucket state
 
--- Define keys for the token counter and last leak time
+-- Define keys for the token counter and last access time
 local tokens_key = token .. ":tokens"
 local last_access_key = token .. ":last_access"
 
 -- Fetch the current token count
 local last_tokens = tonumber(red:get(tokens_key))
 if last_tokens == nil then
-    last_tokens = 0
+    last_tokens = bucket_capacity
 end
 
--- Fetch the last leak time
+-- Fetch the last access time
 local last_access = tonumber(red:get(last_access_key))
 if last_access == nil then
     -- Initialize to current time if not found in Redis
     last_access = now
 end
 
--- Calculate the number of tokens that have leaked due to the elapsed time since the last leak
+-- Calculate the number of tokens to be added due to the elapsed time since the last access
 local elapsed = math.max(0, now - last_access)
-local leaked_tokens = math.floor(elapsed * leak_rate / 1000000)
-local bucket_level = math.max(0, last_tokens - leaked_tokens)
-ngx.log(ngx.ERR, "elapsed: ", elapsed, " leaked_tokens: ", leaked_tokens, " bucket_level: ", bucket_level)
+local add_tokens = math.floor(elapsed * refil_rate / 1000)
+local new_tokens = math.min(bucket_capacity, last_tokens + add_tokens)
 
--- Check if current token level less than capacity
-local allowed = bucket_level < bucket_capacity
+-- Check if enough tokens have been accumulated
+local allowed = new_tokens >= requested
 if allowed then
-    bucket_level = bucket_level + requested
+    new_tokens = new_tokens - requested
     last_access = now
-end
-
--- Update state in Redis
-red:set(tokens_key, bucket_level, "EX", ttl)
-red:set(last_access_key, last_access, "EX", ttl)
-
-if allowed then
+    -- Update state in Redis
+    red:set(tokens_key, new_tokens, "EX", ttl)
+    red:set(last_access_key, last_access, "EX", ttl)
     ngx.say("Request allowed")
 else
     ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
