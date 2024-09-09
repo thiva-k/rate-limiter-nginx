@@ -64,5 +64,3 @@ if not results then
     ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
-
--- Request is allowed, continue processing
