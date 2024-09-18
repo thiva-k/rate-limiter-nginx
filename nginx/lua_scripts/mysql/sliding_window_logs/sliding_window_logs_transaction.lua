@@ -2,29 +2,24 @@ local mysql = require "resty.mysql"
 
 local db, err = mysql:new()
 if not db then
-    ngx.log(ngx.ERR, "Failed to instantiate MySQL: ", err)
+    ngx.log(ngx.ERR, "Failed to instantiate mysql: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
-db:set_timeout(1000)  -- 1 second timeout
+db:set_timeout(1000) -- 1 second timeout
 
 local ok, err, errcode, sqlstate = db:connect{
-    host = "127.0.0.1",
+    host = "mysql",
     port = 3306,
-    database = "rate_limiter",
-    user = "user",
-    password = "password"
+    database = "rate_limit_db",
+    user = "root",
+    password = "root",
+    charset = "utf8mb4",
+    max_packet_size = 1024 * 1024,
 }
 
 if not ok then
     ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err)
-    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-end
-
--- Start a transaction
-local res, err, errcode, sqlstate = db:query("START TRANSACTION")
-if not res then
-    ngx.log(ngx.ERR, "Failed to start transaction: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
@@ -36,61 +31,83 @@ if not token then
 end
 
 -- Hardcoded rate limit and window size
-local rate_limit = 100 -- 100 requests per minute
+local rate_limit = 5 -- 5 requests per minute
 local window_size = 60 -- 1 minute window
 
+-- Get the current timestamp
 local current_time = ngx.now()
+local remove_time = current_time - window_size
 
--- Retrieve the current timestamps for the token
-res, err, errcode, sqlstate =
-    db:query("SELECT request_timestamps FROM rate_limits WHERE token = " .. ngx.quote_sql_str(token) .. " FOR UPDATE")
-
+-- Start a transaction
+local res, err, errcode, sqlstate = db:query("START TRANSACTION;")
 if not res then
-    ngx.log(ngx.ERR, "Failed to query MySQL: ", err)
-    db:query("ROLLBACK")
+    ngx.log(ngx.ERR, "Failed to start transaction: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
-local timestamps = {}
-if #res > 0 then
-    timestamps = cjson.decode(res[1].request_timestamps)
+-- Remove old entries (manual interpolation of values, no extra quotes)
+local remove_query = string.format(
+    "DELETE FROM rate_limit_entries WHERE token = %s AND timestamp < %f", 
+    ngx.quote_sql_str(token), 
+    remove_time
+)
+
+res, err, errcode, sqlstate = db:query(remove_query)
+if not res then
+    ngx.log(ngx.ERR, "Failed to remove old entries: ", err)
+    -- Rollback the transaction in case of error
+    db:query("ROLLBACK;")
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- Remove timestamps outside the current window
-local new_timestamps = {}
-for _, timestamp in ipairs(timestamps) do
-    if current_time - tonumber(timestamp) < window_size then
-        table.insert(new_timestamps, timestamp)
-    end
+-- Count current entries (manual interpolation of values, no extra quotes)
+local count_query = string.format(
+    "SELECT COUNT(*) as count FROM rate_limit_entries WHERE token = %s AND timestamp >= %f", 
+    ngx.quote_sql_str(token), 
+    remove_time
+)
+
+res, err, errcode, sqlstate = db:query(count_query)
+if not res then
+    ngx.log(ngx.ERR, "Failed to count current entries: ", err)
+    -- Rollback the transaction in case of error
+    db:query("ROLLBACK;")
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- Add the current request timestamp
-table.insert(new_timestamps, current_time)
+local count = tonumber(res[1].count)
 
 -- Check if the number of requests exceeds the rate limit
-if #new_timestamps > rate_limit then
-    db:query("ROLLBACK")
+if count >= rate_limit then
+    -- Rollback the transaction since we are rejecting the request
+    db:query("ROLLBACK;")
     ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
 end
 
--- Update the timestamps in the database
-local new_timestamps_json = cjson.encode(new_timestamps)
-res, err, errcode, sqlstate = db:query(
-    "INSERT INTO rate_limits (token, request_timestamps) VALUES (" .. ngx.quote_sql_str(token) .. ", " .. ngx.quote_sql_str(new_timestamps_json) ..
-    ") ON DUPLICATE KEY UPDATE request_timestamps = VALUES(request_timestamps)"
+-- Add the new entry (manual interpolation of values, no extra quotes)
+local insert_query = string.format(
+    "INSERT INTO rate_limit_entries (token, timestamp) VALUES (%s, %f)", 
+    ngx.quote_sql_str(token), 
+    current_time
 )
 
+res, err, errcode, sqlstate = db:query(insert_query)
 if not res then
-    ngx.log(ngx.ERR, "Failed to update MySQL: ", err)
-    db:query("ROLLBACK")
+    ngx.log(ngx.ERR, "Failed to add new entry: ", err)
+    -- Rollback the transaction in case of error
+    db:query("ROLLBACK;")
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- Commit the transaction
-res, err, errcode, sqlstate = db:query("COMMIT")
+-- Commit the transaction if everything was successful
+res, err, errcode, sqlstate = db:query("COMMIT;")
 if not res then
     ngx.log(ngx.ERR, "Failed to commit transaction: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
-ngx.exit(ngx.HTTP_OK)
+-- Close the connection
+local ok, err = db:set_keepalive(10000, 100)
+if not ok then
+    ngx.log(ngx.ERR, "Failed to set keepalive: ", err)
+end
