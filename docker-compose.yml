@@ -36,6 +36,17 @@ services:
       - "6379:6379"
       - "8001:8001"
 
+  mysql:
+    image: mysql:8.4
+    ports:
+      - "3307:3306"
+    command: --mysql-native-password=ON
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: rate_limit_db
+    volumes:
+      - ./init/init_sliding_window_logs.sql:/docker-entrypoint-initdb.d/init.sql
+
   registry:
     image: descartesresearch/teastore-registry
     expose:
