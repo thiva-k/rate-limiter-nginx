@@ -2,7 +2,6 @@ local redis = require "resty.redis"
 
 local redis_host = "redis-enterprise"
 local redis_port = 12000  -- Redis Enterprise default port
-local redis_password = "password"  -- Set this to your actual password
 
 local red = redis:new()
 red:set_timeout(1000) -- 1 second timeout
