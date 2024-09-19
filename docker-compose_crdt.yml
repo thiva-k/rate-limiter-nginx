@@ -1,0 +1,22 @@
+services:
+  rs1_node1:
+    image: redislabs/redis
+    container_name: rs1_node1
+    hostname: rs1_node1
+    ports:
+      - "8443:8443"
+      - "9443:9443"
+      - "12000:12000"
+    cap_add:
+      - sys_resource
+
+  rs2_node1:
+    image: redislabs/redis
+    container_name: rs2_node1
+    hostname: rs2_node1
+    ports:
+      - "8445:8443"
+      - "9445:9443"
+      - "12002:12000"
+    cap_add:
+      - sys_resource
