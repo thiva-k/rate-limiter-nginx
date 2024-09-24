@@ -37,17 +37,27 @@ end
 -- Function to fetch batch quota from Redis
 local function fetch_batch_quota()
     -- Get current count and TTL
-    local count, err = red:get(redis_key)
-    if err then
-        ngx.log(ngx.ERR, "Failed to get counter from Redis: ", err)
+    -- Start a Redis transaction with MULTI
+    local ok, err = red:multi()
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to start Redis transaction: ", err)
         return nil, nil
     end
-    
-    local ttl, err = red:ttl(redis_key)
-    if err then
-        ngx.log(ngx.ERR, "Failed to get TTL from Redis: ", err)
+
+    -- Queue the GET and TTL commands
+    red:get(redis_key)
+    red:ttl(redis_key)
+
+    -- Execute the transaction with EXEC
+    local res, err = red:exec()
+    if not res then
+        ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
         return nil, nil
     end
+
+    -- Extract the results
+    local count = tonumber(res[1]) or 0  -- res[1] corresponds to GET result
+    local ttl = tonumber(res[2]) or -2    -- res[2] corresponds to TTL result (-2 means the key doesn't exist)
 
     -- If key does not exist in Redis (TTL == -2), reset for a new window
     if ttl == -2 then
@@ -55,18 +65,13 @@ local function fetch_batch_quota()
         count = 0
         ttl = window_size
         
-        -- Reset the counter in Redis for the new window
-        local ok, err = red:set(redis_key, 0)
+        -- Reset the counter and set the expiration in a single Redis command
+        local ok, err = red:set(redis_key, 0, "EX", window_size)
         if not ok then
-            ngx.log(ngx.ERR, "Failed to reset counter in Redis: ", err)
+            ngx.log(ngx.ERR, "Failed to reset counter and set expiration in Redis: ", err)
             return nil, nil
         end
-        
-        ok, err = red:expire(redis_key, window_size)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to set expiration for reset counter in Redis: ", err)
-            return nil, nil
-        end
+
     end
 
     count = tonumber(count) or 0
