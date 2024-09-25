@@ -1,28 +1,27 @@
--- Allow root user to connect from any host with password authentication
+-- Change authentication method for root user
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
 
--- Create the rate_limiter database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS rate_limiter;
+USE rate_limit_db;
 
--- Use the rate_limiter database
-USE rate_limiter;
+CREATE TABLE IF NOT EXISTS rate_limit_entries (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    token VARCHAR(255) NOT NULL,
+    timestamp DOUBLE NOT NULL,
+    INDEX idx_token_timestamp (token, timestamp)
+) ENGINE=InnoDB;
 
--- Create the rate_limits table
-CREATE TABLE IF NOT EXISTS rate_limits (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    token VARCHAR(255) NOT NULL UNIQUE,
-    request_timestamps JSON NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+DELIMITER //
 
--- Create an index on the token column for faster lookups
-CREATE INDEX idx_token ON rate_limits (token);
+CREATE EVENT IF NOT EXISTS cleanup_old_entries
+ON SCHEDULE EVERY 1 MINUTE
+DO
+BEGIN
+    DELETE FROM rate_limit_entries
+    WHERE timestamp < UNIX_TIMESTAMP() - 60;
+END //
 
--- Insert a default token with an empty timestamps array
-INSERT INTO rate_limits (token, request_timestamps) VALUES
-    ('default_token', '[]')
-ON DUPLICATE KEY UPDATE request_timestamps = VALUES(request_timestamps);
+DELIMITER ;
 
--- Grant privileges to the 'user' account (adjust as needed)
-GRANT ALL PRIVILEGES ON
+SET GLOBAL event_scheduler = ON;
+
+

@@ -61,5 +61,3 @@ if err then
     ngx.log(ngx.ERR, "Failed to set expiration: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
-
--- Request is allowed, continue processing

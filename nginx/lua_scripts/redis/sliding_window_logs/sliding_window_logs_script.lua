@@ -69,5 +69,3 @@ end
 if result == 1 then
     ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
 end
-
--- Request is allowed, continue processing
