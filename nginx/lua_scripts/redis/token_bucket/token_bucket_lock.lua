@@ -89,3 +89,5 @@ if current_lock_value == lock_value then
 else
     ngx.log(ngx.ERR, "Lock value mismatch, not releasing lock")
 end
+
+-- TODO: have to update current time at the time of updating it to database or have to use redis time command

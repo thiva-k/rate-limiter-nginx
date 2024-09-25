@@ -60,3 +60,5 @@ if result == 1 then
 else
     ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
 end
+
+-- TODO: have to update current time at the time of updating it to database or have to use redis time command
