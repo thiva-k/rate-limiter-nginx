@@ -21,9 +21,8 @@ end
 
 local bucket_capacity = 10 -- Maximum number of tokens in the bucket
 local refill_rate = 1 -- Rate of token generation (tokens/second)
-local now = ngx.now() * 1000 -- Current timestamp in milliseconds
 local requested = 1 -- Number of tokens requested for the operation
-local ttl = 60 -- Time-to-live for the token bucket state
+local ttl = math.floor(bucket_capacity / refil_rate * 2) -- Time-to-live for the token bucket state
 local lock_key = token .. ":lock"
 local lock_ttl = 1000 -- Lock expiration time in milliseconds
 local retry_delay = 100 -- Delay between retries in milliseconds
@@ -57,6 +56,7 @@ end
 
 -- Fetch the last access time
 local last_access = tonumber(red:get(last_access_key))
+local now = ngx.now() * 1000 -- Current timestamp in milliseconds
 if last_access == nil then
     -- Initialize to current time if not found in Redis
     last_access = now

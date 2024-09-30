@@ -1,11 +1,10 @@
 local redis = require "resty.redis"
 
+-- Connect to Redis
 local redis_host = "redis"
 local redis_port = 6379
-
 local red = redis:new()
 red:set_timeout(1000) -- 1 second timeout
-
 local ok, err = red:connect(redis_host, redis_port)
 if not ok then
     ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
@@ -19,11 +18,11 @@ if not token then
     ngx.exit(ngx.HTTP_BAD_REQUEST) -- 400
 end
 
+-- Token bucket parameters
 local bucket_capacity = 10 -- Maximum number of tokens in the bucket
-local refil_rate = 1 -- Rate of token generation (tokens/second)
-local now = ngx.now() * 1000 -- Current timestamp in milliseconds
+local refill_rate = 1 -- Rate of token generation (tokens/second)
 local requested = 1 -- Number of tokens requested for the operation
-local ttl = 60 -- Time-to-live for the token bucket state
+local ttl = math.floor(bucket_capacity / refill_rate * 2) -- Time-to-live for the token bucket state
 
 -- Define keys for the token counter and last access time
 local tokens_key = token .. ":tokens"
@@ -37,6 +36,7 @@ end
 
 -- Fetch the last access time
 local last_access = tonumber(red:get(last_access_key))
+local now = ngx.now() * 1000 -- Current timestamp in milliseconds
 if last_access == nil then
     -- Initialize to current time if not found in Redis
     last_access = now

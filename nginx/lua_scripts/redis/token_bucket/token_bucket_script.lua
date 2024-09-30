@@ -1,28 +1,28 @@
 local redis = require "resty.redis"
+
+-- Connect to Redis
 local redis_host = "redis"
 local redis_port = 6379
-
 local red = redis:new()
 red:set_timeout(1000) -- 1 second timeout
-
 local ok, err = red:connect(redis_host, redis_port)
 if not ok then
     ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR) -- 500
 end
 
+-- Fetch the token from the URL parameter
 local token = ngx.var.arg_token
 if not token then
     ngx.log(ngx.ERR, "Token not provided")
     ngx.exit(ngx.HTTP_BAD_REQUEST) -- 400
 end
 
+-- Token bucket parameters
 local bucket_capacity = 10
 local refill_rate = 1 -- tokens/second
-local ttl = 60 -- seconds
-local now = ngx.now() * 1000 -- Current time in milliseconds
+local ttl = math.floor(bucket_capacity / refill_rate * 2) -- Time-to-live for the token bucket state
 local requested = 1 -- tokens required per request
-
 local tokens_key = token .. ":tokens"
 local last_access_key = token .. ":last_access"
 
@@ -53,12 +53,40 @@ local script = [[
     end
 ]]
 
+-- Get the script SHA
+local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+if not sha then
+    local new_sha, err = red:script("LOAD", script)
+    if not new_sha then
+        ngx.log(ngx.ERR, "Failed to load script: ", err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+    ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
+    sha = new_sha
+end
+
 -- Execute the Lua script atomically
-local result, err = red:eval(script, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, now, requested, ttl)
+local now = ngx.now() * 1000 -- Current time in milliseconds
+local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, now, requested, ttl)
+if err then
+    if err:find("NOSCRIPT", 1, true) then
+        -- Script not found in Redis, reload it
+        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        sha, err = get_script_sha(red)
+        if not sha then
+            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        end
+        result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, now, requested, ttl)
+    end
+    
+    if err then
+        ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+end
+
 if result == 1 then
     ngx.say("Request allowed")
 else
     ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
 end
-
--- TODO: have to update current time at the time of updating it to database or have to use redis time command
