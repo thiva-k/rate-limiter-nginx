@@ -1,3 +1,4 @@
+
 version: '3'
 services:
   load_balancer1:
@@ -14,9 +15,7 @@ services:
       - recommender
       - webui
       - redis
-    volumes:
-      - ./logs/nginx/load_balancer1:/var/log/nginx
-      - ./docker/lua_scripts:/usr/local/openresty/nginx/lua_scripts
+
   load_balancer2:
     build:
       context: ./nginx
@@ -31,8 +30,6 @@ services:
       - recommender
       - webui
       - redis
-    volumes:
-      - ./logs/nginx/load_balancer2:/var/log/nginx
 
   redis:
     image: redis/redis-stack:latest
@@ -49,7 +46,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: rate_limit_db
     volumes:
-      - ./init/init_gcra.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init/init_fixed_window_counter.sql:/docker-entrypoint-initdb.d/init.sql
 
   registry:
     image: descartesresearch/teastore-registry
