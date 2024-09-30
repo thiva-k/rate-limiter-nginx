@@ -32,8 +32,8 @@ if not token then
 end
 
 -- Rate limiting parameters
-local rate_limit = 5         -- Max 5 requests allowed in the window
-local window_size = 60       -- 60 seconds total window size
+local rate_limit = 1         -- Max 5 requests allowed in the window
+local window_size = 10       -- 60 seconds total window size
 
 -- Get the current time
 local current_time = ngx.now()
