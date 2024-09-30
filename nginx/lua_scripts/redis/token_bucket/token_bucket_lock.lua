@@ -11,9 +11,8 @@ local refill_rate = 1 -- Tokens generated per second
 local requested_tokens = 1 -- Number of tokens required per request
 
 -- Lock settings
-local lock_key = "rate_limit_lock" -- Key for the lock
 local lock_timeout = 1000 -- Lock timeout in milliseconds
-local max_retries = 200 -- Maximum number of retries to acquire the lock
+local max_retries = 100 -- Maximum number of retries to acquire the lock
 local retry_delay = 100 -- Delay between retries in milliseconds
 
 -- Helper function to initialize Redis connection
@@ -39,7 +38,7 @@ local function get_token()
 end
 
 -- Function to acquire a lock with retries
-local function acquire_lock(red)
+local function acquire_lock(red, lock_key)
     local lock_value = ngx.now() * 1000 -- Current timestamp as lock value
     for i = 1, max_retries do
         local res, err = red:set(lock_key, lock_value, "NX", "PX", lock_timeout)
@@ -56,7 +55,7 @@ local function acquire_lock(red)
 end
 
 -- Function to release a lock
-local function release_lock(red)
+local function release_lock(red, lock_key)
     red:del(lock_key)
 end
 
@@ -65,9 +64,11 @@ local function rate_limit()
     local red = init_redis() -- Initialize Redis connection
     local token = get_token() -- Fetch the token from URL parameters
 
+    -- Unique lock key for each user
+    local lock_key = "rate_limit_lock:" .. token
+
     -- Try to acquire the lock with retries
-    if not acquire_lock(red) then
-        -- ngx.log(ngx.ERR, "Could not acquire lock, request is being processed by another instance")
+    if not acquire_lock(red, lock_key) then
         ngx.exit(ngx.HTTP_SERVICE_UNAVAILABLE) -- 503
     end
 
@@ -102,7 +103,7 @@ local function rate_limit()
     end
 
     -- Release the lock
-    release_lock(red)
+    release_lock(red, lock_key)
 end
 
 -- Run the rate limiter
