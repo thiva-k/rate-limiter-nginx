@@ -142,12 +142,12 @@ local function rate_limit()
         if remaining_tokens == 0 then
             batch_quota = 0
         else 
-            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens*batch_percent))
+            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
         end
         shared_dict:set(token .. ":batch_quota", batch_quota)
         shared_dict:set(token .. ":batch_used", 0)
+        batch_used = 0
     end
-
     
     if batch_used >= batch_quota then
         -- Batch quota exceeded, fetch new batch quota based on remaining tokens
@@ -155,23 +155,19 @@ local function rate_limit()
         if remaining_tokens == 0 then
             batch_quota = 0
         else 
-            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens*batch_percent))
+            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
         end
         shared_dict:set(token .. ":batch_quota", batch_quota)
         shared_dict:set(token .. ":batch_used", 0)
+        batch_used = 0
     end
     
-    local allowed = false;
     if batch_used < batch_quota then
-        allowed = true
         shared_dict:incr(token .. ":batch_used", 1)
-    end
-
-    lock:unlock() -- Release the lock
-    
-    if allowed then
+        lock:unlock() -- Release the lock
         ngx.say("Request allowed")
     else
+        lock:unlock() -- Release the lock
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
     end
 end
