@@ -135,7 +135,6 @@ local function rate_limit()
 
     local batch_quota = shared_dict:get(token .. ":batch_quota") or 0
     local batch_used = shared_dict:get(token .. ":batch_used") or 0
-    ngx.log(ngx.ERR, "Batch quota: ", batch_quota, ", Batch used: ", batch_used)
 
     if batch_quota == 0 then
         -- Fetch new batch quota based on remaining tokens
@@ -143,13 +142,12 @@ local function rate_limit()
         if remaining_tokens == 0 then
             batch_quota = 0
         else 
-            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens*batch_percent))
+            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
         end
         shared_dict:set(token .. ":batch_quota", batch_quota)
         shared_dict:set(token .. ":batch_used", 0)
         batch_used = 0
     end
-
     
     if batch_used >= batch_quota then
         -- Batch quota exceeded, fetch new batch quota based on remaining tokens
@@ -157,31 +155,19 @@ local function rate_limit()
         if remaining_tokens == 0 then
             batch_quota = 0
         else 
-            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens*batch_percent))
+            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
         end
         shared_dict:set(token .. ":batch_quota", batch_quota)
         shared_dict:set(token .. ":batch_used", 0)
         batch_used = 0
     end
     
-    local allowed = false;
     if batch_used < batch_quota then
-        ngx.log(ngx.ERR, "T Batch quota: ", batch_quota, ", Batch used: ", batch_used)
-        allowed = true
         shared_dict:incr(token .. ":batch_used", 1)
-    else 
-        ngx.log(ngx.ERR, "F Batch quota: ", batch_quota, ", Batch used: ", batch_used)
-    end
-
-    
-    lock:unlock() -- Release the lock
-    if allowed then
+        lock:unlock() -- Release the lock
         ngx.say("Request allowed")
-        ngx.log(ngx.ERR, "Request allowed")
-        ngx.log(ngx.ERR, "-----------------------------------")
     else
-        ngx.log(ngx.ERR, "Request denied")
-        ngx.log(ngx.ERR, "-----------------------------------")
+        lock:unlock() -- Release the lock
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
     end
 end
