@@ -136,31 +136,40 @@ local function rate_limit()
     local batch_quota = shared_dict:get(token .. ":batch_quota") or 0
     local batch_used = shared_dict:get(token .. ":batch_used") or 0
 
+    ngx.log(ngx.ERR, "Batch quota: ", batch_quota, ", Batch used: ", batch_used)
+    
     if batch_quota == 0 then
         -- Fetch new batch quota based on remaining tokens
         local remaining_tokens = execute_token_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, 0, ttl)
+        ngx.log(ngx.ERR, "N - Remaining tokens: ", remaining_tokens)
         if remaining_tokens == 0 then
             batch_quota = 0
         else 
             batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
         end
-        shared_dict:set(token .. ":batch_quota", batch_quota)
-        shared_dict:set(token .. ":batch_used", 0)
+        shared_dict:set(token .. ":batch_quota", batch_quota, ttl)
+        shared_dict:set(token .. ":batch_used", 0, ttl)
         batch_used = 0
     end
     
+    ngx.log(ngx.ERR, "Batch quota: ", batch_quota, ", Batch used: ", batch_used)
+
     if batch_used >= batch_quota then
         -- Batch quota exceeded, fetch new batch quota based on remaining tokens
         local remaining_tokens = execute_token_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, batch_used, ttl)
+        ngx.log(ngx.ERR, "E - Remaining tokens: ", remaining_tokens)
         if remaining_tokens == 0 then
             batch_quota = 0
         else 
             batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
         end
-        shared_dict:set(token .. ":batch_quota", batch_quota)
-        shared_dict:set(token .. ":batch_used", 0)
+        shared_dict:set(token .. ":batch_quota", batch_quota, ttl)
+        shared_dict:set(token .. ":batch_used", 0, ttl)
         batch_used = 0
     end
+
+    ngx.log(ngx.ERR, "Batch quota: ", batch_quota, ", Batch used: ", batch_used)
+    ngx.log(ngx.ERR, "--------------------------")
     
     if batch_used < batch_quota then
         shared_dict:incr(token .. ":batch_used", 1)
