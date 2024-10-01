@@ -144,8 +144,8 @@ local function rate_limit()
         else 
             batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
         end
-        shared_dict:set(token .. ":batch_quota", batch_quota)
-        shared_dict:set(token .. ":batch_used", 0)
+        shared_dict:set(token .. ":batch_quota", batch_quota, ttl)
+        shared_dict:set(token .. ":batch_used", 0, ttl)
         batch_used = 0
     end
     
@@ -157,8 +157,8 @@ local function rate_limit()
         else 
             batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
         end
-        shared_dict:set(token .. ":batch_quota", batch_quota)
-        shared_dict:set(token .. ":batch_used", 0)
+        shared_dict:set(token .. ":batch_quota", batch_quota, ttl)
+        shared_dict:set(token .. ":batch_used", 0, ttl)
         batch_used = 0
     end
     
