@@ -58,12 +58,7 @@ local function get_token_bucket_script()
 
         local elapsed = math.max(0, now - last_access)
         local add_tokens = math.floor(elapsed * refill_rate / 1000)
-        local new_tokens = math.min(bucket_capacity, last_tokens + add_tokens - requested)
-
-        -- Ensure token count does not go below zero
-        if new_tokens < 0 then
-            new_tokens = 0
-        end
+        local new_tokens = math.max(math.min(bucket_capacity, last_tokens + add_tokens - requested), 0)
 
         redis.call("set", tokens_key, new_tokens, "EX", ttl)
         redis.call("set", last_access_key, now, "EX", ttl)
