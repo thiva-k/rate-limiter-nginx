@@ -69,3 +69,5 @@ end
 
 -- Run the rate limiter
 rate_limit()
+
+-- TODO: Add redis pipeline, Add error hanlding for redis operations

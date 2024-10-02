@@ -1,4 +1,5 @@
 local redis = require "resty.redis"
+local resty_lock = require "resty.lock"
 
 -- Redis connection settings
 local redis_host = "redis"
@@ -9,6 +10,15 @@ local redis_timeout = 1000 -- 1 second timeout
 local bucket_capacity = 10 -- Maximum tokens in the bucket
 local leak_rate = 1 -- Tokens leaked per second
 local requested_tokens = 1 -- Number of tokens required per request
+local batch_percent = 0.2 -- 20% of remaining tokens for batch quota
+local min_batch_quota = 1
+
+-- Shared dictionary for local rate limiting
+local shared_dict = ngx.shared.rate_limit_dict
+if not shared_dict then
+    ngx.log(ngx.ERR, "Failed to initialize shared dictionary")
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -32,7 +42,7 @@ local function get_token()
     return token
 end
 
--- Lua script to implement leaky bucket algorithm
+-- Lua script to reduce the batch quota and update the leaky bucket
 local function get_leaky_bucket_script()
     return [[
         local tokens_key = KEYS[1]
@@ -48,16 +58,13 @@ local function get_leaky_bucket_script()
 
         local elapsed = math.max(0, now - last_access)
         local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
-        local bucket_level = math.max(0, last_tokens - leaked_tokens)
+        local bucket_level = math.min(math.max(0, last_tokens - leaked_tokens + requested), bucket_capacity)
+        local remaining_tokens = bucket_capacity - bucket_level
 
-        if bucket_level < bucket_capacity then
-            bucket_level = bucket_level + requested
-            redis.call("set", tokens_key, bucket_level, "EX", ttl)
-            redis.call("set", last_access_key, now, "EX", ttl)
-            return 1
-        else
-            return 0 
-        end
+        redis.call("set", tokens_key, bucket_level, "EX", ttl)
+        redis.call("set", last_access_key, now, "EX", ttl)
+
+        return remaining_tokens
     ]]
 end
 
@@ -103,25 +110,61 @@ local function rate_limit()
     local red = init_redis() -- Initialize Redis connection
     local token = get_token() -- Fetch and validate token
 
-     -- Redis keys for token count and last access time
+    -- Redis keys
     local tokens_key = token .. ":tokens"
     local last_access_key = token .. ":last_access"
 
-    -- Calculate TTL for the Redis keys
+    -- Calculate TTL based on bucket capacity and leak rate
     local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
     -- Load or retrieve the Lua script SHA
     local script = get_leaky_bucket_script()
     local sha = load_script_to_redis(red, script)
 
-    -- Execute leaky bucket logic
-    local result = execute_leaky_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
+    -- Use a lock to ensure only one worker fetches the quota at a time
+    local lock = resty_lock:new("my_locks")
+    local elapsed, err = lock:lock(token)
+    if not elapsed then
+        ngx.log(ngx.ERR, "Failed to acquire lock: ", err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
 
-    -- Handle the result
-    if result == 1 then
+    local batch_quota = shared_dict:get(token .. ":batch_quota") or 0
+    local batch_used = shared_dict:get(token .. ":batch_used") or 0
+
+    if batch_quota == 0 then
+        -- Fetch new batch quota based on remaining tokens
+        local remaining_tokens = execute_leaky_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, 0, ttl)
+        if remaining_tokens == 0 then
+            batch_quota = 0
+        else 
+            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
+        end
+        shared_dict:set(token .. ":batch_quota", batch_quota, ttl)
+        shared_dict:set(token .. ":batch_used", 0, ttl)
+        batch_used = 0
+    end
+
+    if batch_used >= batch_quota then
+        -- Batch quota exceeded, fetch new batch quota based on remaining tokens
+        local remaining_tokens = execute_leaky_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, batch_used, ttl)
+        if remaining_tokens == 0 then
+            batch_quota = 0
+        else 
+            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
+        end
+        shared_dict:set(token .. ":batch_quota", batch_quota, ttl)
+        shared_dict:set(token .. ":batch_used", 0, ttl)
+        batch_used = 0
+    end
+    
+    if batch_used < batch_quota then
+        shared_dict:incr(token .. ":batch_used", 1)
+        lock:unlock() -- Release the lock
         ngx.say("Request allowed")
     else
-        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429 Too Many Requests
+        lock:unlock() -- Release the lock
+        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
     end
 end
 
