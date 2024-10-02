@@ -32,7 +32,7 @@ local function get_token()
     return token
 end
 
--- Build the leaky bucket Lua script
+-- Lua script to implement leaky bucket algorithm
 local function get_leaky_bucket_script()
     return [[
         local tokens_key = KEYS[1]
@@ -43,27 +43,20 @@ local function get_leaky_bucket_script()
         local requested = tonumber(ARGV[4])
         local ttl = tonumber(ARGV[5])
 
-        -- Fetch the current token count (if not found, assume 0)
         local last_tokens = tonumber(redis.call("get", tokens_key)) or 0
-
-        -- Fetch the last leak time (if not found, initialize to now)
         local last_access = tonumber(redis.call("get", last_access_key)) or now
 
-        -- Calculate the number of leaked tokens since the last access
         local elapsed = math.max(0, now - last_access)
         local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
         local bucket_level = math.max(0, last_tokens - leaked_tokens)
 
-        -- Check if we can add more tokens to the bucket
         if bucket_level < bucket_capacity then
-            -- Update the bucket level with the requested number of tokens
             bucket_level = bucket_level + requested
-            -- Update Redis with the new state
             redis.call("set", tokens_key, bucket_level, "EX", ttl)
             redis.call("set", last_access_key, now, "EX", ttl)
-            return 1 -- Allowed
+            return 1
         else
-            return 0 -- Not allowed (429)
+            return 0 
         end
     ]]
 end
@@ -110,7 +103,7 @@ local function rate_limit()
     local red = init_redis() -- Initialize Redis connection
     local token = get_token() -- Fetch and validate token
 
-    -- Redis keys
+     -- Redis keys for token count and last access time
     local tokens_key = token .. ":tokens"
     local last_access_key = token .. ":last_access"
 

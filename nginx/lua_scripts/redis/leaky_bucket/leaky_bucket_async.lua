@@ -1,7 +1,7 @@
 local redis = require "resty.redis"
 local resty_lock = require "resty.lock"
 
--- Redis configuration
+-- Redis connection settings
 local redis_host = "redis"
 local redis_port = 6379
 local redis_timeout = 1000 -- 1 second timeout
@@ -32,7 +32,7 @@ local function init_redis()
     return red
 end
 
--- Fetch and validate the token from the URL parameter
+-- Helper function to get URL token
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
@@ -42,7 +42,7 @@ local function get_token()
     return token
 end
 
--- Build the leaky bucket Lua script with batch quota
+-- Lua script to reduce the batch quota and update the leaky bucket
 local function get_leaky_bucket_script()
     return [[
         local tokens_key = KEYS[1]
@@ -53,17 +53,12 @@ local function get_leaky_bucket_script()
         local requested = tonumber(ARGV[4])
         local ttl = tonumber(ARGV[5])
 
-        -- Fetch the current token count (if not found, assume 0)
         local last_tokens = tonumber(redis.call("get", tokens_key)) or 0
-
-        -- Fetch the last leak time (if not found, initialize to now)
         local last_access = tonumber(redis.call("get", last_access_key)) or now
 
-        -- Calculate the number of leaked tokens since the last access
         local elapsed = math.max(0, now - last_access)
         local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
         local bucket_level = math.min(math.max(0, last_tokens - leaked_tokens + requested), bucket_capacity)
-
         local remaining_tokens = bucket_capacity - bucket_level
 
         redis.call("set", tokens_key, bucket_level, "EX", ttl)
@@ -136,7 +131,6 @@ local function rate_limit()
 
     local batch_quota = shared_dict:get(token .. ":batch_quota") or 0
     local batch_used = shared_dict:get(token .. ":batch_used") or 0
-    ngx.log(ngx.ERR, "Batch quota: ", batch_quota, " Batch used: ", batch_used)
 
     if batch_quota == 0 then
         -- Fetch new batch quota based on remaining tokens
@@ -150,8 +144,6 @@ local function rate_limit()
         shared_dict:set(token .. ":batch_used", 0, ttl)
         batch_used = 0
     end
-    
-    ngx.log(ngx.ERR, "Batch quota: ", batch_quota, " Batch used: ", batch_used)
 
     if batch_used >= batch_quota then
         -- Batch quota exceeded, fetch new batch quota based on remaining tokens

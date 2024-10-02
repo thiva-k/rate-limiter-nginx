@@ -58,9 +58,8 @@ local function rate_limit()
     if bucket_level < bucket_capacity then
         -- Add requested tokens and update Redis state
         bucket_level = bucket_level + requested_tokens
-        last_access = now
         red:set(tokens_key, bucket_level, "EX", ttl)
-        red:set(last_access_key, last_access, "EX", ttl)
+        red:set(last_access_key, now, "EX", ttl)
         ngx.say("Request allowed")
     else
         -- Bucket is full, rate limit the request
@@ -70,3 +69,5 @@ end
 
 -- Run the rate limiter
 rate_limit()
+
+-- TODO: Add redis pipeline, Add error hanlding for redis operations

@@ -32,7 +32,7 @@ local function get_token()
     return token
 end
 
--- Build the token bucket Lua script
+-- Lua script to implement token bucket algorithm
 local function get_token_bucket_script()
     return [[
         local tokens_key = KEYS[1]

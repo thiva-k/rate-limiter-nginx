@@ -80,7 +80,6 @@ local function rate_limit()
     local last_tokens = tonumber(red:get(tokens_key)) or 0
     local now = ngx.now() * 1000 -- Current timestamp in milliseconds
     local last_access = tonumber(red:get(last_access_key)) or now
-    ngx.log(ngx.ERR, "Last access: ", last_access, ", Last tokens: ", last_tokens, ", Now: ", now)
 
     -- Calculate the number of tokens that have leaked due to the elapsed time since the last leak
     local elapsed = math.max(0, now - last_access)
@@ -94,16 +93,15 @@ local function rate_limit()
     local allowed = bucket_level < bucket_capacity
     if allowed then
         bucket_level = bucket_level + requested_tokens
-        last_access = now
         -- Update state in Redis
         red:set(tokens_key, bucket_level, "EX", ttl)
-        red:set(last_access_key, last_access, "EX", ttl)
+        red:set(last_access_key, now, "EX", ttl)
+        release_lock(red, lock_key)
         ngx.say("Request allowed")
     else
+        release_lock(red, lock_key)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
     end
-
-    -- Release the lock
     release_lock(red, lock_key)
 end
 

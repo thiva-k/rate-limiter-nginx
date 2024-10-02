@@ -95,13 +95,10 @@ local function rate_limit()
         new_tokens = new_tokens - requested_tokens
         red:set(tokens_key, new_tokens, "EX", ttl)
         red:set(last_access_key, now, "EX", ttl)
-
         release_lock(red, lock_key)
-        
         ngx.say("Request allowed")
     else
         release_lock(red, lock_key)
-        -- Not enough tokens, rate limit the request
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
     end
 end
