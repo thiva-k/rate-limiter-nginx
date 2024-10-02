@@ -69,7 +69,7 @@ local function rate_limit()
 
     -- Try to acquire the lock with retries
     if not acquire_lock(red, lock_key) then
-        ngx.exit(ngx.HTTP_SERVICE_UNAVAILABLE) -- 503
+        ngx.exit(ngx.HTTP_SERVICE_UNAVAILABLE) -- TODO: have to discuss
     end
 
     -- Redis keys for token count and last access time
@@ -80,7 +80,6 @@ local function rate_limit()
     local last_tokens = tonumber(red:get(tokens_key)) or bucket_capacity
     local now = ngx.now() * 1000 -- Current timestamp in milliseconds
     local last_access = tonumber(red:get(last_access_key)) or now
-    ngx.log(ngx.ERR, "Last access: ", last_access, ", Last tokens: ", last_tokens, ", Now: ", now)
 
     -- Calculate the number of tokens to be added due to the elapsed time since the last access
     local elapsed = math.max(0, now - last_access)
@@ -96,14 +95,15 @@ local function rate_limit()
         new_tokens = new_tokens - requested_tokens
         red:set(tokens_key, new_tokens, "EX", ttl)
         red:set(last_access_key, now, "EX", ttl)
+
+        release_lock(red, lock_key)
+        
         ngx.say("Request allowed")
     else
+        release_lock(red, lock_key)
         -- Not enough tokens, rate limit the request
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
     end
-
-    -- Release the lock
-    release_lock(red, lock_key)
 end
 
 -- Run the rate limiter

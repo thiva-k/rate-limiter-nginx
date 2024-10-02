@@ -1,7 +1,7 @@
 local redis = require "resty.redis"
 local resty_lock = require "resty.lock"
 
--- Redis configuration
+-- Redis connection settings
 local redis_host = "redis"
 local redis_port = 6379
 local redis_timeout = 1000 -- 1 second timeout
@@ -32,7 +32,7 @@ local function init_redis()
     return red
 end
 
--- Fetch and validate the token from the URL parameter
+-- Helper function to get URL token
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
@@ -42,7 +42,7 @@ local function get_token()
     return token
 end
 
--- Build the token bucket Lua script with batch quota
+-- Lua script to reduce the batch quota and update the token bucket
 local function get_token_bucket_script()
     return [[
         local tokens_key = KEYS[1]
@@ -104,12 +104,12 @@ local function execute_token_bucket(red, sha, tokens_key, last_access_key, bucke
     return result
 end
 
--- Main function for rate limiting
+-- Main rate limiting logic
 local function rate_limit()
     local red = init_redis() -- Initialize Redis connection
     local token = get_token() -- Fetch and validate token
 
-    -- Redis keys
+    -- Redis keys for token count and last access time
     local tokens_key = token .. ":tokens"
     local last_access_key = token .. ":last_access"
 
