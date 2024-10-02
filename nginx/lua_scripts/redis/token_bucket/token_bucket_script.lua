@@ -1,14 +1,14 @@
 local redis = require "resty.redis"
 
--- Redis configuration
+-- Redis connection settings
 local redis_host = "redis"
 local redis_port = 6379
 local redis_timeout = 1000 -- 1 second timeout
 
 -- Token bucket parameters
-local bucket_capacity = 10
-local refill_rate = 1 -- tokens per second
-local requested_tokens = 1 -- tokens required per request
+local bucket_capacity = 10 -- Maximum tokens in the bucket
+local refill_rate = 1 -- Tokens generated per second
+local requested_tokens = 1 -- Number of tokens required per request
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -22,7 +22,7 @@ local function init_redis()
     return red
 end
 
--- Fetch and validate the token from the URL parameter
+-- Helper function to get URL token
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
@@ -32,7 +32,7 @@ local function get_token()
     return token
 end
 
--- Build the token bucket Lua script
+-- Lua script to implement token bucket algorithm
 local function get_token_bucket_script()
     return [[
         local tokens_key = KEYS[1]
@@ -98,16 +98,16 @@ local function execute_token_bucket(red, sha, tokens_key, last_access_key, bucke
     return result
 end
 
--- Main function for rate limiting
+-- Main rate limiting logic
 local function rate_limit()
     local red = init_redis() -- Initialize Redis connection
-    local token = get_token() -- Fetch and validate token
+    local token = get_token() -- Fetch the token from URL parameters
 
-    -- Redis keys
+    -- Redis keys for token count and last access time
     local tokens_key = token .. ":tokens"
     local last_access_key = token .. ":last_access"
 
-    -- Calculate TTL based on bucket capacity and refill rate
+     -- Calculate TTL for the Redis keys
     local ttl = math.floor(bucket_capacity / refill_rate * 2)
 
     -- Load or retrieve the Lua script SHA
