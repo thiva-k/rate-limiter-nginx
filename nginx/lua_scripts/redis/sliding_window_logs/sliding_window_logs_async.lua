@@ -198,7 +198,7 @@ local function main()
     end
 
     local lock = resty_lock:new("my_locks")
-    local elapsed, err = lock:lock(redis_key)
+    local elapsed, err = lock:lock(redis_key, { timeout = 10 })
     if not elapsed then
         ngx.log(ngx.ERR, "Failed to acquire lock: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)

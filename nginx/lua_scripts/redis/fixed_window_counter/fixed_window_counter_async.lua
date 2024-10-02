@@ -208,41 +208,33 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Use a lock to ensure only one worker fetches the quota at a time
+    -- Use a lock with TTL to ensure only one worker fetches the quota at a time
     local lock = resty_lock:new("my_locks")
-    local elapsed, err = lock:lock(redis_key)
+    local elapsed, err = lock:lock(redis_key, { timeout = 10 })  -- 10 seconds TTL
     if not elapsed then
         ngx.log(ngx.ERR, "Failed to acquire lock: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Ensure lock is always released
-    local ok, err = pcall(function()
-        -- Process batch quota
-        local batch_quota = process_batch_quota(red, shared_dict, redis_key, lock)
-        if not batch_quota then
-            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-        end
-
-        -- Check if the request should be allowed
-        local allowed = increment_and_check(shared_dict, redis_key, batch_quota, red)
-
-        -- If not allowed, return 429 Too Many Requests
-        if not allowed then
-            ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
-        end
-    end)
-
-    -- Release the lock
-    local unlock_ok, unlock_err = lock:unlock()
-    if not unlock_ok then
-        ngx.log(ngx.ERR, "Failed to unlock: ", unlock_err)
+    -- Process batch quota
+    local batch_quota = process_batch_quota(red, shared_dict, redis_key, lock)
+    if not batch_quota then
+        lock:unlock()
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- If there was an error in the main logic, exit with an error
+    -- Check if the request should be allowed
+    local allowed = increment_and_check(shared_dict, redis_key, batch_quota, red)
+
+    -- Release the lock
+    local ok, err = lock:unlock()
     if not ok then
-        ngx.log(ngx.ERR, "Error in rate limiting: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        ngx.log(ngx.ERR, "Failed to unlock: ", err)
+    end
+
+    -- If not allowed, return 429 Too Many Requests
+    if not allowed then
+        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     end
 end
 
