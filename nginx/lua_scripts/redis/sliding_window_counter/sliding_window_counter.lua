@@ -3,10 +3,11 @@ local redis = require "resty.redis"
 -- Define the rate limiter parameters
 local max_count = 15 -- Max requests allowed in the window
 local window_length_secs = 10 -- Window size in seconds
+local granularity = 1 -- Size of each small interval in seconds
 
 -- Function to get the current time in milliseconds
-local function get_current_time_ms()
-    return ngx.now() * 1000
+local function get_current_time_secs()
+    return ngx.now()
 end
 
 -- Initialize Redis
@@ -26,41 +27,45 @@ local function init_redis()
     return red
 end
 
--- Function to check if the request is allowed (sliding window algorithm)
+-- Function to check if the request is allowed (sliding window counter algorithm)
 local function allowed(token)
     local red = init_redis()
 
-    -- Construct the Redis key using the token
-    local redis_key = "sliding_window_log:" .. token
-    local now = get_current_time_ms()
+    -- Current time in seconds (rounded to nearest interval)
+    local now = get_current_time_secs()
+    local current_bucket = math.floor(now / granularity)
 
-    -- Get the current sliding window for the user
-    local sliding_window, err = red:lrange(redis_key, 0, -1)
-    if err then
-        ngx.log(ngx.ERR, "Failed to get sliding window from Redis: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
+    -- Construct Redis keys for the sliding window buckets
+    local redis_key_prefix = "sliding_window_counter:" .. token
 
-    -- Remove timestamps that are outside the window
-    for _, timestamp in ipairs(sliding_window) do
-        if tonumber(timestamp) + (window_length_secs * 1000) < now then
-            red:lpop(redis_key) -- Remove old timestamps
-        else
-            break -- Since Redis lists are ordered, stop when we reach valid timestamps
+    -- Sum up requests from buckets within the sliding window
+    local total_requests = 0
+    for i = 0, window_length_secs / granularity - 1 do
+        local bucket_key = redis_key_prefix .. ":" .. (current_bucket - i)
+        local count, err = red:get(bucket_key)
+        if err then
+            ngx.log(ngx.ERR, "Failed to get request count from Redis: ", err)
+            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
+
+        total_requests = total_requests + (tonumber(count) or 0)
     end
 
     -- Check if the number of requests exceeds the rate limit
-    local request_count = red:llen(redis_key)
-    if request_count >= max_count then
+    if total_requests >= max_count then
         -- Too many requests in the current window, reject
         return false
     else
-        -- Add the current request timestamp to the sliding window
-        red:rpush(redis_key, now)
+        -- Increment the counter for the current bucket
+        local current_bucket_key = redis_key_prefix .. ":" .. current_bucket
+        local count, err = red:incr(current_bucket_key)
+        if err then
+            ngx.log(ngx.ERR, "Failed to increment request count: ", err)
+            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        end
 
-        -- Set expiration time for the key to ensure Redis memory cleanup
-        red:expire(redis_key, window_length_secs)
+        -- Set the expiration for this bucket to the window size
+        red:expire(current_bucket_key, window_length_secs)
         return true
     end
 end
