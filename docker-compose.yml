@@ -1,4 +1,3 @@
-
 version: '3'
 services:
   load_balancer1:
@@ -17,7 +16,7 @@ services:
       - redis
     volumes:
       - ./logs/nginx/load_balancer1:/var/log/nginx
-      - ./docker/lua_scripts:/usr/local/openresty/nginx/lua_scripts
+      - ./docker/load_balancer1:/usr/local/openresty/nginx/lua_scripts
   load_balancer2:
     build:
       context: ./nginx
@@ -34,7 +33,7 @@ services:
       - redis
     volumes:
       - ./logs/nginx/load_balancer2:/var/log/nginx
-
+      - ./docker/load_balancer2:/usr/local/openresty/nginx/lua_scripts
   redis:
     image: redis/redis-stack:latest
     ports:
