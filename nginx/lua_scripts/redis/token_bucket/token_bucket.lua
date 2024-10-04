@@ -13,12 +13,13 @@ local requested_tokens = 1 -- Number of tokens required per request
 -- Helper function to initialize Redis connection
 local function init_redis()
     local red = redis:new()
-    red:set_timeout(redis_timeout)
+    red:set_timeout(redis_timeout) -- 1 second timeout
+
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR) -- 500
+        return nil, err
     end
+
     return red
 end
 
@@ -26,25 +27,44 @@ end
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
-        ngx.log(ngx.ERR, "Token not provided")
-        ngx.exit(ngx.HTTP_BAD_REQUEST) -- 400
+        return nil, "Token not provided"
     end
     return token
 end
 
 -- Main rate limiting logic
 local function rate_limit()
-    local red = init_redis() -- Initialize Redis connection
-    local token = get_token() -- Fetch the token from URL parameters
+    -- Initialize Redis connection
+    local red, err = init_redis()
+    if not red then
+        ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    -- Get token from the request URL
+    local token, err = get_token()
+    if not token then
+        ngx.log(ngx.ERR, "Failed to get token: ", err)
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
 
     -- Redis keys for token count and last access time
-    local tokens_key = token .. ":tokens"
-    local last_access_key = token .. ":last_access"
+    local tokens_key = "rate_limit:" .. token .. ":tokens"
+    local last_access_key = "rate_limit:" .. token .. ":last_access"
 
-    -- Fetch current state from Redis
-    local last_tokens = tonumber(red:get(tokens_key)) or bucket_capacity
+    -- Use Redis pipeline to fetch current state
+    red:init_pipeline()
+    red:get(tokens_key)
+    red:get(last_access_key)
+    local results, err = red:commit_pipeline()
+    if not results then
+        ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
     local now = ngx.now() * 1000 -- Current timestamp in milliseconds
-    local last_access = tonumber(red:get(last_access_key)) or now
+    last_tokens = tonumber(results[1]) or bucket_capacity
+    last_access = tonumber(results[2]) or now
 
     -- Calculate the number of tokens to be added due to the elapsed time since the last access
     local elapsed = math.max(0, now - last_access)
@@ -58,8 +78,16 @@ local function rate_limit()
     if new_tokens >= requested_tokens then
         -- Deduct tokens and update Redis state
         new_tokens = new_tokens - requested_tokens
+
+        red:init_pipeline()
         red:set(tokens_key, new_tokens, "EX", ttl)
         red:set(last_access_key, now, "EX", ttl)
+        local results, err = red:commit_pipeline()
+        if not results then
+            ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
+            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        end
+
         ngx.say("Request allowed")
     else
         -- Not enough tokens, rate limit the request
@@ -69,5 +97,3 @@ end
 
 -- Run the rate limiter
 rate_limit()
-
--- TODO: Add redis pipeline, Add error hanlding for redis operations
