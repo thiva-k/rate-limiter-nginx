@@ -13,8 +13,7 @@ local function init_redis()
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-        return nil, err
+        return nil, "Failed to connect to Redis: " .. err
     end
 
     return red
@@ -24,7 +23,6 @@ end
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
-        ngx.log(ngx.ERR, "Token not provided")
         return nil, "Token not provided"
     end
     return token
@@ -34,8 +32,7 @@ end
 local function get_current_count(red, redis_key)
     local count, err = red:get(redis_key)
     if err then
-        ngx.log(ngx.ERR, "Failed to get counter from Redis: ", err)
-        return nil, err
+        return nil, "Failed to get counter from Redis: " .. err
     end
 
     -- Convert count to number or set to 0 if it doesn't exist
@@ -47,29 +44,25 @@ local function perform_rate_limiting_transaction(red, redis_key)
     -- Use Redis MULTI to begin a transaction
     local ok, err = red:multi()
     if not ok then
-        ngx.log(ngx.ERR, "Failed to start Redis transaction: ", err)
-        return nil, err
+        return nil, "Failed to start Redis transaction: " .. err
     end
 
     -- Increment the counter
     ok, err = red:incr(redis_key)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to increment counter in Redis: ", err)
-        return nil, err
+        return nil, "Failed to increment counter in Redis: " .. err
     end
 
     -- Set expiration time only if it's a new key (NX flag)
     ok, err = red:expire(redis_key, window_size, "NX")
     if not ok then
-        ngx.log(ngx.ERR, "Failed to set expiration for key in Redis: ", err)
-        return nil, err
+        return nil, "Failed to set expiration for key in Redis: " .. err
     end
 
     -- Execute the Redis transaction
     local results, err = red:exec()
     if not results then
-        ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
-        return nil, err
+        return nil, "Failed to execute Redis transaction: " .. err
     end
 
     return results
@@ -80,12 +73,14 @@ local function check_rate_limit()
     -- Initialize Redis connection
     local red, err = init_redis()
     if not red then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
     -- Get token from URL parameters
     local token, err = get_token()
     if not token then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
@@ -95,6 +90,7 @@ local function check_rate_limit()
     -- Get current count
     local count, err = get_current_count(red, redis_key)
     if not count then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
@@ -106,6 +102,7 @@ local function check_rate_limit()
     -- Perform rate limiting transaction
     local results, err = perform_rate_limiting_transaction(red, redis_key)
     if not results then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 end
