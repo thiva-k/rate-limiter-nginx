@@ -101,8 +101,6 @@ local function rate_limit()
     last_tokens = tonumber(results[1]) or bucket_capacity
     last_access = tonumber(results[2]) or now
 
-    ngx.log(ngx.ERR, "last_tokens: ", last_tokens , " last_access: ", last_access)
-
     -- Calculate the number of tokens to be added due to the elapsed time since the last access
     local elapsed = math.max(0, now - last_access)
     local add_tokens = math.floor(elapsed * refill_rate / 1000)
