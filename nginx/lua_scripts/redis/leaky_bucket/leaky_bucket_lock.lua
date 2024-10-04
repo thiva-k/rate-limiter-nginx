@@ -45,7 +45,6 @@ local function acquire_lock(red, lock_key)
         if res == "OK" then
             return true
         elseif err then
-            ngx.log(ngx.ERR, "Failed to acquire lock: ", err)
             return false
         end
         -- Delay before retrying
@@ -80,6 +79,7 @@ local function rate_limit()
 
     -- Try to acquire the lock with retries
     if not acquire_lock(red, lock_key) then
+        ngx.log(ngx.ERR, "Failed to acquire lock")
         ngx.exit(ngx.HTTP_SERVICE_UNAVAILABLE) -- 503
     end
 
@@ -94,6 +94,7 @@ local function rate_limit()
     local results, err = red:commit_pipeline()
     if not results then
         ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
+        release_lock(red, lock_key)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
@@ -106,7 +107,7 @@ local function rate_limit()
     local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
     local bucket_level = math.max(0, last_tokens - leaked_tokens)
 
-     -- Calculate TTL for the Redis keys
+    -- Calculate TTL for the Redis keys
     local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
     -- Check if current token level is less than capacity
@@ -120,6 +121,7 @@ local function rate_limit()
         local results, err = red:commit_pipeline()
         if not results then
             ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
+            release_lock(red, lock_key)
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
 
@@ -129,7 +131,6 @@ local function rate_limit()
         release_lock(red, lock_key)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
     end
-    release_lock(red, lock_key)
 end
 
 -- Run the rate limiter

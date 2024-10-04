@@ -17,7 +17,6 @@ local min_batch_quota = 1
 local function init_shared_dict()
     local shared_dict = ngx.shared.rate_limit_dict
     if not shared_dict then
-        ngx.log(ngx.ERR, "Failed to initialize shared dictionary")
         return nil
     end
     return shared_dict
@@ -106,6 +105,28 @@ local function execute_token_bucket(red, sha, tokens_key, last_access_key, bucke
     return result
 end
 
+-- Function to fetch and set batch quota
+local function fetch_batch_quota(token, shared_dict, remaining_tokens)
+    local batch_quota
+    if remaining_tokens == 0 then
+        batch_quota = 0
+    else
+        batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
+    end
+
+    local ok, err = shared_dict:set(token .. ":batch_quota", batch_quota, ttl)
+    if not ok then
+        return nil, "Failed to set batch_quota in shared_dict: " .. err
+    end
+
+    ok, err = shared_dict:set(token .. ":batch_used", 0, ttl)
+    if not ok then
+        return nil, "Failed to set batch_used in shared_dict: " .. err
+    end
+
+    return batch_quota, nil
+end
+
 -- Main rate limiting logic
 local function rate_limit()
     -- Initialize Redis connection
@@ -118,9 +139,10 @@ local function rate_limit()
     -- Initialize shared dictionary
     local shared_dict = init_shared_dict()
     if not shared_dict then
+        ngx.log(ngx.ERR, "Failed to initialize shared dictionary")
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
-    
+
     -- Get token from the request URL
     local token, err = get_token()
     if not token then
@@ -158,64 +180,38 @@ local function rate_limit()
         -- Fetch new batch quota based on remaining tokens
         local remaining_tokens, err = execute_token_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, 0, ttl)
         if not remaining_tokens then
-            ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
-            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-        end
-
-        if remaining_tokens == 0 then
-            batch_quota = 0
-        else 
-            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
-        end
-
-        local ok, err = shared_dict:set(token .. ":batch_quota", batch_quota, ttl)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to set batch_quota in shared_dict: ", err)
+            ngx.log(ngx.ERR, err)
             lock:unlock() -- Release the lock
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
 
-        ok, err = shared_dict:set(token .. ":batch_used", 0, ttl)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to set batch_used in shared_dict: ", err)
+        batch_quota, err = fetch_batch_quota(token, shared_dict, remaining_tokens)
+        if err then
+            ngx.log(ngx.ERR, err)
             lock:unlock() -- Release the lock
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
-
         batch_used = 0
     end
-    
+
     if batch_used >= batch_quota then
         -- Batch quota exceeded, fetch new batch quota based on remaining tokens
         local remaining_tokens, err = execute_token_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, batch_used, ttl)
         if not remaining_tokens then
-            ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
-            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-        end
-
-        if remaining_tokens == 0 then
-            batch_quota = 0
-        else 
-            batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
-        end
-
-        local ok, err = shared_dict:set(token .. ":batch_quota", batch_quota, ttl)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to set batch_quota in shared_dict: ", err)
+            ngx.log(ngx.ERR, err)
             lock:unlock() -- Release the lock
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
 
-        ok, err = shared_dict:set(token .. ":batch_used", 0, ttl)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to set batch_used in shared_dict: ", err)
+        batch_quota, err = fetch_batch_quota(token, shared_dict, remaining_tokens)
+        if err then
+            ngx.log(ngx.ERR, err)
             lock:unlock() -- Release the lock
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
-
         batch_used = 0
     end
-    
+
     if batch_used < batch_quota then
         local new_batch_used, err = shared_dict:incr(token .. ":batch_used", 1)
         if not new_batch_used then
@@ -226,6 +222,7 @@ local function rate_limit()
 
         lock:unlock() -- Release the lock
         ngx.say("Request allowed")
+        ngx.exit(ngx.HTTP_OK)
     else
         lock:unlock() -- Release the lock
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429

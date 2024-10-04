@@ -45,7 +45,6 @@ local function acquire_lock(red, lock_key)
         if res == "OK" then
             return true
         elseif err then
-            ngx.log(ngx.ERR, "Failed to acquire lock: ", err)
             return false
         end
         -- Delay before retrying
@@ -80,6 +79,7 @@ local function rate_limit()
 
     -- Try to acquire the lock with retries
     if not acquire_lock(red, lock_key) then
+        ngx.log(ngx.ERR, "Failed to acquire lock")
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
@@ -94,6 +94,7 @@ local function rate_limit()
     local results, err = red:commit_pipeline()
     if not results then
         ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
+        release_lock(red, lock_key)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
@@ -120,9 +121,10 @@ local function rate_limit()
         local results, err = red:commit_pipeline()
         if not results then
             ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
+            release_lock(red, lock_key)
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
-        
+
         release_lock(red, lock_key)
         ngx.say("Request allowed")
     else
