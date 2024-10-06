@@ -33,7 +33,7 @@ local function get_token()
 end
 
 -- Lua script to implement leaky bucket algorithm
-local function get_leaky_bucket_script()
+local function get_rate_limit_script()
     return [[
         local tokens_key = KEYS[1]
         local last_access_key = KEYS[2]
@@ -50,7 +50,7 @@ local function get_leaky_bucket_script()
         local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
         local bucket_level = math.max(0, last_tokens - leaked_tokens)
 
-        if bucket_level < bucket_capacity then
+        if bucket_level + requested <= bucket_capacity then
             bucket_level = bucket_level + requested
             redis.call("set", tokens_key, bucket_level, "EX", ttl)
             redis.call("set", last_access_key, now, "EX", ttl)
@@ -76,7 +76,7 @@ local function load_script_to_redis(red, script)
 end
 
 -- Execute the leaky bucket logic atomically
-local function execute_leaky_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
+local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
     local now = ngx.now() * 1000 -- Current time in milliseconds
     local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, leak_rate, now, requested_tokens, ttl)
 
@@ -84,13 +84,13 @@ local function execute_leaky_bucket(red, sha, tokens_key, last_access_key, bucke
         if err:find("NOSCRIPT", 1, true) then
             -- Script not found in Redis, reload it
             ngx.shared.my_cache:delete("rate_limit_script_sha")
-            sha, err = load_script_to_redis(red, get_leaky_bucket_script())
+            sha, err = load_script_to_redis(red, get_rate_limit_script())
             if not sha then
                 return nil, err
             end
             result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, leak_rate, now, requested_tokens, ttl)
         end
-        
+
         if err then
             return nil, err
         end
@@ -123,7 +123,7 @@ local function rate_limit()
     local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
     -- Load or retrieve the Lua script SHA
-    local script = get_leaky_bucket_script()
+    local script = get_rate_limit_script()
     local sha, err = load_script_to_redis(red, script)
     if not sha then
         ngx.log(ngx.ERR, "Failed to load script: ", err)
@@ -131,12 +131,12 @@ local function rate_limit()
     end
 
     -- Execute leaky bucket logic
-    local result, err = execute_leaky_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
+    local result, err = execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
     if not result then
         ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
-    
+
     -- Handle the result
     if result == 1 then
         ngx.say("Request allowed")

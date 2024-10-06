@@ -60,13 +60,13 @@ end
 
 -- Function to load the script into Redis if not already cached
 local function load_script_to_redis(red, script)
-    local sha = ngx.shared.my_cache:get("sorted_set_rate_limit_script_sha")
+    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
     if not sha then
         local new_sha, err = red:script("LOAD", script)
         if not new_sha then
             return nil, err
         end
-        ngx.shared.my_cache:set("sorted_set_rate_limit_script_sha", new_sha)
+        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
         sha = new_sha
     end
     return sha
@@ -78,7 +78,7 @@ local function execute_sorted_set_rate_limit(red, sha, sorted_set_key, now, wind
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
-        ngx.shared.my_cache:delete("sorted_set_rate_limit_script_sha")
+        ngx.shared.my_cache:delete("rate_limit_script_sha")
         sha, err = load_script_to_redis(red, get_sorted_set_rate_limit_script())
         if not sha then
             return nil, err
@@ -109,15 +109,6 @@ local function rate_limit()
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
-    -- Redis sorted set key for tracking request timestamps
-    local sorted_set_key = "rate_limit:" .. token .. ":timestamps"
-
-    local now = ngx.now() -- Current timestamp in seconds
-    local window_start = now - 1 -- 1 second sliding window
-
-    -- Calculate TTL for the Redis key
-    local ttl = 10 -- Set a reasonable TTL for the sorted set (e.g., 10 seconds)
-
     -- Load or retrieve the Lua script SHA
     local script = get_sorted_set_rate_limit_script()
     local sha, err = load_script_to_redis(red, script)
@@ -125,6 +116,15 @@ local function rate_limit()
         ngx.log(ngx.ERR, "Failed to load script: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
+
+    -- Redis sorted set key for tracking request timestamps
+    local sorted_set_key = "rate_limit:" .. token .. ":timestamps"
+
+    -- Calculate TTL for the Redis key
+    local ttl = math.floor(bucket_capacity / refill_rate * 2)
+    local window_size = 1 / refill_rate
+    local now = ngx.now() -- Current timestamp in seconds
+    local window_start = now - window_size -- 1 second sliding window
 
     -- Execute the rate limiting logic atomically
     local result, err = execute_sorted_set_rate_limit(red, sha, sorted_set_key, now, window_start, bucket_capacity, ttl)

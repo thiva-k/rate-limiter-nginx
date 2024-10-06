@@ -77,11 +77,11 @@ local function rate_limit()
     local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
     -- Check if current token level is less than capacity
-    if bucket_level < bucket_capacity then
+    if bucket_level + requested_tokens <= bucket_capacity then
         -- Add requested tokens and update Redis state
         bucket_level = bucket_level + requested_tokens
 
-         red:init_pipeline()
+        red:init_pipeline()
         red:set(tokens_key, bucket_level, "EX", ttl)
         red:set(last_access_key, now, "EX", ttl)
         local results, err = red:commit_pipeline()

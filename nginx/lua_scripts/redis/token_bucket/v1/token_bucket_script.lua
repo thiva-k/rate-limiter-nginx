@@ -33,7 +33,7 @@ local function get_token()
 end
 
 -- Redis script to implement token bucket algorithm
-local function get_token_bucket_script()
+local function get_rate_limit_script()
     return [[
         local tokens_key = KEYS[1]
         local last_access_key = KEYS[2]
@@ -76,14 +76,14 @@ local function load_script_to_redis(red, script)
 end
 
 -- Execute the token bucket logic atomically
-local function execute_token_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
     local now = ngx.now() * 1000 -- Current time in milliseconds
     local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, now, requested_tokens, ttl)
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
         ngx.shared.my_cache:delete("rate_limit_script_sha")
-        sha, err = load_script_to_redis(red, get_token_bucket_script())
+        sha, err = load_script_to_redis(red, get_rate_limit_script())
         if not sha then
             return nil, err
         end
@@ -121,7 +121,7 @@ local function rate_limit()
     local ttl = math.floor(bucket_capacity / refill_rate * 2)
 
     -- Load or retrieve the Lua script SHA
-    local script = get_token_bucket_script()
+    local script = get_rate_limit_script()
     local sha, err = load_script_to_redis(red, script)
     if not sha then
         ngx.log(ngx.ERR, "Failed to load script: ", err)
@@ -129,7 +129,7 @@ local function rate_limit()
     end
 
     -- Execute token bucket logic
-    local result, err = execute_token_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+    local result, err = execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
     if not result then
         ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)

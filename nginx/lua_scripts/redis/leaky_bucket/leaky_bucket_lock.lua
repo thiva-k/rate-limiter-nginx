@@ -111,8 +111,7 @@ local function rate_limit()
     local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
     -- Check if current token level is less than capacity
-    local allowed = bucket_level < bucket_capacity
-    if allowed then
+    if bucket_level + requested_tokens <= bucket_capacity then
         bucket_level = bucket_level + requested_tokens
 
         red:init_pipeline()
