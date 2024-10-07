@@ -17,8 +17,7 @@ local function init_redis()
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-        return nil, err
+        return nil, "Failed to connect to Redis: " .. err
     end
 
     return red
@@ -28,7 +27,6 @@ end
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
-        ngx.log(ngx.ERR, "Token not provided")
         return nil, "Token not provided"
     end
     return token
@@ -42,14 +40,12 @@ local function fetch_batch_quota(red, redis_key)
     -- Remove old entries and count current entries
     local removed, err = red:zremrangebyscore(redis_key, 0, window_start)
     if err then
-        ngx.log(ngx.ERR, "Failed to remove old entries: ", err)
-        return nil, nil
+        return nil, "Failed to remove old entries: " .. err
     end
 
     local count, err = red:zcard(redis_key)
     if err then
-        ngx.log(ngx.ERR, "Failed to count entries: ", err)
-        return nil, nil
+        return nil, "Failed to count entries: " .. err
     end
 
     -- Calculate remaining quota and batch size
@@ -68,23 +64,20 @@ end
 local function update_redis_with_exhausted_batch(red, redis_key, timestamps)
     local multi_result, err = red:multi()
     if not multi_result then
-        ngx.log(ngx.ERR, "Failed to start Redis transaction: ", err)
-        return false
+        return false, "Failed to start Redis transaction: " .. err
     end
 
     for _, ts in ipairs(timestamps) do
         local ok, err = red:zadd(redis_key, ts, ts)
         if not ok then
-            ngx.log(ngx.ERR, "Failed to add timestamp to Redis: ", err)
             red:discard()
-            return false
+            return false, "Failed to add timestamp to Redis: " .. err
         end
     end
 
     local exec_result, err = red:exec()
     if not exec_result then
-        ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
-        return false
+        return false, "Failed to execute Redis transaction: " .. err
     end
 
     return true
@@ -99,16 +92,16 @@ local function handle_batch_quota(shared_dict, redis_key, red)
     if not batch_quota or batch_quota == 0 or not timestamps_json then
         -- Update Redis with the previously exhausted batch if it exists
         if #timestamps > 0 then
-            local success = update_redis_with_exhausted_batch(red, redis_key, timestamps)
+            local success, err = update_redis_with_exhausted_batch(red, redis_key, timestamps)
             if not success then
-                return nil, "Failed to update Redis with exhausted batch"
+                return nil, err
             end
         end
 
         -- Fetch new batch quota
         batch_quota, ttl = fetch_batch_quota(red, redis_key)
         if batch_quota == nil then
-            return nil, "Failed to fetch batch quota"
+            return nil, ttl  -- ttl contains error message in this case
         end
 
         if batch_quota > 0 then
@@ -153,7 +146,7 @@ local function process_request(shared_dict, redis_key, red, batch_quota, timesta
             allowed = true
         else
             -- Batch is exhausted, update Redis and fetch a new batch
-            local success = update_redis_with_exhausted_batch(red, redis_key, timestamps)
+            local success, err = update_redis_with_exhausted_batch(red, redis_key, timestamps)
             if success then
                 -- Fetch new batch quota
                 batch_quota, ttl = fetch_batch_quota(red, redis_key)
@@ -170,6 +163,8 @@ local function process_request(shared_dict, redis_key, red, batch_quota, timesta
                     end
                     allowed = true
                 end
+            else
+                return nil, err
             end
         end
     end
@@ -181,11 +176,13 @@ end
 local function main()
     local red, err = init_redis()
     if not red then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
     local token, err = get_token()
     if not token then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
@@ -206,18 +203,22 @@ local function main()
 
     local batch_quota, timestamps = handle_batch_quota(shared_dict, redis_key, red)
     if not batch_quota then
+        ngx.log(ngx.ERR, "Failed to handle batch quota: ", timestamps)  -- timestamps contains error message in this case
         lock:unlock()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
     local allowed, err = process_request(shared_dict, redis_key, red, batch_quota, timestamps)
     if err then
-        ngx.log(ngx.ERR, err)
+        ngx.log(ngx.ERR, "Failed to process request: ", err)
         lock:unlock()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    lock:unlock()
+    local ok, err = lock:unlock()
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to release lock: ", err)
+    end
 
     if not allowed then
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)

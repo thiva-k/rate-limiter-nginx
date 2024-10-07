@@ -12,8 +12,7 @@ local function init_redis()
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-        return nil, err
+        return nil, "Failed to connect to Redis: " .. err
     end
 
     return red
@@ -22,7 +21,6 @@ end
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
-        ngx.log(ngx.ERR, "Token not provided")
         return nil, "Token not provided"
     end
     return token
@@ -54,8 +52,7 @@ local function get_script_sha(red)
         ]]
         local new_sha, err = red:script("LOAD", redis_script)
         if not new_sha then
-            ngx.log(ngx.ERR, "Failed to load script: ", err)
-            return nil, err
+            return nil, "Failed to load script: " .. err
         end
         ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
         sha = new_sha
@@ -82,6 +79,7 @@ local function check_rate_limit()
     -- Get the script SHA
     local sha, err = get_script_sha(red)
     if not sha then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
@@ -97,6 +95,7 @@ local function check_rate_limit()
             ngx.shared.my_cache:delete("rate_limit_script_sha")
             sha, err = get_script_sha(red)
             if not sha then
+                ngx.log(ngx.ERR, err)
                 ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
             end
             result, err = red:evalsha(sha, 1, key, current_time, window_size, rate_limit)
