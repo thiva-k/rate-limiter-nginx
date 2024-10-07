@@ -104,7 +104,7 @@ local function rate_limit()
 
     -- Calculate the number of tokens to be added due to the elapsed time since the last access
     local elapsed = math.max(0, now - last_access)
-    local add_tokens = math.floor(elapsed * refill_rate / 1000)
+    local add_tokens = elapsed * refill_rate / 1000
     local new_tokens = math.min(bucket_capacity, last_tokens + add_tokens)
 
     -- Calculate TTL for the Redis keys

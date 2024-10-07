@@ -47,7 +47,7 @@ local function get_rate_limit_script()
         local last_access = tonumber(redis.call("get", last_access_key)) or now
 
         local elapsed = math.max(0, now - last_access)
-        local add_tokens = math.floor(elapsed * refill_rate / 1000)
+        local add_tokens = elapsed * refill_rate / 1000
         local new_tokens = math.min(bucket_capacity, last_tokens + add_tokens)
 
         if new_tokens >= requested then
