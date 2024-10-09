@@ -1,11 +1,10 @@
 local redis = require "resty.redis"
-local cjson = require "cjson"  
+local cjson = require "cjson"
 
 -- Define the rate limiter parameters
-local window_size = 15 -- Window size in seconds
-local request_limit = 10 -- Max requests allowed in the window
-local number_of_sub_windows = 5 -- Number of subwindows (can be adjusted for granularity)
-local sub_window_size = window_size / number_of_sub_windows -- Size of each subwindow
+local window_size = 60 -- Total window size in seconds
+local request_limit = 100 -- Max requests allowed in the window
+local sub_window_count = 4 -- Number of subwindows
 
 -- Initialize Redis connection
 local redis_host = "redis"
@@ -22,64 +21,40 @@ end
 
 -- Function to check if the request is allowed (sliding window counter algorithm)
 local function allowed(token)
-    local now = ngx.now()
-    local redis_key_prefix = "sliding_window_counter:" .. token
+    local now = ngx.time()
+    local sub_window_size = window_size / sub_window_count -- Calculate sub-window size based on count
+    local current_window_key = math.floor(now / sub_window_size) * sub_window_size -- Current sub-window key
+    local current_count, err = red:get("rate_limit:" .. token .. ":" .. current_window_key)
+    current_count = tonumber(current_count) or 0
 
-    -- Get the last access time from Redis
-    local last_access_time, err = red:get(redis_key_prefix .. ":last_access")
-    if last_access_time == ngx.null then
-        last_access_time = now -- Initialize to current time if no previous access exists
-    else
-        last_access_time = tonumber(last_access_time)
+    -- Generate keys for previous windows dynamically
+    local window_keys = {}
+    for i = 1, sub_window_count  do
+        window_keys[i] = current_window_key - (i * sub_window_size)
     end
 
-    -- Calculate elapsed time since the last access
-    local elapsed_time = now - last_access_time
-
-    -- Initialize the subwindows in Redis if they don't exist
-    local sub_windows_key = redis_key_prefix .. ":sub_windows"
-    local sub_windows = red:get(sub_windows_key)
-    if not sub_windows or sub_windows == ngx.null then
-        sub_windows = {}
-        for i = 1, number_of_sub_windows do
-            sub_windows[i] = 0 -- Initialize all subwindows to 0 requests
+    -- Get counts from Redis for all windows
+    local total_requests = current_count
+    local elapsed_time = now % sub_window_size
+    for i, window_key in ipairs(window_keys) do
+        local window_count, err = red:get("rate_limit:" .. token .. ":" .. window_key)
+        window_count = tonumber(window_count) or 0
+        -- Apply weight only to the last window
+        if i == sub_window_count then
+            total_requests = total_requests + (sub_window_size - elapsed_time) / sub_window_size * window_count
+        else
+            total_requests = total_requests + window_count
         end
-    else
-        sub_windows = cjson.decode(sub_windows) -- Decode the JSON stored array
-    end
-
-    -- Update subwindow count if the elapsed time exceeds the subwindow size
-    if elapsed_time >= sub_window_size then
-        local current_sub_window_index = math.floor(now / sub_window_size) % number_of_sub_windows
-        sub_windows[current_sub_window_index + 1] = 0 -- Reset the current subwindow count
-    end
-
-    -- Calculate the total requests in the sliding window
-    local total_requests = 0
-    for _, count in ipairs(sub_windows) do
-        total_requests = total_requests + count
     end
 
     -- Check if the total requests exceed the limit
-    if total_requests < request_limit then
-        -- Increment the count for the current subwindow
-        local current_sub_window_index = math.floor(now / sub_window_size) % number_of_sub_windows
-        sub_windows[current_sub_window_index + 1] = sub_windows[current_sub_window_index + 1] + 1
-        
-        -- Update the subwindows in Redis
-        local ok, err = red:set(sub_windows_key, cjson.encode(sub_windows))
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to update sub windows in Redis: ", err)
+    if total_requests + 1 <= request_limit then
+        -- Increment the count for the current window
+        local new_count, err = red:incr("rate_limit:" .. token .. ":" .. current_window_key)
+        if err then
+            ngx.log(ngx.ERR, "Failed to increment counter in Redis: ", err)
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
-
-        -- Update the last access time in Redis
-        ok, err = red:set(redis_key_prefix .. ":last_access", now)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to update last access time in Redis: ", err)
-            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-        end
-
         return true -- Request allowed
     else
         return false -- Request not allowed
