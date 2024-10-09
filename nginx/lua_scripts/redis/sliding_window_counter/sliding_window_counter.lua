@@ -61,7 +61,6 @@ local function allowed(token)
     end
 end
 
--- Example usage: Fetch token from URL parameters and check if the request is allowed
 local token = ngx.var.arg_token
 if not token then
     ngx.log(ngx.ERR, "Token not provided")
