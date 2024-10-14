@@ -5,10 +5,15 @@ local redis_host = "redis"
 local redis_port = 6379
 local redis_timeout = 1000 -- 1 second timeout
 
--- Token bucket parameters
+-- Leaky bucket parameters
 local bucket_capacity = 10 -- Maximum tokens in the bucket
-local refill_rate = 1 -- Tokens generated per second
+local leak_rate = 1 -- Tokens leaked per second
 local requested_tokens = 1 -- Number of tokens required per request
+
+-- Lock settings
+local lock_timeout = 1000 -- Lock timeout in milliseconds
+local max_retries = 100 -- Maximum number of retries to acquire the lock
+local retry_delay = 100 -- Delay between retries in milliseconds
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -63,34 +68,47 @@ local function rate_limit()
     end
 
     local now = ngx.now() * 1000 -- Current timestamp in milliseconds
-    last_tokens = tonumber(results[1]) or bucket_capacity
+    last_tokens = tonumber(results[1]) or 0
     last_access = tonumber(results[2]) or now
 
-    -- Calculate the number of tokens to be added due to the elapsed time since the last access
+    -- Calculate the number of tokens that have leaked due to the elapsed time since the last leak
     local elapsed = math.max(0, now - last_access)
-    local add_tokens = elapsed * refill_rate / 1000
-    local new_tokens = math.min(bucket_capacity, last_tokens + add_tokens)
+    local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
+    local bucket_level = math.max(0, last_tokens - leaked_tokens)
+
+    local delay_between_requests = 1 / leak_rate * 1000
+
+    -- Assumption: Atleast 1ms delay will be there between request processing
+    -- If time difference either 0 or greater than delay_between_requests then no need to add delay
+    local time_diff = now - last_access
+    local delay = 0
+    if time_diff < 0 or (time_diff > 0 and time_diff < delay_between_requests) then
+        delay = -time_diff + delay_between_requests
+    end
 
     -- Calculate TTL for the Redis keys
-    local ttl = math.floor(bucket_capacity / refill_rate * 2)
+    local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
-    -- Check if there are enough tokens for the request
-    if new_tokens >= requested_tokens then
-        -- Deduct tokens and update Redis state
-        new_tokens = new_tokens - requested_tokens
+    -- Verify if the current token level is below the bucket capacity.
+    if bucket_level + requested_tokens <= bucket_capacity then
+        -- For the first request no need to increment the bucket level as we allow it immediately
+        if (delay ~= 0) or (bucket_level ~= 0) then
+            bucket_level = bucket_level + requested_tokens
+        end
 
         red:init_pipeline()
-        red:set(tokens_key, new_tokens, "EX", ttl)
-        red:set(last_access_key, now, "EX", ttl)
+        red:set(tokens_key, bucket_level, "EX", ttl)
+        red:set(last_access_key, now + delay, "EX", ttl)
         local results, err = red:commit_pipeline()
         if not results then
             ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
 
+        ngx.sleep(delay / 1000)
+
         ngx.say("Request allowed")
     else
-        -- Not enough tokens, rate limit the request
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
     end
 end

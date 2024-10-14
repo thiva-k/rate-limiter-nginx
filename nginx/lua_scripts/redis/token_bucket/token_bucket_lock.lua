@@ -5,9 +5,9 @@ local redis_host = "redis"
 local redis_port = 6379
 local redis_timeout = 1000 -- 1 second timeout
 
--- Leaky bucket parameters
+-- Token bucket parameters
 local bucket_capacity = 10 -- Maximum tokens in the bucket
-local leak_rate = 1 -- Tokens leaked per second
+local refill_rate = 1 -- Tokens generated per second
 local requested_tokens = 1 -- Number of tokens required per request
 
 -- Lock settings
@@ -80,7 +80,7 @@ local function rate_limit()
     -- Try to acquire the lock with retries
     if not acquire_lock(red, lock_key) then
         ngx.log(ngx.ERR, "Failed to acquire lock")
-        ngx.exit(ngx.HTTP_SERVICE_UNAVAILABLE) -- 503
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
     -- Redis keys for token count and last access time
@@ -99,23 +99,24 @@ local function rate_limit()
     end
 
     local now = ngx.now() * 1000 -- Current timestamp in milliseconds
-    last_tokens = tonumber(results[1]) or 0
+    last_tokens = tonumber(results[1]) or bucket_capacity
     last_access = tonumber(results[2]) or now
 
-    -- Calculate the number of tokens that have leaked due to the elapsed time since the last leak
+    -- Calculate the number of tokens to be added due to the elapsed time since the last access
     local elapsed = math.max(0, now - last_access)
-    local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
-    local bucket_level = math.max(0, last_tokens - leaked_tokens)
+    local add_tokens = elapsed * refill_rate / 1000
+    local new_tokens = math.floor(math.min(bucket_capacity, last_tokens + add_tokens) * 1000 + 0.5) / 1000
 
     -- Calculate TTL for the Redis keys
-    local ttl = math.floor(bucket_capacity / leak_rate * 2)
+    local ttl = math.floor(bucket_capacity / refill_rate * 2)
 
-    -- Check if current token level is less than capacity
-    if bucket_level + requested_tokens <= bucket_capacity then
-        bucket_level = bucket_level + requested_tokens
+    -- Check if there are enough tokens for the request
+    if new_tokens >= requested_tokens then
+        -- Deduct tokens and update Redis state
+        new_tokens = new_tokens - requested_tokens
 
         red:init_pipeline()
-        red:set(tokens_key, bucket_level, "EX", ttl)
+        red:set(tokens_key, new_tokens, "EX", ttl)
         red:set(last_access_key, now, "EX", ttl)
         local results, err = red:commit_pipeline()
         if not results then
