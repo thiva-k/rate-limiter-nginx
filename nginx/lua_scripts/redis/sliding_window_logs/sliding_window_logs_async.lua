@@ -1,6 +1,5 @@
 local redis = require "resty.redis"
 local resty_lock = require "resty.lock"
-local cjson = require "cjson"
 
 -- Global variables
 local redis_host = "redis"
@@ -17,8 +16,7 @@ local function init_redis()
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-        return nil, err
+        return nil, "Failed to connect to Redis: " .. err
     end
 
     return red
@@ -28,7 +26,6 @@ end
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
-        ngx.log(ngx.ERR, "Token not provided")
         return nil, "Token not provided"
     end
     return token
@@ -39,18 +36,25 @@ local function fetch_batch_quota(red, redis_key)
     local current_time = ngx.now()
     local window_start = current_time - window_size
 
-    -- Remove old entries and count current entries
-    local removed, err = red:zremrangebyscore(redis_key, 0, window_start)
-    if err then
-        ngx.log(ngx.ERR, "Failed to remove old entries: ", err)
-        return nil, nil
+    -- Start a Redis transaction
+    local ok, err = red:multi()
+    if not ok then
+        return nil, "Failed to start Redis transaction: " .. err
     end
 
-    local count, err = red:zcard(redis_key)
-    if err then
-        ngx.log(ngx.ERR, "Failed to count entries: ", err)
-        return nil, nil
+    -- Queue commands in the transaction
+    red:zremrangebyscore(redis_key, 0, window_start)
+    red:zcard(redis_key)
+
+    -- Execute the transaction
+    local results, err = red:exec()
+    if not results then
+        return nil, "Failed to execute Redis transaction: " .. err
     end
+
+    -- Parse the results
+    local removed = results[1]
+    local count = results[2]
 
     -- Calculate remaining quota and batch size
     local remaining = math.max(0, rate_limit - count)
@@ -65,50 +69,49 @@ local function fetch_batch_quota(red, redis_key)
 end
 
 -- Function to update Redis with the exhausted batch
-local function update_redis_with_exhausted_batch(red, redis_key, timestamps)
+local function update_redis_with_exhausted_batch(red, shared_dict, redis_key)
     local multi_result, err = red:multi()
     if not multi_result then
-        ngx.log(ngx.ERR, "Failed to start Redis transaction: ", err)
-        return false
+        return false, "Failed to start Redis transaction: " .. err
     end
 
-    for _, ts in ipairs(timestamps) do
-        local ok, err = red:zadd(redis_key, ts, ts)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to add timestamp to Redis: ", err)
+    local timestamps_len = shared_dict:llen(redis_key .. ":timestamps")
+    for i = 1, timestamps_len do
+        local ts, err = shared_dict:lpop(redis_key .. ":timestamps")
+        if ts then
+            red:zadd(redis_key, ts, ts)
+        else
             red:discard()
-            return false
+            return false, "Failed to pop timestamp from shared dict: " .. err
         end
     end
 
     local exec_result, err = red:exec()
     if not exec_result then
-        ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
-        return false
+        return false, "Failed to execute Redis transaction: " .. err
     end
 
     return true
 end
 
 -- Function to handle batch quota and timestamps
-local function handle_batch_quota(shared_dict, redis_key, red)
-    local batch_quota, err = shared_dict:get(redis_key .. ":batch")
-    local timestamps_json, err_ts = shared_dict:get(redis_key .. ":timestamps")
-    local timestamps = timestamps_json and cjson.decode(timestamps_json) or {}
+local function process_batch_quota(shared_dict, redis_key, red)
+    local batch_quota = shared_dict:get(redis_key .. ":batch")
+    local timestamps_len = shared_dict:llen(redis_key .. ":timestamps")
 
-    if not batch_quota or batch_quota == 0 or not timestamps_json then
+    if not batch_quota or batch_quota == 0 or not timestamps_len then
         -- Update Redis with the previously exhausted batch if it exists
-        if #timestamps > 0 then
-            local success = update_redis_with_exhausted_batch(red, redis_key, timestamps)
+        if timestamps_len and timestamps_len > 0 then
+            local success, err = update_redis_with_exhausted_batch(red, shared_dict, redis_key)
             if not success then
-                return nil, "Failed to update Redis with exhausted batch"
+                return nil, err
             end
         end
 
         -- Fetch new batch quota
         batch_quota, ttl = fetch_batch_quota(red, redis_key)
         if batch_quota == nil then
-            return nil, "Failed to fetch batch quota"
+            return nil, ttl  -- ttl contains error message in this case
         end
 
         if batch_quota > 0 then
@@ -117,29 +120,25 @@ local function handle_batch_quota(shared_dict, redis_key, red)
             if not ok then
                 return nil, "Failed to set batch quota in shared memory: " .. err
             end
-            -- Reset the timestamps for the new batch
-            ok, err = shared_dict:set(redis_key .. ":timestamps", cjson.encode({}), ttl)
+            -- Reset the timestamps for the new batch (list will be empty)
+            ok, err = shared_dict:delete(redis_key .. ":timestamps")
             if not ok then
                 return nil, "Failed to reset timestamps in shared memory: " .. err
             end
-            timestamps = {}
         end
     end
 
-    return batch_quota, timestamps
+    return batch_quota, timestamps_len
 end
 
--- Function to process the request
-local function process_request(shared_dict, redis_key, red, batch_quota, timestamps)
+-- Function to process the request. Increment the used count and check if request is allowed
+local function increment_and_check(shared_dict, redis_key, red, batch_quota, timestamps_len)
     local allowed = false
     if batch_quota > 0 then
         -- Add current timestamp to the batch
         local current_time = ngx.now()
-        table.insert(timestamps, current_time)
-        
-        -- Update timestamps in shared memory
-        local ok, err = shared_dict:set(redis_key .. ":timestamps", cjson.encode(timestamps))
-        if not ok then
+        local length, err = shared_dict:rpush(redis_key .. ":timestamps", current_time)
+        if not length then
             return nil, "Failed to update timestamps in shared memory: " .. err
         end
         
@@ -153,7 +152,7 @@ local function process_request(shared_dict, redis_key, red, batch_quota, timesta
             allowed = true
         else
             -- Batch is exhausted, update Redis and fetch a new batch
-            local success = update_redis_with_exhausted_batch(red, redis_key, timestamps)
+            local success, err = update_redis_with_exhausted_batch(red, shared_dict, redis_key)
             if success then
                 -- Fetch new batch quota
                 batch_quota, ttl = fetch_batch_quota(red, redis_key)
@@ -164,12 +163,14 @@ local function process_request(shared_dict, redis_key, red, batch_quota, timesta
                         return nil, "Failed to set new batch quota in shared memory: " .. err
                     end
                     -- Reset the timestamps for the new batch, including the current request
-                    ok, err = shared_dict:set(redis_key .. ":timestamps", cjson.encode({current_time}), ttl)
+                    ok, err = shared_dict:rpush(redis_key .. ":timestamps", current_time)
                     if not ok then
                         return nil, "Failed to reset timestamps in shared memory: " .. err
                     end
                     allowed = true
                 end
+            else
+                return nil, err
             end
         end
     end
@@ -181,11 +182,13 @@ end
 local function main()
     local red, err = init_redis()
     if not red then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
     local token, err = get_token()
     if not token then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
@@ -198,26 +201,30 @@ local function main()
     end
 
     local lock = resty_lock:new("my_locks")
-    local elapsed, err = lock:lock(redis_key, { timeout = 10 })
+    local elapsed, err = lock:lock(redis_key)
     if not elapsed then
         ngx.log(ngx.ERR, "Failed to acquire lock: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local batch_quota, timestamps = handle_batch_quota(shared_dict, redis_key, red)
+    local batch_quota, timestamps_len = process_batch_quota(shared_dict, redis_key, red)
     if not batch_quota then
+        ngx.log(ngx.ERR, "Failed to handle batch quota: ", timestamps_len)  -- timestamps_len contains error message in this case
         lock:unlock()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local allowed, err = process_request(shared_dict, redis_key, red, batch_quota, timestamps)
+    local allowed, err = increment_and_check(shared_dict, redis_key, red, batch_quota, timestamps_len)
     if err then
-        ngx.log(ngx.ERR, err)
+        ngx.log(ngx.ERR, "Failed to process request: ", err)
         lock:unlock()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    lock:unlock()
+    local ok, err = lock:unlock()
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to release lock: ", err)
+    end
 
     if not allowed then
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)

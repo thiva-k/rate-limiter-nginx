@@ -1,13 +1,13 @@
 local redis = require "resty.redis"
 local resty_lock = require "resty.lock"
 
--- Global variables
-local redis_host = "redis"
-local redis_port = 6379
-local rate_limit = 500 -- 500 requests per minute
-local window_size = 60 -- 60 second window
-local batch_percent = 0.1 -- 10% of remaining quota
-local min_batch_size = 1 -- Minimum batch size to use batching
+-- Configuration
+local redis_host = "redis"         -- Redis server host
+local redis_port = 6379            -- Redis server port
+local rate_limit = 500             -- Max requests allowed in the window
+local batch_percent = 0.1          -- Percentage of remaining requests to allow in a batch
+local min_batch_size = 1           -- Minimum size of batch
+local window_size = 60             -- Time window size in seconds
 
 -- Initialize Redis connection
 local function init_redis()
@@ -16,129 +16,110 @@ local function init_redis()
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-        return nil
+        return nil, "Failed to connect to Redis: " .. err
     end
 
     return red
 end
 
--- Get token from URL parameter
+-- Retrieve token from URL parameter
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
-        ngx.log(ngx.ERR, "Token not provided")
-        return nil
+        return nil, "Token not provided"
     end
     return token
 end
 
--- Initialize shared dictionary
-local function init_shared_dict()
+-- Access Nginx shared dictionary
+local function get_shared_dict()
     local shared_dict = ngx.shared.rate_limit_dict
     if not shared_dict then
-        ngx.log(ngx.ERR, "Failed to initialize shared dictionary")
-        return nil
+        return nil, "Failed to access shared dictionary"
     end
     return shared_dict
 end
 
+-- Calculate remaining TTL in the current window
+local function calculate_ttl()
+    local current_time = ngx.now()
+    local window_start = math.floor(current_time / window_size) * window_size
+    local ttl = window_size - (current_time - window_start)
+    return math.max(1, math.ceil(ttl))  -- Ensure TTL is at least 1 second
+end
+
 -- Fetch batch quota from Redis
 local function fetch_batch_quota(red, redis_key)
-    -- Start a Redis transaction
-    local ok, err = red:multi()
-    if not ok then
-        ngx.log(ngx.ERR, "Failed to start Redis transaction: ", err)
-        return nil, nil
-    end
-
-    -- Queue GET and TTL commands
-    red:get(redis_key)
-    red:ttl(redis_key)
-
-    -- Execute the transaction
-    local res, err = red:exec()
-    if not res then
-        ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
-        return nil, nil
-    end
-
-    local count = tonumber(res[1]) or 0
-    local ttl = tonumber(res[2]) or -2
-
-    -- If key does not exist in Redis, reset for a new window
-    if ttl == -2 then
-        ngx.log(ngx.DEBUG, "TTL expired, resetting counter for new window")
-        count = 0
-        ttl = window_size
-        
-        local ok, err = red:set(redis_key, 0, "EX", window_size)
-        if not ok then
-            ngx.log(ngx.ERR, "Failed to reset counter and set expiration in Redis: ", err)
-            return nil, nil
-        end
+    local count, err = red:get(redis_key)
+    if err then
+        return nil, "Failed to GET from Redis: " .. err
     end
 
     count = tonumber(count) or 0
-    ttl = math.max(0, tonumber(ttl) or 0)
-    
-    -- Calculate remaining quota and batch size
-    local remaining = math.max(0, rate_limit - count)
-    if remaining == 0 then
-        return 0, ttl  -- No more requests allowed in this window
+    local remaining = rate_limit - count
+
+    if remaining <= 0 then
+        return 0
     end
-    
+
     local batch_size = math.floor(remaining * batch_percent)
-    batch_size = math.max(math.min(batch_size, remaining), min_batch_size)
-    
-    return batch_size, ttl
+    batch_size = math.max(batch_size, min_batch_size)
+    batch_size = math.min(batch_size, remaining)
+
+    return batch_size
 end
 
--- Update Redis with the exhausted batch
-local function update_redis_with_exhausted_batch(red, redis_key, exhausted_batch_size)
-    local new_count, err = red:incrby(redis_key, exhausted_batch_size)
+-- Update Redis with the exhausted batch count and set TTL if necessary
+local function update_redis_with_exhausted_batch(red, redis_key, batch_quota, ttl)
+    local new_count, err = red:incrby(redis_key, batch_quota)
     if err then
-        ngx.log(ngx.ERR, "Failed to update counter in Redis with exhausted batch: ", err)
-        return false
+        return nil, "Failed to INCRBY in Redis: " .. err
     end
+
+    -- Set expiration if this is the first batch
+    if new_count == batch_quota then
+        red:expire(redis_key, ttl)
+    end
+
     return true
 end
 
--- Process batch quota
-local function process_batch_quota(red, shared_dict, redis_key, lock)
-    local batch_quota, err = shared_dict:get(redis_key .. ":batch")
-    local batch_used, err_used = shared_dict:get(redis_key .. ":used")
+-- Set new batch quota and reset used count in shared memory
+local function set_new_batch(shared_dict, redis_key, batch_size, ttl)
+    local ok, err = shared_dict:set(redis_key .. ":batch", batch_size, ttl)
+    if not ok then
+        return nil, "Failed to set batch quota in shared memory: " .. err
+    end
 
-    -- Check if we need to fetch a new batch quota
-    if not batch_quota or batch_quota == 0 or not batch_used then
-        -- Update Redis with the previously exhausted batch if it exists
-        if batch_used and batch_used > 0 then
-            local success = update_redis_with_exhausted_batch(red, redis_key, batch_used)
+    ok, err = shared_dict:set(redis_key .. ":used", 0, ttl)
+    if not ok then
+        return nil, "Failed to reset used count in shared memory: " .. err
+    end
+
+    return true
+end
+
+-- Process batch quota and update shared dictionary
+local function process_batch_quota(red, shared_dict, redis_key, ttl)
+    local batch_quota = shared_dict:get(redis_key .. ":batch") or 0
+    local batch_used = shared_dict:get(redis_key .. ":used") or 0
+
+    if batch_quota == 0 then
+        local batch_size = fetch_batch_quota(red, redis_key)
+        if not batch_size then
+            return nil, "Failed to fetch batch quota"
+        end
+
+        if batch_size > 0 then
+            local success, err = set_new_batch(shared_dict, redis_key, batch_size, ttl)
             if not success then
-                return false
+                return nil, err
             end
-        end
-        
-        -- Fetch new batch quota
-        local ttl
-        batch_quota, ttl = fetch_batch_quota(red, redis_key)
-        if batch_quota == nil then
-            return false
-        end
-        
-        if batch_quota > 0 then
-            -- Store new batch quota in shared memory
-            local ok, err = shared_dict:set(redis_key .. ":batch", batch_quota, ttl)
-            if not ok then
-                ngx.log(ngx.ERR, "Failed to set batch quota in shared memory: ", err)
-                return false
-            end
-            -- Reset the used count for the new batch
-            ok, err = shared_dict:set(redis_key .. ":used", 0, ttl)
-            if not ok then
-                ngx.log(ngx.ERR, "Failed to reset used count in shared memory: ", err)
-                return false
-            end
+
+            return batch_size
+        else
+            -- No remaining requests
+            return 0
         end
     end
 
@@ -146,93 +127,126 @@ local function process_batch_quota(red, shared_dict, redis_key, lock)
 end
 
 -- Increment the used count and check if request is allowed
-local function increment_and_check(shared_dict, redis_key, batch_quota, red)
+local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl)
     if batch_quota > 0 then
-        -- Increment the used count
         local new_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
         if err then
-            ngx.log(ngx.ERR, "Failed to increment used count: ", err)
-            return false
+            return nil, "Failed to increment used count: " .. err
         end
-        
+
         if new_used <= batch_quota then
-            return true  -- Request is allowed
+            return true  -- Request is allowed within batch quota
         else
-            -- Batch is exhausted, update Redis and fetch a new batch
-            local success = update_redis_with_exhausted_batch(red, redis_key, batch_quota)
-            if success then
-                -- Fetch new batch quota
-                local ttl
-                batch_quota, ttl = fetch_batch_quota(red, redis_key)
-                if batch_quota and batch_quota > 0 then
-                    -- Store new batch quota in shared memory
-                    local ok, err = shared_dict:set(redis_key .. ":batch", batch_quota, ttl)
-                    if not ok then
-                        ngx.log(ngx.ERR, "Failed to set new batch quota in shared memory: ", err)
-                        return false
-                    end
-                    -- Reset the used count for the new batch
-                    ok, err = shared_dict:set(redis_key .. ":used", 1, ttl)
-                    if not ok then
-                        ngx.log(ngx.ERR, "Failed to reset used count in shared memory: ", err)
-                        return false
-                    end
-                    return true  -- Request is allowed
+            -- Batch exhausted; check global rate limit
+            local current_count, err = red:get(redis_key)
+            if err then
+                return nil, "Failed to GET from Redis: " .. err
+            end
+            current_count = tonumber(current_count) or 0
+
+            if current_count >= rate_limit then
+                return false  -- Rate limit exceeded
+            end
+
+            -- Update Redis with the exhausted batch
+            local success, err = update_redis_with_exhausted_batch(red, redis_key, batch_quota, ttl)
+            if not success then
+                return nil, err
+            end
+
+            -- Fetch new batch quota
+            local new_batch_size = fetch_batch_quota(red, redis_key)
+            if new_batch_size > 0 then
+                -- Set new batch quota and reset used count
+                local success, err = set_new_batch(shared_dict, redis_key, new_batch_size, ttl)
+                if not success then
+                    return nil, err
                 end
+
+                -- Increment used count for the current request
+                local updated_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
+                if not updated_used then
+                    return nil, "Failed to increment used count after setting new batch: " .. err
+                end
+
+                return true  -- Request is allowed with new batch quota
+            else
+                return false  -- No new batch quota available, reject request
             end
         end
     end
-    return false  -- Request is not allowed
+
+    return false  -- No batch quota available, reject request
 end
 
--- Main function to orchestrate the rate limiting process
+-- Main rate-limiting function
 local function main()
     -- Initialize Redis
-    local red = init_redis()
+    local red, err = init_redis()
     if not red then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Get token from URL parameter
-    local token = get_token()
+    -- Retrieve token
+    local token, err = get_token()
     if not token then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
-    -- Construct the Redis key using the token
-    local redis_key = "rate_limit:" .. token
+    -- Calculate TTL
+    local ttl = calculate_ttl()
 
-    -- Initialize shared dictionary
-    local shared_dict = init_shared_dict()
+    -- Construct Redis key
+    local window_start = math.floor(ngx.now() / window_size) * window_size
+    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
+
+    -- Access shared dictionary
+    local shared_dict, err = get_shared_dict()
     if not shared_dict then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Use a lock with TTL to ensure only one worker fetches the quota at a time
+    -- Acquire lock to prevent race conditions
     local lock = resty_lock:new("my_locks")
-    local elapsed, err = lock:lock(redis_key, { timeout = 10 })  -- 10 seconds TTL
+    local elapsed, err = lock:lock(redis_key, { timeout = 10 })  -- 10 seconds timeout
     if not elapsed then
-        ngx.log(ngx.ERR, "Failed to acquire lock: ", err)
+        ngx.log(ngx.ERR, "Failed to acquire lock: " .. err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    -- Ensure lock is released on exit
+    local function unlock_and_exit(status)
+        local ok, err = lock:unlock()
+        if not ok then
+            ngx.log(ngx.ERR, "Failed to unlock: " .. err)
+        end
+        ngx.exit(status)
     end
 
     -- Process batch quota
-    local batch_quota = process_batch_quota(red, shared_dict, redis_key, lock)
+    local batch_quota, err = process_batch_quota(red, shared_dict, redis_key, ttl)
     if not batch_quota then
-        lock:unlock()
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        ngx.log(ngx.ERR, err)
+        unlock_and_exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Check if the request should be allowed
-    local allowed = increment_and_check(shared_dict, redis_key, batch_quota, red)
+    -- Determine if request is allowed
+    local allowed, err = increment_and_check(shared_dict, redis_key, batch_quota, red, ttl)
+    if err then
+        ngx.log(ngx.ERR, err)
+        unlock_and_exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
 
     -- Release the lock
     local ok, err = lock:unlock()
     if not ok then
-        ngx.log(ngx.ERR, "Failed to unlock: ", err)
+        ngx.log(ngx.ERR, "Failed to unlock: " .. err)
     end
 
-    -- If not allowed, return 429 Too Many Requests
+    -- Enforce rate limit
     if not allowed then
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     end

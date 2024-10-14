@@ -12,8 +12,7 @@ local function init_redis()
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-        return nil, err
+        return nil, "Failed to connect to Redis: " .. err
     end
 
     return red
@@ -22,7 +21,6 @@ end
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
-        ngx.log(ngx.ERR, "Token not provided")
         return nil, "Token not provided"
     end
     return token
@@ -33,12 +31,15 @@ local function get_script_sha(red)
     if not sha then
         local redis_script = [[
             local key = KEYS[1]
-            local now = tonumber(ARGV[1])
-            local window = tonumber(ARGV[2])
-            local limit = tonumber(ARGV[3])
+            local window = tonumber(ARGV[1])
+            local limit = tonumber(ARGV[2])
+
+            -- Get current Redis time
+            local time = redis.call('TIME')
+            local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
 
             -- Remove elements outside the current window
-            redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
+            redis.call('ZREMRANGEBYSCORE', key, 0, now - window * 1000)
 
             -- Count the number of elements in the current window
             local count = redis.call('ZCARD', key)
@@ -54,8 +55,7 @@ local function get_script_sha(red)
         ]]
         local new_sha, err = red:script("LOAD", redis_script)
         if not new_sha then
-            ngx.log(ngx.ERR, "Failed to load script: ", err)
-            return nil, err
+            return nil, "Failed to load script: " .. err
         end
         ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
         sha = new_sha
@@ -82,14 +82,12 @@ local function check_rate_limit()
     -- Get the script SHA
     local sha, err = get_script_sha(red)
     if not sha then
+        ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Get the current timestamp
-    local current_time = ngx.now()
-
     -- Run the Lua script
-    local result, err = red:evalsha(sha, 1, key, current_time, window_size, rate_limit)
+    local result, err = red:evalsha(sha, 1, key, window_size, rate_limit)
 
     if err then
         if err:find("NOSCRIPT", 1, true) then
@@ -97,9 +95,10 @@ local function check_rate_limit()
             ngx.shared.my_cache:delete("rate_limit_script_sha")
             sha, err = get_script_sha(red)
             if not sha then
+                ngx.log(ngx.ERR, err)
                 ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
             end
-            result, err = red:evalsha(sha, 1, key, current_time, window_size, rate_limit)
+            result, err = red:evalsha(sha, 1, key, window_size, rate_limit)
         end
 
         if err then

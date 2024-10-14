@@ -12,8 +12,7 @@ local function init_redis()
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return nil, "Failed to connect to Redis: " .. err
     end
 
     return red
@@ -22,8 +21,7 @@ end
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
-        ngx.log(ngx.ERR, "Token not provided")
-        ngx.exit(ngx.HTTP_BAD_REQUEST)
+        return nil, "Token not provided"
     end
     return token
 end
@@ -34,8 +32,7 @@ local function remove_old_entries_and_count(red, key, current_time)
     red:zcard(key)
     local results, err = red:exec()
     if not results then
-        ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return nil, "Failed to execute Redis transaction: " .. err
     end
     return results[2] -- Return the count
 end
@@ -47,22 +44,42 @@ local function add_new_entry(red, key, current_time)
     local results, err = red:exec()
 
     if not results then
-        ngx.log(ngx.ERR, "Failed to execute Redis transaction: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return nil, "Failed to execute Redis transaction: " .. err
     end
+    return true
 end
 
 local function check_rate_limit()
-    local red = init_redis()
-    local token = get_token()
+    local red, err = init_redis()
+    if not red then
+        ngx.log(ngx.ERR, err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    local token, err = get_token()
+    if not token then
+        ngx.log(ngx.ERR, err)
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
+
     local key = "rate_limit:" .. token
     local current_time = ngx.now()
 
-    local count = remove_old_entries_and_count(red, key, current_time)
+    local count, err = remove_old_entries_and_count(red, key, current_time)
+    if not count then
+        ngx.log(ngx.ERR, err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
     if count >= rate_limit then
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     end
-    add_new_entry(red, key, current_time)
+
+    local success, err = add_new_entry(red, key, current_time)
+    if not success then
+        ngx.log(ngx.ERR, err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
 end
 
 -- Main execution
