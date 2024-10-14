@@ -51,17 +51,19 @@ local function get_rate_limit_script()
         local last_access_key = KEYS[2]
         local bucket_capacity = tonumber(ARGV[1])
         local refill_rate = tonumber(ARGV[2])
-        local now = tonumber(ARGV[3])
-        local requested = tonumber(ARGV[4])
-        local ttl = tonumber(ARGV[5])
+        local requested = tonumber(ARGV[3])
+        local ttl = tonumber(ARGV[4])
+
+        local redis_time = redis.call("TIME")
+        local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microsec
 
         local values = redis.call("mget", tokens_key, last_access_key)
         local last_tokens = tonumber(values[1]) or bucket_capacity
         local last_access = tonumber(values[2]) or now
 
         local elapsed = math.max(0, now - last_access)
-        local add_tokens = elapsed * refill_rate / 1000
-        local new_tokens = math.max(math.min(bucket_capacity, last_tokens + add_tokens - requested), 0)
+        local add_tokens = elapsed * refill_rate / 1000000
+        local new_tokens = math.max(math.floor(math.min(bucket_capacity, last_tokens + add_tokens - requested) * 1000000 + 0.5) / 1000000, 0)
 
         redis.call("set", tokens_key, new_tokens, "EX", ttl)
         redis.call("set", last_access_key, now, "EX", ttl)
@@ -86,8 +88,7 @@ end
 
 -- Execute the token bucket logic atomically
 local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
-    local now = ngx.now() * 1000 -- Current time in milliseconds
-    local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, now, requested_tokens, ttl)
+    local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
@@ -96,7 +97,7 @@ local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_
         if not sha then
             return nil, err
         end
-        result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, now, requested_tokens, ttl)
+        result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
     end
 
     if err then
@@ -109,7 +110,7 @@ end
 -- Function to fetch and set batch quota
 local function fetch_batch_quota(token, shared_dict, remaining_tokens)
     local batch_quota
-    if remaining_tokens == 0 then
+    if remaining_tokens < 1 then
         batch_quota = 0
     else
         batch_quota = math.max(min_batch_quota, math.floor(remaining_tokens * batch_percent))
