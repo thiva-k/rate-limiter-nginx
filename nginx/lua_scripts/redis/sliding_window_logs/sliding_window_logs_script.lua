@@ -31,12 +31,15 @@ local function get_script_sha(red)
     if not sha then
         local redis_script = [[
             local key = KEYS[1]
-            local now = tonumber(ARGV[1])
-            local window = tonumber(ARGV[2])
-            local limit = tonumber(ARGV[3])
+            local window = tonumber(ARGV[1])
+            local limit = tonumber(ARGV[2])
+
+            -- Get current Redis time
+            local time = redis.call('TIME')
+            local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
 
             -- Remove elements outside the current window
-            redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
+            redis.call('ZREMRANGEBYSCORE', key, 0, now - window * 1000)
 
             -- Count the number of elements in the current window
             local count = redis.call('ZCARD', key)
@@ -83,11 +86,8 @@ local function check_rate_limit()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Get the current timestamp
-    local current_time = ngx.now()
-
     -- Run the Lua script
-    local result, err = red:evalsha(sha, 1, key, current_time, window_size, rate_limit)
+    local result, err = red:evalsha(sha, 1, key, window_size, rate_limit)
 
     if err then
         if err:find("NOSCRIPT", 1, true) then
@@ -98,7 +98,7 @@ local function check_rate_limit()
                 ngx.log(ngx.ERR, err)
                 ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
             end
-            result, err = red:evalsha(sha, 1, key, current_time, window_size, rate_limit)
+            result, err = red:evalsha(sha, 1, key, window_size, rate_limit)
         end
 
         if err then
