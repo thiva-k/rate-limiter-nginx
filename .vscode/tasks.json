@@ -17,6 +17,25 @@
                 "panel": "shared"
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Remove Logs",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "${workspaceFolder}/remove_logs.py"
+            ],
+            "group": {
+                "kind": "none",
+                "isDefault": false
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "never",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
         }
     ]
 }
