@@ -52,13 +52,9 @@ local function rate_limit()
     local tokens_key = "rate_limit:" .. token .. ":tokens"
     local last_access_key = "rate_limit:" .. token .. ":last_access"
 
-    -- Use Redis pipeline to fetch current state
-    red:init_pipeline()
-    red:get(tokens_key)
-    red:get(last_access_key)
-    local results, err = red:commit_pipeline()
+    local results, err = red:mget(tokens_key, last_access_key)
     if not results then
-        ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
+        ngx.log(ngx.ERR, "Failed to execute Redis MGET: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
@@ -68,8 +64,8 @@ local function rate_limit()
 
     -- Calculate the number of tokens to be added due to the elapsed time since the last access
     local elapsed = math.max(0, now - last_access)
-    local add_tokens = math.floor(elapsed * refill_rate / 1000)
-    local new_tokens = math.min(bucket_capacity, last_tokens + add_tokens)
+    local add_tokens = elapsed * refill_rate / 1000
+    local new_tokens = math.floor(math.min(bucket_capacity, last_tokens + add_tokens) * 1000 + 0.5) / 1000
 
     -- Calculate TTL for the Redis keys
     local ttl = math.floor(bucket_capacity / refill_rate * 2)

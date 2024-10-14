@@ -33,22 +33,25 @@ local function get_token()
 end
 
 -- Redis script to implement token bucket algorithm
-local function get_token_bucket_script()
+local function get_rate_limit_script()
     return [[
         local tokens_key = KEYS[1]
         local last_access_key = KEYS[2]
         local bucket_capacity = tonumber(ARGV[1])
         local refill_rate = tonumber(ARGV[2])
-        local now = tonumber(ARGV[3])
-        local requested = tonumber(ARGV[4])
-        local ttl = tonumber(ARGV[5])
+        local requested = tonumber(ARGV[3])
+        local ttl = tonumber(ARGV[4])
 
-        local last_tokens = tonumber(redis.call("get", tokens_key)) or bucket_capacity
-        local last_access = tonumber(redis.call("get", last_access_key)) or now
+        local redis_time = redis.call("TIME")
+        local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
 
+        local values = redis.call("mget", tokens_key, last_access_key)
+        local last_tokens = tonumber(values[1]) or bucket_capacity
+        local last_access = tonumber(values[2]) or now
+        
         local elapsed = math.max(0, now - last_access)
-        local add_tokens = math.floor(elapsed * refill_rate / 1000)
-        local new_tokens = math.min(bucket_capacity, last_tokens + add_tokens)
+        local add_tokens = elapsed * refill_rate / 1000000
+        local new_tokens = math.floor(math.min(bucket_capacity, last_tokens + add_tokens) * 1000000 + 0.5) / 1000000
 
         if new_tokens >= requested then
             new_tokens = new_tokens - requested
@@ -76,18 +79,17 @@ local function load_script_to_redis(red, script)
 end
 
 -- Execute the token bucket logic atomically
-local function execute_token_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
-    local now = ngx.now() * 1000 -- Current time in milliseconds
-    local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, now, requested_tokens, ttl)
+local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+    local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
         ngx.shared.my_cache:delete("rate_limit_script_sha")
-        sha, err = load_script_to_redis(red, get_token_bucket_script())
+        sha, err = load_script_to_redis(red, get_rate_limit_script())
         if not sha then
             return nil, err
         end
-        result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, now, requested_tokens, ttl)
+        result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
     end
 
     if err then
@@ -121,7 +123,7 @@ local function rate_limit()
     local ttl = math.floor(bucket_capacity / refill_rate * 2)
 
     -- Load or retrieve the Lua script SHA
-    local script = get_token_bucket_script()
+    local script = get_rate_limit_script()
     local sha, err = load_script_to_redis(red, script)
     if not sha then
         ngx.log(ngx.ERR, "Failed to load script: ", err)
@@ -129,7 +131,7 @@ local function rate_limit()
     end
 
     -- Execute token bucket logic
-    local result, err = execute_token_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+    local result, err = execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
     if not result then
         ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)

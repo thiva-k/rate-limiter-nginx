@@ -33,30 +33,46 @@ local function get_token()
 end
 
 -- Lua script to implement leaky bucket algorithm
-local function get_leaky_bucket_script()
+local function get_rate_limit_script()
     return [[
         local tokens_key = KEYS[1]
         local last_access_key = KEYS[2]
         local bucket_capacity = tonumber(ARGV[1])
         local leak_rate = tonumber(ARGV[2])
-        local now = tonumber(ARGV[3])
-        local requested = tonumber(ARGV[4])
-        local ttl = tonumber(ARGV[5])
+        local requested = tonumber(ARGV[3])
+        local ttl = tonumber(ARGV[4])
+        
+        local redis_time = redis.call("TIME")
+        local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
 
-        local last_tokens = tonumber(redis.call("get", tokens_key)) or 0
-        local last_access = tonumber(redis.call("get", last_access_key)) or now
-
+        local values = redis.call("mget", tokens_key, last_access_key)
+        local last_tokens = tonumber(values[1]) or 0
+        local last_access = tonumber(values[2]) or now
+        
         local elapsed = math.max(0, now - last_access)
-        local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
+        local leaked_tokens = math.floor(elapsed * leak_rate / 1000000)
         local bucket_level = math.max(0, last_tokens - leaked_tokens)
 
-        if bucket_level < bucket_capacity then
-            bucket_level = bucket_level + requested
+        local delay_between_requests = 1 / leak_rate * 1000000
+
+        -- Assumption: Atleast 1us delay will be there between request processing
+        -- If time difference either 0 or greater than delay_between_requests then no need to add delay
+        local time_diff = now - last_access
+        local delay = 0
+        if time_diff < 0 or (time_diff > 0 and time_diff < delay_between_requests) then
+            delay = -time_diff + delay_between_requests
+        end
+
+        if bucket_level + requested <= bucket_capacity then
+            -- For the first request no need to increment the bucket level as we allow it immediately
+            if delay ~= 0 or bucket_level ~= 0 then
+                bucket_level = bucket_level + requested
+            end
             redis.call("set", tokens_key, bucket_level, "EX", ttl)
-            redis.call("set", last_access_key, now, "EX", ttl)
-            return 1
+            redis.call("set", last_access_key, now + delay, "EX", ttl)
+            return delay
         else
-            return 0 
+            return -1
         end
     ]]
 end
@@ -76,21 +92,20 @@ local function load_script_to_redis(red, script)
 end
 
 -- Execute the leaky bucket logic atomically
-local function execute_leaky_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
-    local now = ngx.now() * 1000 -- Current time in milliseconds
-    local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, leak_rate, now, requested_tokens, ttl)
+local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
+    local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
 
     if err then
         if err:find("NOSCRIPT", 1, true) then
             -- Script not found in Redis, reload it
             ngx.shared.my_cache:delete("rate_limit_script_sha")
-            sha, err = load_script_to_redis(red, get_leaky_bucket_script())
+            sha, err = load_script_to_redis(red, get_rate_limit_script())
             if not sha then
                 return nil, err
             end
-            result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, leak_rate, now, requested_tokens, ttl)
+            result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
         end
-        
+
         if err then
             return nil, err
         end
@@ -123,7 +138,7 @@ local function rate_limit()
     local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
     -- Load or retrieve the Lua script SHA
-    local script = get_leaky_bucket_script()
+    local script = get_rate_limit_script()
     local sha, err = load_script_to_redis(red, script)
     if not sha then
         ngx.log(ngx.ERR, "Failed to load script: ", err)
@@ -131,17 +146,20 @@ local function rate_limit()
     end
 
     -- Execute leaky bucket logic
-    local result, err = execute_leaky_bucket(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
+    local result, err = execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
     if not result then
         ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
-    
+
     -- Handle the result
-    if result == 1 then
-        ngx.say("Request allowed")
-    else
+    if result == -1 then
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429 Too Many Requests
+    else
+        -- Nginx sleep supports second with milliseconds precision 
+        local rounded_delay = math.floor(result / 1000 + 0.5) / 1000 -- Round to 3 decimal places
+        ngx.sleep(rounded_delay) -- Convert microseconds to seconds
+        ngx.say("Request allowed")
     end
 end
 
