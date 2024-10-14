@@ -87,13 +87,9 @@ local function rate_limit()
     local tokens_key = "rate_limit:" .. token .. ":tokens"
     local last_access_key = "rate_limit:" .. token .. ":last_access"
 
-    -- Use Redis pipeline to fetch current state
-    red:init_pipeline()
-    red:get(tokens_key)
-    red:get(last_access_key)
-    local results, err = red:commit_pipeline()
+    local results, err = red:mget(tokens_key, last_access_key)
     if not results then
-        ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
+        ngx.log(ngx.ERR, "Failed to execute Redis MGET: ", err)
         release_lock(red, lock_key)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end

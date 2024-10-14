@@ -45,8 +45,9 @@ local function get_rate_limit_script()
         local redis_time = redis.call("TIME")
         local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
 
-        local last_tokens = tonumber(redis.call("get", tokens_key)) or 0
-        local last_access = tonumber(redis.call("get", last_access_key)) or now
+        local values = redis.call("mget", tokens_key, last_access_key)
+        local last_tokens = tonumber(values[1]) or 0
+        local last_access = tonumber(values[2]) or now
         
         local elapsed = math.max(0, now - last_access)
         local leaked_tokens = math.floor(elapsed * leak_rate / 1000000)

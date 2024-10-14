@@ -55,8 +55,9 @@ local function get_rate_limit_script()
         local requested = tonumber(ARGV[4])
         local ttl = tonumber(ARGV[5])
 
-        local last_tokens = tonumber(redis.call("get", tokens_key)) or bucket_capacity
-        local last_access = tonumber(redis.call("get", last_access_key)) or now
+        local values = redis.call("mget", tokens_key, last_access_key)
+        local last_tokens = tonumber(values[1]) or bucket_capacity
+        local last_access = tonumber(values[2]) or now
 
         local elapsed = math.max(0, now - last_access)
         local add_tokens = elapsed * refill_rate / 1000
