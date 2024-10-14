@@ -3,7 +3,7 @@ local redis = require "resty.redis"
 -- Global variables
 local redis_host = "redis"
 local redis_port = 6379
-local rate_limit = 500 -- 50 requests per minute
+local rate_limit = 500 -- 500 requests per minute
 local window_size = 60 -- 60 second window
 
 -- Function to initialize Redis connection
@@ -40,7 +40,7 @@ local function get_current_count(red, redis_key)
 end
 
 -- Function to perform rate limiting transaction
-local function perform_rate_limiting_transaction(red, redis_key)
+local function increment_transaction(red, redis_key, remaining_time)
     -- Use Redis MULTI to begin a transaction
     local ok, err = red:multi()
     if not ok then
@@ -53,8 +53,8 @@ local function perform_rate_limiting_transaction(red, redis_key)
         return nil, "Failed to increment counter in Redis: " .. err
     end
 
-    -- Set expiration time only if it's a new key (NX flag)
-    ok, err = red:expire(redis_key, window_size, "NX")
+    -- Set expiration time only if it's a new key (when count becomes 1)
+    ok, err = red:expire(redis_key, math.ceil(remaining_time), "NX")
     if not ok then
         return nil, "Failed to set expiration for key in Redis: " .. err
     end
@@ -84,8 +84,12 @@ local function check_rate_limit()
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
-    -- Construct the Redis key using only the token
-    local redis_key = "rate_limit:" .. token
+    -- Get the current timestamp and round it down to the nearest minute
+    local current_time = ngx.now()
+    local window_start = math.floor(current_time / window_size) * window_size
+
+    -- Construct the Redis key using the token and the window start time
+    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
 
     -- Get current count
     local count, err = get_current_count(red, redis_key)
@@ -99,8 +103,11 @@ local function check_rate_limit()
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     end
 
+    -- Calculate remaining time in the current window
+    local remaining_time = window_size - (current_time % window_size)
+
     -- Perform rate limiting transaction
-    local results, err = perform_rate_limiting_transaction(red, redis_key)
+    local results, err = increment_transaction(red, redis_key, remaining_time)
     if not results then
         ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)

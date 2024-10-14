@@ -6,11 +6,11 @@ local redis_port = 6379
 local rate_limit = 500 -- Maximum number of requests allowed per window
 local window_size = 60 -- Time window in seconds
 
--- Lua script for atomic rate limiting
+-- Lua script for atomic rate limiting with fixed window
 local limit_script = [[
     local key = KEYS[1]
     local limit = tonumber(ARGV[1])
-    local window = tonumber(ARGV[2])
+    local ttl = tonumber(ARGV[2])
     
     local current = redis.call('get', key)
     if current then
@@ -25,7 +25,7 @@ local limit_script = [[
     current = current + 1
     redis.call('set', key, current)
     if current == 1 then
-        redis.call('expire', key, window)
+        redis.call('expire', key, ttl)
     end
     
     return current
@@ -69,13 +69,13 @@ local function get_script_sha(red)
 end
 
 -- Function to run the rate limiting script
-local function run_rate_limit_script(red, redis_key)
+local function run_rate_limit_script(red, redis_key, ttl)
     local sha, err = get_script_sha(red)
     if not sha then
         return nil, err
     end
     
-    local resp, err = red:evalsha(sha, 1, redis_key, rate_limit, window_size)
+    local resp, err = red:evalsha(sha, 1, redis_key, rate_limit, ttl)
     
     if err then
         if err:find("NOSCRIPT", 1, true) then
@@ -85,7 +85,7 @@ local function run_rate_limit_script(red, redis_key)
             if not sha then
                 return nil, err
             end
-            resp, err = red:evalsha(sha, 1, redis_key, rate_limit, window_size)
+            resp, err = red:evalsha(sha, 1, redis_key, rate_limit, ttl)
         end
         
         if err then
@@ -112,11 +112,16 @@ local function check_rate_limit()
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
-    -- Construct the Redis key using only the token
-    local redis_key = "rate_limit:" .. token
+    -- Calculate the current time window and TTL
+    local current_time = ngx.now()
+    local window_start = math.floor(current_time / window_size) * window_size
+    local ttl = window_size - (current_time - window_start)
+
+    -- Construct the Redis key using the token and window start time
+    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
 
     -- Run the rate limiting script
-    local resp, err = run_rate_limit_script(red, redis_key)
+    local resp, err = run_rate_limit_script(red, redis_key, math.ceil(ttl))
     if not resp then
         ngx.log(ngx.ERR, err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
