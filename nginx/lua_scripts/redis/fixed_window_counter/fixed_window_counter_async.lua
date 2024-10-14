@@ -70,7 +70,7 @@ local function fetch_batch_quota(red, redis_key)
 end
 
 -- Update Redis with the exhausted batch count and set TTL if necessary
-local function update_redis(red, redis_key, batch_quota, ttl)
+local function update_redis_with_exhausted_batch(red, redis_key, batch_quota, ttl)
     local new_count, err = red:incrby(redis_key, batch_quota)
     if err then
         return nil, "Failed to INCRBY in Redis: " .. err
@@ -149,7 +149,7 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
             end
 
             -- Update Redis with the exhausted batch
-            local success, err = update_redis(red, redis_key, batch_quota, ttl)
+            local success, err = update_redis_with_exhausted_batch(red, redis_key, batch_quota, ttl)
             if not success then
                 return nil, err
             end
