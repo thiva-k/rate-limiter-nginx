@@ -1,76 +1,65 @@
 local redis = require "resty.redis"
 
 -- Define the rate limiter parameters
-local max_count = 15 -- Max requests allowed in the window
-local window_length_secs = 10 -- Window size in seconds
-local granularity = 1 -- Size of each small interval in seconds
+local window_size = 60 -- Total window size in seconds
+local request_limit = 100 -- Max requests allowed in the window
+local sub_window_count = 4 -- Number of subwindows
 
--- Function to get the current time in milliseconds
-local function get_current_time_secs()
-    return ngx.now()
-end
-
--- Initialize Redis
+-- Initialize Redis connection
 local redis_host = "redis"
 local redis_port = 6379
 
-local function init_redis()
-    local red = redis:new()
-    red:set_timeout(1000) -- 1 second timeout
+local red = redis:new()
+red:set_timeout(1000) -- 1 second timeout
 
-    local ok, err = red:connect(redis_host, redis_port)
-    if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
-
-    return red
+local ok, err = red:connect(redis_host, redis_port)
+if not ok then
+    ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
 -- Function to check if the request is allowed (sliding window counter algorithm)
 local function allowed(token)
-    local red = init_redis()
+    local now = ngx.time()
+    local sub_window_size = window_size / sub_window_count -- Calculate sub-window size based on count
+    local current_window_key = math.floor(now / sub_window_size) * sub_window_size -- Current sub-window key
+    local current_count, err = red:get("rate_limit:" .. token .. ":" .. current_window_key)
+    current_count = tonumber(current_count) or 0
 
-    -- Current time in seconds (rounded to nearest interval)
-    local now = get_current_time_secs()
-    local current_bucket = math.floor(now / granularity)
-
-    -- Construct Redis keys for the sliding window buckets
-    local redis_key_prefix = "sliding_window_counter:" .. token
-
-    -- Sum up requests from buckets within the sliding window
-    local total_requests = 0
-    for i = 0, window_length_secs / granularity - 1 do
-        local bucket_key = redis_key_prefix .. ":" .. (current_bucket - i)
-        local count, err = red:get(bucket_key)
-        if err then
-            ngx.log(ngx.ERR, "Failed to get request count from Redis: ", err)
-            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-        end
-
-        total_requests = total_requests + (tonumber(count) or 0)
+    -- Generate keys for previous windows dynamically
+    local window_keys = {}
+    for i = 1, sub_window_count  do
+        window_keys[i] = current_window_key - (i * sub_window_size)
     end
 
-    -- Check if the number of requests exceeds the rate limit
-    if total_requests >= max_count then
-        -- Too many requests in the current window, reject
-        return false
-    else
-        -- Increment the counter for the current bucket
-        local current_bucket_key = redis_key_prefix .. ":" .. current_bucket
-        local count, err = red:incr(current_bucket_key)
+    -- Get counts from Redis for all windows
+    local total_requests = current_count
+    local elapsed_time = now % sub_window_size
+    for i, window_key in ipairs(window_keys) do
+        local window_count, err = red:get("rate_limit:" .. token .. ":" .. window_key)
+        window_count = tonumber(window_count) or 0
+        -- Apply weight only to the last window
+        if i == sub_window_count then
+            total_requests = total_requests + (sub_window_size - elapsed_time) / sub_window_size * window_count
+        else
+            total_requests = total_requests + window_count
+        end
+    end
+
+    -- Check if the total requests exceed the limit
+    if total_requests + 1 <= request_limit then
+        -- Increment the count for the current window
+        local new_count, err = red:incr("rate_limit:" .. token .. ":" .. current_window_key)
         if err then
-            ngx.log(ngx.ERR, "Failed to increment request count: ", err)
+            ngx.log(ngx.ERR, "Failed to increment counter in Redis: ", err)
             ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
         end
-
-        -- Set the expiration for this bucket to the window size
-        red:expire(current_bucket_key, window_length_secs)
-        return true
+        return true -- Request allowed
+    else
+        return false -- Request not allowed
     end
 end
 
--- Example usage: Fetch token from URL parameters and check if the request is allowed
 local token = ngx.var.arg_token
 if not token then
     ngx.log(ngx.ERR, "Token not provided")
@@ -80,5 +69,5 @@ end
 if allowed(token) then
     ngx.say("Request allowed")
 else
-    ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+    ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- Return 429 if rate limit exceeded
 end
