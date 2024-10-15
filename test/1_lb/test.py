@@ -12,7 +12,8 @@ def send_request(client_id, token, latencies):
     end_time = time.time()
     latency = end_time - start_time
     latencies.append(latency)
-    print(f"Client {client_id} - Token {token} - Status Code: {response.status_code} - Latency: {latency:.4f} seconds")
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + f".{int((time.time() % 1) * 1_000_000):06d}"
+    print(f"{current_time} - Client {client_id} - Token {token} - Status Code: {response.status_code} - Latency: {latency:.4f} seconds")
 
 # Test the rate-limiting algorithm with multiple clients
 def test_rate_limiter_concurrent(num_clients):
@@ -22,11 +23,12 @@ def test_rate_limiter_concurrent(num_clients):
     with ThreadPoolExecutor(max_workers=num_clients) as executor:
         # Send initial requests to deplete the tokens
         print("Sending initial requests to deplete tokens:")
-        for _ in range(10):  # Send 10 requests per client
+        for _ in range(11):  # Send 10 requests per client
             futures = [executor.submit(send_request, client_id, tokens[client_id], latencies) for client_id in range(num_clients)]
             for future in futures:
                 future.result()
-            time.sleep(0.1)  # Short delay between requests
+                print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
+            time.sleep(0.07)  # Short delay between requests
 
         # Send a request that should be rate-limited
         print("Sending requests that should be rate-limited:")
@@ -56,5 +58,5 @@ def test_rate_limiter_concurrent(num_clients):
     print(f"Throughput: {throughput:.4f} requests/second")
 
 if __name__ == "__main__":
-    num_clients = 10  # Number of concurrent clients
+    num_clients = 1  # Number of concurrent clients
     test_rate_limiter_concurrent(num_clients)

@@ -12,7 +12,8 @@ def send_request(client_id, token, url, latencies):
     end_time = time.time()
     latency = end_time - start_time
     latencies.append(latency)
-    print(f"Client {client_id} - Token {token} - URL {url} - Status Code: {response.status_code} - Latency: {latency:.4f} seconds")
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + f".{int((time.time() % 1) * 1_000_000):06d}"
+    print(f"{current_time} - Client {client_id} - Token {token} - URL {url} - Status Code: {response.status_code} - Latency: {latency:.4f} seconds")
 
 # Test the latency of sending requests
 def test_latency(num_clients, num_requests):

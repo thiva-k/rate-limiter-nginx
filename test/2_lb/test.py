@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 # Define the NGINX endpoint URLs
-urls = ["http://localhost:8090/auth", "http://localhost:8091/auth"]
+urls = ["http://localhost:8090/auth", "http://localhost:8090/auth"]
 
 # Function to send a request and print the response
 def send_request(client_id, token, url, latencies):
@@ -12,7 +12,8 @@ def send_request(client_id, token, url, latencies):
     end_time = time.time()
     latency = end_time - start_time
     latencies.append(latency)
-    print(f"Client {client_id} - Token {token} - URL {url} - Status Code: {response.status_code} - Latency: {latency:.4f} seconds")
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + f".{int((time.time() % 1) * 1_000_000):06d}"
+    print(f"{current_time} - Client {client_id} - Token {token} - URL {url} - Status Code: {response.status_code} - Latency: {latency:.6f} seconds")
     return response.status_code
 
 # Test the rate-limiting algorithm with multiple requests from multiple users
@@ -34,7 +35,9 @@ def test_rate_limiter_concurrent(num_requests, num_users):
         # Send a request that should be rate-limited
         print("Sending requests that should be rate-limited:")
         for _ in range(num_users):
-            futures = [executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) for request_id in range(num_requests)]
+            futures = [
+                executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) 
+                for request_id in range(num_requests)]
             for future in futures:
                 future.result()
 
@@ -45,16 +48,18 @@ def test_rate_limiter_concurrent(num_requests, num_users):
         # Send a request that should be allowed
         print("Sending requests that should be allowed:")
         for _ in range(num_users):
-            futures = [executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) for request_id in range(num_requests)]
+            futures = [
+                executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) 
+                for request_id in range(num_requests)]
             for future in futures:
                 future.result()
 
     return latencies
 
 if __name__ == "__main__":
-    num_requests = 10  # Number of concurrent requests
+    num_requests = 11 # Number of concurrent requests
     num_runs = 1  # Number of times to run the test
-    num_users = 100  # Number of users
+    num_users = 1  # Number of users
 
     all_latencies = []
 

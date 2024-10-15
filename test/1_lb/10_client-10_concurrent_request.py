@@ -3,12 +3,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 # Define the NGINX endpoint URL
-url = "http://localhost:8091/auth"  # Replace with your actual endpoint
+url = "http://localhost:8090/auth"  # Replace with your actual endpoint
 
 # Function to send a request and print the response
 def send_request(client_id, token):
     response = requests.get(url, params={"token": token})
-    print(f"Client {client_id} - Token {token} - Status Code: {response.status_code}")
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + f".{int((time.time() % 1) * 1_000_000):06d}"
+    print(f"{current_time} - Client {client_id} - Token {token} - Status Code: {response.status_code}")
 
 # Test the rate-limiting algorithm with multiple clients
 def test_rate_limiter_concurrent(num_clients):
@@ -40,5 +41,5 @@ def test_rate_limiter_concurrent(num_clients):
             future.result()
 
 if __name__ == "__main__":
-    num_clients = 10  # Number of concurrent clients
+    num_clients = 1  # Number of concurrent clients
     test_rate_limiter_concurrent(num_clients)
