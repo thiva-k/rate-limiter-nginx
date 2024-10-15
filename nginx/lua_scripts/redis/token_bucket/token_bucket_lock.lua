@@ -122,9 +122,11 @@ local function rate_limit()
         end
 
         release_lock(red, lock_key)
+
         ngx.say("Request allowed")
     else
         release_lock(red, lock_key)
+
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429
     end
 end

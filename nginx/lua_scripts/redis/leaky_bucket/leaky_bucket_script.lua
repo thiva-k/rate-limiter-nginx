@@ -53,23 +53,26 @@ local function get_rate_limit_script()
         local leaked_tokens = math.floor(elapsed * leak_rate / 1000000)
         local bucket_level = math.max(0, last_tokens - leaked_tokens)
 
-        local delay_between_requests = 1 / leak_rate * 1000000
-
-        -- Assumption: Atleast 1us delay will be there between request processing
-        -- If time difference either 0 or greater than delay_between_requests then no need to add delay
-        local time_diff = now - last_access
-        local delay = 0
-        if time_diff < 0 or (time_diff > 0 and time_diff < delay_between_requests) then
-            delay = -time_diff + delay_between_requests
-        end
-
         if bucket_level + requested <= bucket_capacity then
+            -- Calculate default delay between requests based on leak rate in microseconds
+            local delay_between_requests = 1 / leak_rate * 1000000
+
+            -- Assumption: Atleast 1us delay will be there between request processing
+            -- If time difference either 0 or greater than delay_between_requests then no need to add delay
+            local time_diff = now - last_access
+            local delay = 0
+            if time_diff < 0 or (time_diff > 0 and time_diff < delay_between_requests) then
+                delay = -time_diff + delay_between_requests
+            end
+
             -- For the first request no need to increment the bucket level as we allow it immediately
             if delay ~= 0 or bucket_level ~= 0 then
                 bucket_level = bucket_level + requested
             end
+
             redis.call("set", tokens_key, bucket_level, "EX", ttl)
             redis.call("set", last_access_key, now + delay, "EX", ttl)
+            
             return delay
         else
             return -1
