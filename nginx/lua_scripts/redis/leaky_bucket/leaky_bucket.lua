@@ -72,25 +72,26 @@ local function rate_limit()
     local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
     local bucket_level = math.max(0, last_tokens - leaked_tokens)
 
-    local delay_between_requests = 1 / leak_rate * 1000
-
-    -- Assumption: Atleast 1ms delay will be there between request processing
-    -- If time difference either 0 or greater than delay_between_requests then no need to add delay
-    local time_diff = now - last_access
-    local delay = 0
-    if time_diff < 0 or (time_diff > 0 and time_diff < delay_between_requests) then
-        delay = -time_diff + delay_between_requests
-    end
-
-    -- Calculate TTL for the Redis keys
-    local ttl = math.floor(bucket_capacity / leak_rate * 2)
-
     -- Verify if the current token level is below the bucket capacity.
     if bucket_level + requested_tokens <= bucket_capacity then
+        -- Calculate the default delay between requests based on the leak rate in milliseconds
+        local delay_between_requests = 1 / leak_rate * 1000
+
+        -- Assumption: Atleast 1ms delay will be there between request processing
+        -- If time difference either 0 or greater than delay_between_requests then no need to add delay
+        local time_diff = now - last_access
+        local delay = 0
+        if time_diff < 0 or (time_diff > 0 and time_diff < delay_between_requests) then
+            delay = -time_diff + delay_between_requests
+        end
+
         -- For the first request no need to increment the bucket level as we allow it immediately
         if (delay ~= 0) or (bucket_level ~= 0) then
             bucket_level = bucket_level + requested_tokens
         end
+
+        -- Calculate TTL for the Redis keys
+        local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
         red:init_pipeline()
         red:set(tokens_key, bucket_level, "EX", ttl)

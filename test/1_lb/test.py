@@ -27,7 +27,6 @@ def test_rate_limiter_concurrent(num_clients):
             futures = [executor.submit(send_request, client_id, tokens[client_id], latencies) for client_id in range(num_clients)]
             for future in futures:
                 future.result()
-                print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
             time.sleep(0.07)  # Short delay between requests
 
         # Send a request that should be rate-limited
