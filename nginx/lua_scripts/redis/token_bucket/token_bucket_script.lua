@@ -4,6 +4,8 @@ local redis = require "resty.redis"
 local redis_host = "redis"
 local redis_port = 6379
 local redis_timeout = 1000 -- 1 second timeout
+local max_idle_timeout = 10000 -- 10 seconds
+local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Token bucket parameters
 local bucket_capacity = 10 -- Maximum tokens in the bucket
@@ -23,8 +25,16 @@ local function init_redis()
     return red
 end
 
+-- Helper function to close Redis connection
+local function close_redis(red)
+    local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to set keepalive: ", err)
+    end
+end
+
 -- Helper function to get URL token
-local function get_token()
+local function get_user_url_token()
     local token = ngx.var.arg_token
     if not token then
         return nil, "Token not provided"
@@ -32,14 +42,14 @@ local function get_token()
     return token
 end
 
--- Redis script to implement token bucket algorithm
+-- Function to get the rate limit Lua script
 local function get_rate_limit_script()
     return [[
         local tokens_key = KEYS[1]
         local last_access_key = KEYS[2]
         local bucket_capacity = tonumber(ARGV[1])
         local refill_rate = tonumber(ARGV[2])
-        local requested = tonumber(ARGV[3])
+        local requested_tokens = tonumber(ARGV[3])
         local ttl = tonumber(ARGV[4])
 
         local redis_time = redis.call("TIME")
@@ -53,8 +63,8 @@ local function get_rate_limit_script()
         local add_tokens = elapsed * refill_rate / 1000000
         local new_tokens = math.floor(math.min(bucket_capacity, last_tokens + add_tokens) * 1000000 + 0.5) / 1000000
 
-        if new_tokens >= requested then
-            new_tokens = new_tokens - requested
+        if new_tokens >= requested_tokens then
+            new_tokens = new_tokens - requested_tokens
             redis.call("set", tokens_key, new_tokens, "EX", ttl)
             redis.call("set", last_access_key, now, "EX", ttl)
             return 1
@@ -64,7 +74,7 @@ local function get_rate_limit_script()
     ]]
 end
 
--- Function to load the script into Redis if not already cached
+-- Load the Lua script into Redis if not already cached
 local function load_script_to_redis(red, script)
     local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
     if not sha then
@@ -79,7 +89,7 @@ local function load_script_to_redis(red, script)
 end
 
 -- Execute the token bucket logic atomically
-local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+local function execute_rate_limit(red, sha, tokens_key, last_access_key, ttl)
     local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
 
     if err and err:find("NOSCRIPT", 1, true) then
@@ -100,50 +110,63 @@ local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_
 end
 
 -- Main rate limiting logic
-local function rate_limit()
-    -- Initialize Redis connection
-    local red, err = init_redis()
-    if not red then
-        ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
-
-    -- Get token from the request URL
-    local token, err = get_token()
-    if not token then
-        ngx.log(ngx.ERR, "Failed to get token: ", err)
-        ngx.exit(ngx.HTTP_BAD_REQUEST)
-    end
-
+local function rate_limit(red, token)
     -- Redis keys for token count and last access time
     local tokens_key = "rate_limit:" .. token .. ":tokens"
     local last_access_key = "rate_limit:" .. token .. ":last_access"
-
-    -- Calculate TTL for the Redis keys
-    local ttl = math.floor(bucket_capacity / refill_rate * 2)
 
     -- Load or retrieve the Lua script SHA
     local script = get_rate_limit_script()
     local sha, err = load_script_to_redis(red, script)
     if not sha then
         ngx.log(ngx.ERR, "Failed to load script: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return ngx.HTTP_INTERNAL_SERVER_ERROR
     end
 
+    -- Calculate TTL for the Redis keys
+    local ttl = math.floor(bucket_capacity / refill_rate * 2)
+
     -- Execute token bucket logic
-    local result, err = execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+    local result, err = execute_rate_limit(red, sha, tokens_key, last_access_key, ttl)
     if not result then
         ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return ngx.HTTP_INTERNAL_SERVER_ERROR
     end
 
     -- Handle the result
     if result == 1 then
         ngx.say("Request allowed")
+        return ngx.HTTP_OK
     else
-        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429 Too Many Requests
+        return ngx.HTTP_TOO_MANY_REQUESTS -- 429
     end
 end
 
--- Run the rate limiter
-rate_limit()
+-- Main function to initialize Redis and handle rate limiting
+local function main()
+    local token, err = get_user_url_token()
+    if not token then
+        ngx.log(ngx.ERR, "Failed to get token: ", err)
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
+
+    local red, err = init_redis()
+    if not red then
+        ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    local ok, status = pcall(rate_limit, red, token)
+
+    close_redis(red)
+
+    if not ok then
+        ngx.log(ngx.ERR, status)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    else
+        ngx.exit(status)
+    end
+end
+
+-- Run the main function
+main()
