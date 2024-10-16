@@ -29,8 +29,10 @@ end
 local function close_redis(red)
     local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to set keepalive: ", err)
+        return nil, err
     end
+
+    return true
 end
 
 -- Helper function to get URL token
@@ -39,6 +41,7 @@ local function get_user_url_token()
     if not token then
         return nil, "Token not provided"
     end
+
     return token
 end
 
@@ -85,6 +88,7 @@ local function load_script_to_redis(red, script)
         ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
         sha = new_sha
     end
+
     return sha
 end
 
@@ -156,11 +160,14 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local ok, status = pcall(rate_limit, red, token)
+    local res, status = pcall(rate_limit, red, token)
 
-    close_redis(red)
-
+    local ok, err = close_redis(red)
     if not ok then
+        ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
+    end
+
+    if not res then
         ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     else

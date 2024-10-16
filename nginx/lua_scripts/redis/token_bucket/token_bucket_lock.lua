@@ -34,16 +34,20 @@ end
 local function close_redis(red)
     local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to set keepalive: ", err)
+        return nil, err
     end
+
+    return true
 end
 
 -- Helper function to get URL token
 local function get_user_url_token()
     local token = ngx.var.arg_token
+
     if not token then
         return nil, "Token not provided"
     end
+
     return token
 end
 
@@ -63,13 +67,20 @@ local function acquire_lock(red, token)
         -- Delay before retrying
         ngx.sleep(retry_delay / 1000) -- Convert milliseconds to seconds
     end
+
     return false -- Failed to acquire lock after max retries
 end
 
 -- Function to release a lock
 local function release_lock(red, token)
     local lock_key = "rate_limit_lock:" .. token
-    red:del(lock_key)
+
+    local res, err = red:del(lock_key)
+    if not res then
+        return false
+    end
+
+    return true
 end
 
 -- Main rate limiting logic
@@ -139,13 +150,18 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local ok, status = pcall(rate_limit, red, token)
+    local res, status = pcall(rate_limit, red, token)
 
-    release_lock(red, token)
+    if not release_lock(red, token) then
+        ngx.log(ngx.ERR, "Failed to release lock")
+    end
 
-    close_redis(red)
-
+    local ok, err = close_redis(red)
     if not ok then
+        ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
+    end
+
+    if not res then
         ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     else
