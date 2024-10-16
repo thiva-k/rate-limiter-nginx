@@ -21,6 +21,7 @@ local function init_shared_dict()
     if not shared_dict then
         return nil
     end
+
     return shared_dict
 end
 
@@ -41,8 +42,10 @@ end
 local function close_redis(red)
     local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to set keepalive: ", err)
+        return nil, err
     end
+
+    return true
 end
 
 -- Helper function to acquire a lock
@@ -50,15 +53,20 @@ local function aquire_lock(token)
     local lock = resty_lock:new("my_locks")
     local elapsed, err = lock:lock(token)
     if not elapsed then
-        ngx.log(ngx.ERR, "Failed to acquire lock: ", err)
         return nil, err
     end
+
     return lock
 end
 
 -- Helper function to release the lock
 local function release_lock(lock)
-    lock:unlock()
+    local ok, err = lock:unlock()
+    if not ok then
+        return nil, err
+    end
+
+    return true
 end
 
 -- Helper function to get URL token
@@ -67,6 +75,7 @@ local function get_user_url_token()
     if not token then
         return nil, "Token not provided"
     end
+
     return token
 end
 
@@ -247,13 +256,19 @@ local function main()
     end
 
     -- Rate limit the request
-    local ok, status = pcall(rate_limit, red, token, shared_dict)
+    local res, status = pcall(rate_limit, red, token, shared_dict)
 
-    release_lock(lock)
-
-    close_redis(red)
-
+    local ok, err = release_lock(lock)
     if not ok then
+        ngx.log(ngx.ERR, "Failed to release lock: ", err)
+    end
+
+    local ok, err = close_redis(red)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
+    end
+
+    if not res then
         ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     else
