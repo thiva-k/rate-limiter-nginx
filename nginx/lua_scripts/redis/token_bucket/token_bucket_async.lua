@@ -28,7 +28,7 @@ end
 -- Helper function to initialize Redis connection
 local function init_redis()
     local red = redis:new()
-    red:set_timeout(redis_timeout) -- 1 second timeout
+    red:set_timeout(redis_timeout)
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
@@ -225,7 +225,7 @@ local function rate_limit(red, token, shared_dict)
         ngx.say("Request allowed")
         return ngx.HTTP_OK
     else
-        return ngx.HTTP_TOO_MANY_REQUESTS -- 42
+        return ngx.HTTP_TOO_MANY_REQUESTS
     end
 end
 
