@@ -49,29 +49,14 @@ local function check_rate_limit(red, token)
     -- Construct the Redis key using the token and the window start time
     local redis_key = string.format("rate_limit:%s:%d", token, window_start)
 
-    -- Get the current count
-    local count, err = red:get(redis_key)
-    if err then
-        ngx.log(ngx.ERR, "Failed to get counter from Redis: ", err)
-        return ngx.HTTP_INTERNAL_SERVER_ERROR
-    end
-
-    -- Convert count to number or set to 0 if it doesn't exist
-    count = tonumber(count) or 0
-
-    -- Check if the number of requests exceeds the rate limit
-    if count >= rate_limit then
-        return ngx.HTTP_TOO_MANY_REQUESTS
-    end
-
-    -- Increment the counter only if the request is to be allowed
+    -- Increment the counter first
     local new_count, err = red:incr(redis_key)
     if err then
         ngx.log(ngx.ERR, "Failed to increment counter in Redis: ", err)
         return ngx.HTTP_INTERNAL_SERVER_ERROR
     end
 
-    -- Set the expiration time for the Redis key if it's a new key
+    -- Set the expiration time for the Redis key if it's a new key (count == 1)
     if new_count == 1 then
         local remaining_time = window_size - (current_time % window_size)
         local ok, err = red:expire(redis_key, math.ceil(remaining_time))
@@ -79,6 +64,11 @@ local function check_rate_limit(red, token)
             ngx.log(ngx.ERR, "Failed to set expiration for key in Redis: ", err)
             return ngx.HTTP_INTERNAL_SERVER_ERROR
         end
+    end
+
+    -- Check if the number of requests exceeds the rate limit
+    if new_count > rate_limit then
+        return ngx.HTTP_TOO_MANY_REQUESTS
     end
 
     return ngx.HTTP_OK

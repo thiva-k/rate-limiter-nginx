@@ -1,8 +1,13 @@
 local redis = require "resty.redis"
 
--- Global variables
+-- Redis connection settings
 local redis_host = "redis"
 local redis_port = 6379
+local redis_timeout = 1000 -- 1 second timeout
+local max_idle_timeout = 10000 -- 10 seconds
+local pool_size = 100 -- Maximum number of idle connections in the pool
+
+-- Rate limiting parameters
 local rate_limit = 500 -- Maximum number of requests allowed per window
 local window_size = 60 -- Time window in seconds
 
@@ -31,20 +36,27 @@ local limit_script = [[
     return current
 ]]
 
--- Function to initialize Redis connection
+-- Helper function to initialize Redis connection
 local function init_redis()
     local red = redis:new()
-    red:set_timeout(1000) -- 1 second timeout
-    
+    red:set_timeout(redis_timeout)
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        return nil, "Failed to connect to Redis: " .. err
+        return nil, err
     end
-    
     return red
 end
 
--- Function to retrieve the token from URL parameters
+-- Helper function to close Redis connection
+local function close_redis(red)
+    local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
+    if not ok then
+        return nil, err
+    end
+    return true
+end
+
+-- Helper function to get URL token
 local function get_token()
     local token = ngx.var.arg_token
     if not token then
@@ -57,7 +69,6 @@ end
 local function get_script_sha(red)
     local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
     if not sha then
-        -- If SHA is not in cache, load the script into Redis
         local new_sha, err = red:script("LOAD", limit_script)
         if not new_sha then
             return nil, "Failed to load script: " .. err
@@ -96,22 +107,8 @@ local function run_rate_limit_script(red, redis_key, ttl)
     return resp
 end
 
--- Main function to check rate limit
-local function check_rate_limit()
-    -- Initialize Redis connection
-    local red, err = init_redis()
-    if not red then
-        ngx.log(ngx.ERR, err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
-
-    -- Get token from URL parameters
-    local token, err = get_token()
-    if not token then
-        ngx.log(ngx.ERR, err)
-        ngx.exit(ngx.HTTP_BAD_REQUEST)
-    end
-
+-- Main rate limiting logic
+local function check_rate_limit(red, token)
     -- Calculate the current time window and TTL
     local current_time = ngx.now()
     local window_start = math.floor(current_time / window_size) * window_size
@@ -123,15 +120,50 @@ local function check_rate_limit()
     -- Run the rate limiting script
     local resp, err = run_rate_limit_script(red, redis_key, math.ceil(ttl))
     if not resp then
-        ngx.log(ngx.ERR, err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return nil, err
     end
 
     -- Check if the rate limit has been exceeded
     if resp > rate_limit then
-        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+        return ngx.HTTP_TOO_MANY_REQUESTS
+    end
+
+    return ngx.HTTP_OK
+end
+
+-- Main function to initialize Redis and handle rate limiting
+local function main()
+    -- Get token from URL parameters
+    local token, err = get_token()
+    if not token then
+        ngx.log(ngx.ERR, "Failed to get token: ", err)
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
+
+    -- Initialize Redis connection
+    local red, err = init_redis()
+    if not red then
+        ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    -- Run rate limiting check with error handling
+    local res, status = pcall(check_rate_limit, red, token)
+    
+    -- Properly close Redis connection
+    local ok, close_err = close_redis(red)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to close Redis connection: ", close_err)
+    end
+
+    -- Handle any errors from the rate limiting check
+    if not res then
+        ngx.log(ngx.ERR, status)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    else
+        ngx.exit(status)
     end
 end
 
--- Main execution
-check_rate_limit()
+-- Run the main function
+main()
