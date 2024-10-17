@@ -9,11 +9,13 @@ local redis_timeout = 1000 -- 1 second timeout
 local bucket_capacity = 10 -- Maximum tokens in the bucket
 local leak_rate = 1 -- Tokens leaked per second
 local requested_tokens = 1 -- Number of tokens required per request
+local max_idle_timeout = 10000 -- 10 seconds
+local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Helper function to initialize Redis connection
 local function init_redis()
     local red = redis:new()
-    red:set_timeout(redis_timeout) -- 1 second timeout
+    red:set_timeout(redis_timeout)
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
@@ -23,12 +25,23 @@ local function init_redis()
     return red
 end
 
+-- Helper function to close Redis connection
+local function close_redis(red)
+    local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
+    if not ok then
+        return nil, err
+    end
+
+    return true
+end
+
 -- Helper function to get URL token
-local function get_token()
+local function get_user_url_token()
     local token = ngx.var.arg_token
     if not token then
         return nil, "Token not provided"
     end
+
     return token
 end
 
@@ -95,7 +108,7 @@ local function load_script_to_redis(red, script)
 end
 
 -- Execute the leaky bucket logic atomically
-local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
+local function execute_rate_limit(red, sha, tokens_key, last_access_key, ttl)
     local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
 
     if err then
@@ -118,21 +131,7 @@ local function execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_
 end
 
 -- Main function for rate limiting
-local function rate_limit()
-    -- Initialize Redis connection
-    local red, err = init_redis()
-    if not red then
-        ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
-
-    -- Get token from the request URL
-    local token, err = get_token()
-    if not token then
-        ngx.log(ngx.ERR, "Failed to get token: ", err)
-        ngx.exit(ngx.HTTP_BAD_REQUEST)
-    end
-
+local function rate_limit(red, token)
     -- Redis keys for token count and last access time
     local tokens_key = "rate_limit:" .. token .. ":tokens"
     local last_access_key = "rate_limit:" .. token .. ":last_access"
@@ -145,26 +144,57 @@ local function rate_limit()
     local sha, err = load_script_to_redis(red, script)
     if not sha then
         ngx.log(ngx.ERR, "Failed to load script: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return ngx.HTTP_INTERNAL_SERVER_ERROR
     end
 
     -- Execute leaky bucket logic
-    local result, err = execute_rate_limit(red, sha, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
+    local result, err = execute_rate_limit(red, sha, tokens_key, last_access_key, ttl)
     if not result then
         ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return ngx.HTTP_INTERNAL_SERVER_ERROR
     end
 
     -- Handle the result
     if result == -1 then
-        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS) -- 429 Too Many Requests
+        return ngx.HTTP_TOO_MANY_REQUESTS
     else
         -- Nginx sleep supports second with milliseconds precision 
         local rounded_delay = math.floor(result / 1000 + 0.5) / 1000 -- Round to 3 decimal places
         ngx.sleep(rounded_delay) -- Convert microseconds to seconds
         ngx.say("Request allowed")
+        return ngx.HTTP_OK
     end
 end
 
--- Run the rate limiter
-rate_limit()
+-- Main function to initialize Redis and handle rate limiting
+local function main()
+    local token, err = get_user_url_token()
+    if not token then
+        ngx.log(ngx.ERR, "Failed to get token: ", err)
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
+
+    local red, err = init_redis()
+    if not red then
+        ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    local res, status = pcall(rate_limit, red, token)
+
+    local ok, err = close_redis(red)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
+    end
+
+    if not res then
+        ngx.log(ngx.ERR, status)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    else
+        ngx.exit(status)
+    end
+end
+
+-- Run the main function
+main()
+
