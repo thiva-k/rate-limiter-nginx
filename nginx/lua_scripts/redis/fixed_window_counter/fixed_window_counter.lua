@@ -32,7 +32,7 @@ local function close_redis(red)
 end
 
 -- Helper function to get URL token
-local function get_user_url_token()
+local function get_token()
     local token = ngx.var.arg_token
     if not token then
         return nil, "Token not provided"
@@ -86,7 +86,7 @@ end
 
 -- Main function to initialize Redis and handle rate limiting
 local function main()
-    local token, err = get_user_url_token()
+    local token, err = get_token()
     if not token then
         ngx.log(ngx.ERR, "Failed to get token: ", err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
