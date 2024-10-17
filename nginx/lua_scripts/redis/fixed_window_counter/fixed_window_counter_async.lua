@@ -4,15 +4,18 @@ local resty_lock = require "resty.lock"
 -- Configuration
 local redis_host = "redis"         -- Redis server host
 local redis_port = 6379            -- Redis server port
+local redis_timeout = 1000         -- 1 second timeout
+local max_idle_timeout = 10000     -- 10 seconds
+local pool_size = 100             -- Maximum number of idle connections in the pool
 local rate_limit = 500             -- Max requests allowed in the window
 local batch_percent = 0.1          -- Percentage of remaining requests to allow in a batch
 local min_batch_size = 1           -- Minimum size of batch
 local window_size = 60             -- Time window size in seconds
 
--- Initialize Redis connection
+-- Initialize Redis connection with pooling
 local function init_redis()
     local red = redis:new()
-    red:set_timeout(1000) -- 1 second timeout
+    red:set_timeout(redis_timeout)
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
@@ -20,6 +23,15 @@ local function init_redis()
     end
 
     return red
+end
+
+-- Close Redis connection with keepalive for pooling
+local function close_redis(red)
+    local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
+    if not ok then
+        return nil, err
+    end
+    return true
 end
 
 -- Retrieve token from URL parameter
@@ -179,22 +191,8 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
     return false  -- No batch quota available, reject request
 end
 
--- Main rate-limiting function
-local function main()
-    -- Initialize Redis
-    local red, err = init_redis()
-    if not red then
-        ngx.log(ngx.ERR, err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
-
-    -- Retrieve token
-    local token, err = get_token()
-    if not token then
-        ngx.log(ngx.ERR, err)
-        ngx.exit(ngx.HTTP_BAD_REQUEST)
-    end
-
+-- Rate limiting logic wrapper
+local function check_rate_limit(red, token)
     -- Calculate TTL
     local ttl = calculate_ttl()
 
@@ -205,52 +203,81 @@ local function main()
     -- Access shared dictionary
     local shared_dict, err = get_shared_dict()
     if not shared_dict then
-        ngx.log(ngx.ERR, err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return nil, err
     end
 
     -- Acquire lock to prevent race conditions
     local lock = resty_lock:new("my_locks")
     local elapsed, err = lock:lock(redis_key, { timeout = 10 })  -- 10 seconds timeout
     if not elapsed then
-        ngx.log(ngx.ERR, "Failed to acquire lock: " .. err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return nil, "Failed to acquire lock: " .. err
     end
 
-    -- Ensure lock is released on exit
-    local function unlock_and_exit(status)
+    -- Ensure lock is released
+    local function unlock_and_return(status, error_msg)
         local ok, err = lock:unlock()
         if not ok then
             ngx.log(ngx.ERR, "Failed to unlock: " .. err)
         end
-        ngx.exit(status)
+        if error_msg then
+            return nil, error_msg
+        end
+        return status
     end
 
     -- Process batch quota
     local batch_quota, err = process_batch_quota(red, shared_dict, redis_key, ttl)
     if not batch_quota then
-        ngx.log(ngx.ERR, err)
-        unlock_and_exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return unlock_and_return(nil, err)
     end
 
     -- Determine if request is allowed
     local allowed, err = increment_and_check(shared_dict, redis_key, batch_quota, red, ttl)
     if err then
-        ngx.log(ngx.ERR, err)
-        unlock_and_exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        return unlock_and_return(nil, err)
     end
 
-    -- Release the lock
+    -- Release the lock and return result
     local ok, err = lock:unlock()
     if not ok then
         ngx.log(ngx.ERR, "Failed to unlock: " .. err)
     end
 
-    -- Enforce rate limit
-    if not allowed then
-        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+    return allowed and ngx.HTTP_OK or ngx.HTTP_TOO_MANY_REQUESTS
+end
+
+-- Main function
+local function main()
+    -- Get token
+    local token, err = get_token()
+    if not token then
+        ngx.log(ngx.ERR, err)
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
+
+    -- Initialize Redis with pooling
+    local red, err = init_redis()
+    if not red then
+        ngx.log(ngx.ERR, err)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    -- Use pcall to handle errors in rate limiting logic
+    local res, status = pcall(check_rate_limit, red, token)
+    
+    -- Close Redis connection (return to pool)
+    local ok, err = close_redis(red)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
+    end
+
+    if not res then
+        ngx.log(ngx.ERR, status)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    else
+        ngx.exit(status)
     end
 end
 
--- Execute main function
+-- Run the main function
 main()
