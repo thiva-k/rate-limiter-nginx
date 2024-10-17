@@ -20,7 +20,7 @@ local retry_delay = 100 -- Delay between retries in milliseconds
 -- Helper function to initialize Redis connection
 local function init_redis()
     local red = redis:new()
-    red:set_timeout(redis_timeout) -- 1 second timeout
+    red:set_timeout(redis_timeout)
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
@@ -125,7 +125,7 @@ local function rate_limit(red, token)
         return ngx.HTTP_OK
     else
         -- Not enough tokens, rate limit the request
-        return ngx.HTTP_TOO_MANY_REQUESTS -- 429
+        return ngx.HTTP_TOO_MANY_REQUESTS
     end
 end
 
