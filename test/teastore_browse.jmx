@@ -47,8 +47,6 @@
           </elementProp>
         </collectionProp>
       </elementProp>
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
@@ -98,7 +96,7 @@
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -134,13 +132,13 @@
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="HTTP Cookie Manager" enabled="true">
+        <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="HTTP Cookie Manager">
           <collectionProp name="CookieManager.cookies"/>
           <boolProp name="CookieManager.clearEachIteration">true</boolProp>
           <boolProp name="CookieManager.controlledByThreadGroup">false</boolProp>
         </CookieManager>
         <hashTree/>
-        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
           <collectionProp name="HeaderManager.headers">
             <elementProp name="" elementType="Header">
               <stringProp name="Header.name">Content-Type</stringProp>
@@ -182,7 +180,7 @@ sampler.setPath(currentPath);
         <hashTree/>
         <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Home"/>
         <hashTree>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Categories" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Categories">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${persistence}/categories?start=-1&amp;max=-1</stringProp>
@@ -194,14 +192,14 @@ sampler.setPath(currentPath);
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree>
-            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get First Category" enabled="true">
+            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get First Category">
               <stringProp name="JSONPostProcessor.referenceNames">category</stringProp>
               <stringProp name="JSONPostProcessor.jsonPathExprs">$[0].id </stringProp>
               <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
             </JSONPostProcessor>
             <hashTree/>
           </hashTree>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Is Logged In" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Is Logged In">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${auth}/useractions/isloggedin</stringProp>
@@ -237,7 +235,7 @@ sampler.setPath(currentPath);
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Web Icon Image" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Store Icon Image">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${image}/image/getWebImages</stringProp>
@@ -258,9 +256,9 @@ sampler.setPath(currentPath);
           </HTTPSamplerProxy>
           <hashTree/>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Login" enabled="true"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Login"/>
         <hashTree>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Login" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Login">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${auth}/useractions/login?name=user${__threadNum}&amp;password=password</stringProp>
@@ -282,15 +280,21 @@ sampler.setPath(currentPath);
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree>
-            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Save Session Blob" enabled="true">
+            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get User UID">
+              <stringProp name="JSONPostProcessor.referenceNames">user_uid</stringProp>
+              <stringProp name="JSONPostProcessor.jsonPathExprs">$.uid</stringProp>
+              <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
+            </JSONPostProcessor>
+            <hashTree/>
+            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Save Session Blob">
               <stringProp name="JSONPostProcessor.referenceNames">session_blob</stringProp>
               <stringProp name="JSONPostProcessor.jsonPathExprs">$</stringProp>
-              <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
+              <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
             </JSONPostProcessor>
             <hashTree/>
           </hashTree>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="List Products" enabled="true"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="List Products"/>
         <hashTree>
           <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Category" enabled="true">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
@@ -316,7 +320,7 @@ sampler.setPath(currentPath);
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Product List" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Product List">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${persistence}/products/category/${category}?start=0&amp;max=20</stringProp>
@@ -328,47 +332,20 @@ sampler.setPath(currentPath);
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree>
-            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get Product Ids" enabled="true">
+            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get Product Id">
+              <stringProp name="JSONPostProcessor.referenceNames">product_id</stringProp>
+              <stringProp name="JSONPostProcessor.jsonPathExprs">$.[0].id</stringProp>
+              <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
+            </JSONPostProcessor>
+            <hashTree/>
+            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get Product Ids">
               <stringProp name="JSONPostProcessor.referenceNames">product_ids</stringProp>
               <stringProp name="JSONPostProcessor.jsonPathExprs">$.[*].id</stringProp>
               <stringProp name="JSONPostProcessor.match_numbers">-1</stringProp>
             </JSONPostProcessor>
             <hashTree/>
-            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get Product Id" enabled="true">
-              <stringProp name="JSONPostProcessor.referenceNames">product_id</stringProp>
-              <stringProp name="JSONPostProcessor.jsonPathExprs">$.[0].id</stringProp>
-              <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
-            </JSONPostProcessor>
-            <hashTree/>
           </hashTree>
-          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Create Product Images Request Body" enabled="true">
-            <stringProp name="scriptLanguage">groovy</stringProp>
-            <stringProp name="parameters"></stringProp>
-            <stringProp name="filename"></stringProp>
-            <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">// Import necessary classes
-import groovy.json.JsonBuilder
-
-// Initialize the JSON object
-def jsonObject = new JsonBuilder()
-def idsMap = [:] // Create an empty map to hold the ID-value pairs
-
-// Loop through the IDs from ids_1 to ids_20
-for (int i = 1; i &lt;= 20; i++) {
-    def id = vars.get(&quot;product_ids_&quot; + i) // Get the current ID
-    if (id != null) {
-        idsMap[id] = &quot;64x64&quot; // Add to the map with the required value
-    }
-}
-
-// Create the JSON object from the map
-jsonObject(idsMap)
-
-// Store the result in a variable
-vars.put(&quot;product_images_request_body&quot;, jsonObject.toPrettyString()) // Save the JSON string</stringProp>
-          </JSR223PreProcessor>
-          <hashTree/>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Product Images" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Product Images">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${image}/image/getWebImages</stringProp>
@@ -385,8 +362,40 @@ vars.put(&quot;product_images_request_body&quot;, jsonObject.toPrettyString()) /
               </collectionProp>
             </elementProp>
           </HTTPSamplerProxy>
-          <hashTree/>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Web Icon Image" enabled="true">
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Create Request Body">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">// Import necessary classes
+import groovy.json.JsonBuilder
+
+// Initialize the JSON object
+def jsonObject = new JsonBuilder()
+def idsMap = [:] // Create an empty map to hold the ID-value pairs
+
+// Get the number of product IDs extracted
+def numIds = vars.getObject(&quot;product_ids_matchNr&quot;)?.toInteger() ?: 0
+
+// Loop through each product ID dynamically
+for (int i = 1; i &lt;= numIds; i++) {
+    def id = vars.get(&quot;product_ids_&quot; + i) // Get each ID
+    if (id) {
+        idsMap[id] = &quot;64x64&quot; // Add to the map with the required value
+    }
+}
+
+// Create the JSON object from the map
+jsonObject(idsMap)
+
+// Store the result in a variable
+vars.put(&quot;product_images_request_body&quot;, jsonObject.toPrettyString()) // Save the JSON string
+</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Store Icon Image">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${image}/image/getWebImages</stringProp>
@@ -407,9 +416,9 @@ vars.put(&quot;product_images_request_body&quot;, jsonObject.toPrettyString()) /
           </HTTPSamplerProxy>
           <hashTree/>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Look at Product" enabled="true"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Look at Product"/>
         <hashTree>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Categories">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Categories" enabled="true">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${persistence}/categories?start=-1&amp;max=-1</stringProp>
@@ -421,7 +430,7 @@ vars.put(&quot;product_images_request_body&quot;, jsonObject.toPrettyString()) /
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree>
-            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get First Category" enabled="true">
+            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get First Category">
               <stringProp name="JSONPostProcessor.referenceNames">category</stringProp>
               <stringProp name="JSONPostProcessor.jsonPathExprs">$[0].id </stringProp>
               <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
@@ -446,7 +455,7 @@ vars.put(&quot;product_images_request_body&quot;, jsonObject.toPrettyString()) /
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Product" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Product Details">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${persistence}/products/${product_id}</stringProp>
@@ -459,54 +468,217 @@ vars.put(&quot;product_images_request_body&quot;, jsonObject.toPrettyString()) /
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="JSR223 PostProcessor" enabled="true">
-            <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="filename"></stringProp>
-            <stringProp name="parameters"></stringProp>
-            <stringProp name="script">//// Step 1: Define the new order item
-//def newOrderItem = [
-//    id: 1,                       // Example order item ID
-//    name: &quot;Sample Item&quot;,         // Example item name
-//    quantity: 2,                 // Quantity of the item
-//    price: 19.99                 // Price of the item
-//]
-//
-//// Step 2: Retrieve the current session_blob
-//def sessionBlob = vars.get(&quot;session_blob&quot;) ?: &quot;{}&quot;  // Default to empty JSON object if not found
-//
-//// Step 3: Parse the existing session_blob (assuming it&apos;s JSON)
-//def jsonSlurper = new groovy.json.JsonSlurper()
-//def sessionData = jsonSlurper.parseText(sessionBlob)
-//
-//// Step 4: Add the new order item to the orderItems array
-//if (!sessionData.orderItems) {
-//    sessionData.orderItems = []  // Initialize orderItems if not present
-//}
-//sessionData.orderItems.add(newOrderItem)
-//
-//// Step 5: Convert back to JSON string
-//def jsonBuilder = new groovy.json.JsonBuilder(sessionData)
-//def updatedSessionBlob = jsonBuilder.toPrettyString()
-//
-//// Step 6: Store the updated session_blob back to JMeter variable
-//vars.put(&quot;session_blob&quot;, updatedSessionBlob)
-//
-//// Optional: Log the updated session_blob for debugging
-//log.info(&quot;Updated session_blob: ${updatedSessionBlob}&quot;)
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Product Image">
+            <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
+            <stringProp name="HTTPSampler.port">${port}</stringProp>
+            <stringProp name="HTTPSampler.path">${image}/image/getWebImages</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{&#xd;
+   &quot;product_id&quot;: &quot;300x300&quot;&#xd;
+}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Product Recommendations">
+            <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
+            <stringProp name="HTTPSampler.port">${port}</stringProp>
+            <stringProp name="HTTPSampler.path">${recommender}/recommend?uid=${user_uid}</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">${product_recommendations_request_body}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Get Recommended Product Ids">
+              <stringProp name="JSONPostProcessor.referenceNames">recommended_product_id</stringProp>
+              <stringProp name="JSONPostProcessor.jsonPathExprs">$[*]</stringProp>
+              <stringProp name="JSONPostProcessor.match_numbers">-1</stringProp>
+            </JSONPostProcessor>
+            <hashTree/>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Create Request Body">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">import groovy.json.JsonSlurper
+import groovy.json.JsonBuilder
+
+// Parse the session_blob variable
+def sessionBlob = vars.get(&quot;session_blob&quot;) ?: &quot;{}&quot;
+def sessionData = new JsonSlurper().parseText(sessionBlob)
+
+// Ensure orderItems is initialized as a list
+if (!sessionData.containsKey(&quot;orderItems&quot;) || !(sessionData.orderItems instanceof List)) {
+    sessionData.orderItems = []
+}
+
+// Create a new OrderItem object with required fields
+def newOrderItem = new LinkedHashMap()  // Using LinkedHashMap to keep field order consistent
+newOrderItem.put(&quot;id&quot;, 0)                // Replace with actual ID if needed
+newOrderItem.put(&quot;productId&quot;, vars.get(&quot;product_id&quot;).toLong())  // Retrieve productId dynamically
+newOrderItem.put(&quot;orderId&quot;, 0)           // Set an order ID if needed
+newOrderItem.put(&quot;quantity&quot;, 1)          // Define quantity as required
+newOrderItem.put(&quot;unitPriceInCents&quot;, 0)  // Set unit price in cents
+
+// Add the new OrderItem object to the orderItems list
+sessionData.orderItems.add(newOrderItem)
+
+// Store orderItems in a separate variable
+def orderItemsJson = new JsonBuilder(sessionData.orderItems).toPrettyString()
+vars.put(&quot;product_recommendations_request_body&quot;, orderItemsJson)
+
+// Convert the updated JSON structure back to a string and save it in session_blob
+//vars.put(&quot;session_blob&quot;, new JsonBuilder(sessionData).toPrettyString())
 </stringProp>
-            <stringProp name="scriptLanguage">groovy</stringProp>
-          </JSR223PostProcessor>
+            </JSR223PreProcessor>
+            <hashTree/>
+          </hashTree>
+          <ForeachController guiclass="ForeachControlPanel" testclass="ForeachController" testname="Get Product Details For Each Recommended Products">
+            <stringProp name="ForeachController.inputVal">recommended_product_id</stringProp>
+            <stringProp name="ForeachController.returnVal">current_recommended_product_id</stringProp>
+            <boolProp name="ForeachController.useSeparator">true</boolProp>
+          </ForeachController>
+          <hashTree>
+            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Product Details">
+              <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
+              <stringProp name="HTTPSampler.port">${port}</stringProp>
+              <stringProp name="HTTPSampler.path">${persistence}/products/${current_recommended_product_id}</stringProp>
+              <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+              <stringProp name="HTTPSampler.method">GET</stringProp>
+              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+              <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+                <collectionProp name="Arguments.arguments"/>
+              </elementProp>
+            </HTTPSamplerProxy>
+            <hashTree/>
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Recommended Product Images">
+            <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
+            <stringProp name="HTTPSampler.port">${port}</stringProp>
+            <stringProp name="HTTPSampler.path">${image}/image/getWebImages</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">${recommended_product_images_request_body}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Create Request Body">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">// Import necessary classes
+import groovy.json.JsonBuilder
+
+// Initialize the JSON object
+def jsonObject = new JsonBuilder()
+def idsMap = [:] // Create an empty map to hold the ID-value pairs
+
+// Get the number of recommended product IDs extracted
+def numIds = vars.getObject(&quot;recommended_product_id_matchNr&quot;)?.toInteger() ?: 0
+
+// Loop through each recommended product ID dynamically
+for (int i = 1; i &lt;= numIds; i++) {
+    def id = vars.get(&quot;recommended_product_id_&quot; + i) // Get each ID
+    if (id) {
+        idsMap[id] = &quot;125x125&quot; // Add to the map with the required value
+    }
+}
+
+// Create the JSON object from the map
+jsonObject(idsMap)
+
+// Store the result in a variable
+vars.put(&quot;recommended_product_images_request_body&quot;, jsonObject.toPrettyString()) // Save the JSON string
+</stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Store Icon Image">
+            <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
+            <stringProp name="HTTPSampler.port">${port}</stringProp>
+            <stringProp name="HTTPSampler.path">${image}/image/getWebImages</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{&#xd;
+   &quot;icon&quot;: &quot;64x64&quot;&#xd;
+}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+          </HTTPSamplerProxy>
           <hashTree/>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Add Product to Cart" enabled="true"/>
-        <hashTree/>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="List Products with different page" enabled="true"/>
-        <hashTree/>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Add Product 2 to Cart" enabled="true"/>
-        <hashTree/>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Logout" enabled="true"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Add Product to Cart"/>
         <hashTree>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Logout" enabled="true">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Add Product to Cart">
+            <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
+            <stringProp name="HTTPSampler.port">${port}</stringProp>
+            <stringProp name="HTTPSampler.path">${auth}//cart/add/${product_id}</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">${session_blob}&#xd;
+</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Save Session Blob">
+              <stringProp name="JSONPostProcessor.referenceNames">session_blob</stringProp>
+              <stringProp name="JSONPostProcessor.jsonPathExprs">$</stringProp>
+              <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
+            </JSONPostProcessor>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="List Products with different page" enabled="false"/>
+        <hashTree/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Add Product 2 to Cart" enabled="false"/>
+        <hashTree/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Logout"/>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Logout">
             <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
             <stringProp name="HTTPSampler.port">${port}</stringProp>
             <stringProp name="HTTPSampler.path">${auth}/useractions/logout</stringProp>
