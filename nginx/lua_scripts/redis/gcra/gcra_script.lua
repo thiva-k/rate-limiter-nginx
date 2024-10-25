@@ -53,7 +53,6 @@ local function get_gcra_script()
         local tat_key = KEYS[1]
         local emission_interval = tonumber(ARGV[1])
         local delay_tolerance = tonumber(ARGV[2])
-        local ttl = tonumber(ARGV[3])
 
         -- Get the current time from Redis
         local redis_time = redis.call("TIME")
@@ -71,7 +70,10 @@ local function get_gcra_script()
             -- Request allowed; calculate the new TAT
             local new_tat = math.max(current_time, last_tat) + emission_interval
             
-            -- Store the updated TAT with TTL
+            -- Calculate TTL based on the new TAT and the current time
+            local ttl = math.ceil(new_tat - current_time + delay_tolerance)
+
+            -- Store the updated TAT with calculated TTL
             redis.call("SET", tat_key, new_tat, "EX", ttl)
             return 1  -- Request allowed
         else
@@ -96,8 +98,8 @@ local function load_script_to_redis(red, script)
 end
 
 -- Execute the GCRA logic atomically
-local function execute_gcra_rate_limit(red, sha, tat_key, ttl)
-    local result, err = red:evalsha(sha, 1, tat_key, emission_interval, delay_tolerance, ttl)
+local function execute_gcra_rate_limit(red, sha, tat_key)
+    local result, err = red:evalsha(sha, 1, tat_key, emission_interval, delay_tolerance)
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
@@ -106,7 +108,7 @@ local function execute_gcra_rate_limit(red, sha, tat_key, ttl)
         if not sha then
             return nil, err
         end
-        result, err = red:evalsha(sha, 1, tat_key, emission_interval, delay_tolerance, ttl)
+        result, err = red:evalsha(sha, 1, tat_key, emission_interval, delay_tolerance)
     end
 
     if err then
@@ -129,11 +131,12 @@ local function rate_limit(red, token)
         return ngx.HTTP_INTERNAL_SERVER_ERROR
     end
 
-    -- Calculate TTL for the Redis keys, allowing them to persist for a period longer than the burst
-    local ttl = math.floor(burst * emission_interval)
-
     -- Execute GCRA logic
+<<<<<<< HEAD
+    local result, err = execute_gcra_rate_limit(red, sha, tat_key)
+=======
     local result, err = execute_gcra_rate_limit(red, sha, tat_key, ttl)
+>>>>>>> 2b768480ef5ffe1e9a588c0287119dcce0300373
     if not result then
         ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
         return ngx.HTTP_INTERNAL_SERVER_ERROR
