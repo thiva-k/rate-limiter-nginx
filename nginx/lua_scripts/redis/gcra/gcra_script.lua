@@ -132,7 +132,11 @@ local function rate_limit(red, token)
     end
 
     -- Execute GCRA logic
+<<<<<<< HEAD
     local result, err = execute_gcra_rate_limit(red, sha, tat_key)
+=======
+    local result, err = execute_gcra_rate_limit(red, sha, tat_key, ttl)
+>>>>>>> 2b768480ef5ffe1e9a588c0287119dcce0300373
     if not result then
         ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
         return ngx.HTTP_INTERNAL_SERVER_ERROR
