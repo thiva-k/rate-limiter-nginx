@@ -109,13 +109,16 @@ end
 
 -- Main rate limiting logic
 local function check_rate_limit(red, token)
-    -- Calculate the current time window and TTL
+    
+    local service_name = ngx.var.service_name
+    local http_method = ngx.var.request_method
+
+    -- Get the current timestamp and round it down to the nearest minute
     local current_time = ngx.now()
     local window_start = math.floor(current_time / window_size) * window_size
-    local ttl = window_size - (current_time - window_start)
 
-    -- Construct the Redis key using the token and window start time
-    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
+    -- Construct the Redis key using the token, http_method, service_name and the window start time
+    local redis_key = string.format("rate_limit:%s:%s:%s:%d", token, http_method, service_name, window_start)
 
     -- Run the rate limiting script
     local resp, err = run_rate_limit_script(red, redis_key, math.ceil(ttl))
