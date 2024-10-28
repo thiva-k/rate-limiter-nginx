@@ -122,7 +122,7 @@ local function main()
     elseif err then
         ngx.log(ngx.ERR, "Rate limiting error: ", err)
         ngx.exit(status)
-    else
+    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
         ngx.exit(status)
     end
 end

@@ -43,11 +43,15 @@ end
 -- Main rate limiting logic
 local function check_rate_limit(red, token)
     -- Get the current timestamp and round it down to the nearest minute
+    local service_name = ngx.var.service_name or "default_service"
+    local http_method = ngx.var.request_method
+    local endpoint = ngx.var.uri 
+
     local current_time = ngx.now()
     local window_start = math.floor(current_time / window_size) * window_size
 
     -- Construct the Redis key using the token and the window start time
-    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
+    local redis_key = string.format("rate_limit:%s:%s:%s:%s:%d", token, http_method, service_name, endpoint, window_start)
 
     -- Get the current count
     local count, err = red:get(redis_key)
@@ -107,7 +111,7 @@ local function main()
     if not res then
         ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    else
+    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
         ngx.exit(status)
     end
 end
