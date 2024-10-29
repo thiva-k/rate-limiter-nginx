@@ -1,5 +1,6 @@
 local redis = require "resty.redis"
 local resty_lock = require "resty.lock"
+local cjson = require "cjson"
 
 -- Configuration
 local redis_host = "redis"         -- Redis server host
@@ -11,6 +12,12 @@ local rate_limit = 500             -- Max requests allowed in the window
 local batch_percent = 0.1          -- Percentage of remaining requests to allow in a batch
 local min_batch_size = 1           -- Minimum size of batch
 local window_size = 60             -- Time window size in seconds
+
+-- Quota stealing configuration
+local node_id = os.getenv("NODE_ID") or ngx.worker.pid()
+local steal_request_channel = "quota_steal_requests"
+local steal_response_channel = "quota_steal_responses:"
+local steal_timeout = 1  -- 1 second timeout for steal requests
 
 -- Initialize Redis connection with pooling
 local function init_redis()
@@ -57,7 +64,7 @@ local function calculate_ttl()
     local current_time = ngx.now()
     local window_start = math.floor(current_time / window_size) * window_size
     local ttl = window_size - (current_time - window_start)
-    return math.max(1, math.ceil(ttl))  -- Ensure TTL is at least 1 second
+    return math.max(1, math.ceil(ttl))
 end
 
 -- Fetch batch quota from Redis
@@ -111,6 +118,106 @@ local function set_new_batch(shared_dict, redis_key, batch_size, ttl)
     return true
 end
 
+-- Try to steal quota from peer nodes
+local function try_steal_quota(shared_dict, redis_key, ttl)
+    local red = redis:new()
+    red:set_timeout(redis_timeout)
+    local ok, err = red:connect(redis_host, redis_port)
+    if not ok then
+        return nil, "Failed to connect to Redis for quota stealing"
+    end
+
+    -- Publish steal request
+    local request = {
+        requester_id = node_id,
+        redis_key = redis_key,
+        timestamp = ngx.now()
+    }
+    
+    ok, err = red:publish(steal_request_channel, cjson.encode(request))
+    if not ok then
+        return nil, "Failed to publish steal request"
+    end
+
+    -- Subscribe to our response channel
+    ok, err = red:subscribe(steal_response_channel .. node_id)
+    if not ok then
+        return nil, "Failed to subscribe to response channel"
+    end
+
+    -- Wait for responses with timeout
+    local start_time = ngx.now()
+    while (ngx.now() - start_time) < steal_timeout do
+        local res, err = red:read_reply()
+        if res and res[1] == "message" then
+            local response = cjson.decode(res[3])
+            if response.quota > 0 then
+                -- Update our local batch quota with stolen quota
+                ok, err = shared_dict:set(redis_key .. ":batch", response.quota, ttl)
+                if not ok then
+                    return nil, "Failed to set stolen quota"
+                end
+                -- Reset used count
+                ok, err = shared_dict:set(redis_key .. ":used", 0, ttl)
+                if not ok then
+                    return nil, "Failed to reset used count"
+                end
+                return response.quota
+            end
+        end
+        ngx.sleep(0.1)
+    end
+    
+    return nil, "No quota available from peers"
+end
+
+-- Handle quota steal requests from other nodes
+local function handle_steal_request()
+    local red = redis:new()
+    red:set_timeout(redis_timeout)
+    local ok, err = red:connect(redis_host, redis_port)
+    if not ok then
+        return
+    end
+
+    ok, err = red:subscribe(steal_request_channel)
+    if not ok then
+        return
+    end
+
+    while true do
+        local res, err = red:read_reply()
+        if res and res[1] == "message" then
+            local request = cjson.decode(res[3])
+            local shared_dict = ngx.shared.rate_limit_dict
+            
+            -- Check our local quota
+            local batch_quota = shared_dict:get(request.redis_key .. ":batch") or 0
+            local batch_used = shared_dict:get(request.redis_key .. ":used") or 0
+            local available = batch_quota - batch_used
+            
+            if available > 1 then
+                -- Share half of our available quota
+                local share_amount = math.floor(available / 2)
+                
+                -- Reduce our local quota
+                shared_dict:set(request.redis_key .. ":batch", batch_quota - share_amount)
+                
+                -- Send response
+                local resp_red = redis:new()
+                resp_red:connect(redis_host, redis_port)
+                local response = {
+                    donor_id = node_id,
+                    quota = share_amount
+                }
+                resp_red:publish(steal_response_channel .. request.requester_id, 
+                               cjson.encode(response))
+                close_redis(resp_red)
+            end
+        end
+    end
+end
+
 -- Process batch quota and update shared dictionary
 local function process_batch_quota(red, shared_dict, redis_key, ttl)
     local batch_quota = shared_dict:get(redis_key .. ":batch") or 0
@@ -130,7 +237,6 @@ local function process_batch_quota(red, shared_dict, redis_key, ttl)
 
             return batch_size
         else
-            -- No remaining requests
             return 0
         end
     end
@@ -147,9 +253,9 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
         end
 
         if new_used <= batch_quota then
-            return true  -- Request is allowed within batch quota
+            return true
         else
-            -- Batch exhausted; check global rate limit
+            -- Check global rate limit
             local current_count, err = red:get(redis_key)
             if err then
                 return nil, "Failed to GET from Redis: " .. err
@@ -157,7 +263,12 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
             current_count = tonumber(current_count) or 0
 
             if current_count >= rate_limit then
-                return false  -- Rate limit exceeded
+                -- Try to steal quota from peers when both local and global quotas are exhausted
+                local stolen_quota, err = try_steal_quota(shared_dict, redis_key, ttl)
+                if stolen_quota then
+                    return true
+                end
+                return false
             end
 
             -- Update Redis with the exhausted batch
@@ -169,26 +280,24 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
             -- Fetch new batch quota
             local new_batch_size = fetch_batch_quota(red, redis_key)
             if new_batch_size > 0 then
-                -- Set new batch quota and reset used count
                 local success, err = set_new_batch(shared_dict, redis_key, new_batch_size, ttl)
                 if not success then
                     return nil, err
                 end
 
-                -- Increment used count for the current request
                 local updated_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
                 if not updated_used then
                     return nil, "Failed to increment used count after setting new batch: " .. err
                 end
 
-                return true  -- Request is allowed with new batch quota
+                return true
             else
-                return false  -- No new batch quota available, reject request
+                return false
             end
         end
     end
 
-    return false  -- No batch quota available, reject request
+    return false
 end
 
 -- Rate limiting logic wrapper
@@ -244,16 +353,20 @@ local function check_rate_limit(red, token)
     end
 
     -- Release the lock and return result
-    local ok, err = lock:unlock()
-    if not ok then
-        ngx.log(ngx.ERR, "Failed to unlock: " .. err)
-    end
-
-    return allowed and ngx.HTTP_OK or ngx.HTTP_TOO_MANY_REQUESTS
+    return unlock_and_return(allowed and ngx.HTTP_OK or ngx.HTTP_TOO_MANY_REQUESTS)
 end
 
 -- Main function
 local function main()
+    -- Initialize quota stealing worker in worker 0
+    if ngx.worker.id() == 0 then
+        ngx.timer.at(0, function(premature)
+            if not premature then
+                handle_steal_request()
+            end
+        end)
+    end
+
     -- Get token
     local token, err = get_token()
     if not token then

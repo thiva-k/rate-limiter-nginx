@@ -6,6 +6,8 @@ services:
       context: ./nginx
     ports:
       - "8090:8080"
+    environment:
+      - NODE_ID=nginx1
     depends_on:
       - registry
       - db
@@ -21,6 +23,8 @@ services:
       context: ./nginx
     ports:
       - "8091:8080"
+    environment:
+      - NODE_ID=nginx2
     depends_on:
       - registry
       - db
