@@ -8,7 +8,7 @@ local redis_port = 6379            -- Redis server port
 local redis_timeout = 1000         -- 1 second timeout
 local max_idle_timeout = 10000     -- 10 seconds
 local pool_size = 100             -- Maximum number of idle connections in the pool
-local rate_limit = 10             -- Max requests allowed in the window
+local rate_limit = 500             -- Max requests allowed in the window
 local batch_percent = 0.1          -- Percentage of remaining requests to allow in a batch
 local min_batch_size = 1           -- Minimum size of batch
 local window_size = 60             -- Time window size in seconds
@@ -67,8 +67,8 @@ local function calculate_ttl()
     return math.max(1, math.ceil(ttl))
 end
 
--- Fetch batch quota from Redis
-local function fetch_batch_quota(red, redis_key)
+-- Fetch batch quota from Redis and update Redis count
+local function fetch_and_update_batch_quota(red, redis_key, ttl)
     local count, err = red:get(redis_key)
     if err then
         return nil, "Failed to GET from Redis: " .. err
@@ -85,22 +85,17 @@ local function fetch_batch_quota(red, redis_key)
     batch_size = math.max(batch_size, min_batch_size)
     batch_size = math.min(batch_size, remaining)
 
-    return batch_size
-end
 
--- Update Redis with the exhausted batch count and set TTL if necessary
-local function update_redis_with_exhausted_batch(red, redis_key, batch_quota, ttl)
-    local new_count, err = red:incrby(redis_key, batch_quota)
+    local new_count, err = red:incrby(redis_key, batch_size)
     if err then
         return nil, "Failed to INCRBY in Redis: " .. err
     end
 
-    -- Set expiration if this is the first batch
-    if new_count == batch_quota then
+    if new_count == batch_size then  -- Set TTL only on the initial increment
         red:expire(redis_key, ttl)
     end
 
-    return true
+    return batch_size
 end
 
 -- Set new batch quota and reset used count in shared memory
@@ -118,7 +113,7 @@ local function set_new_batch(shared_dict, redis_key, batch_size, ttl)
     return true
 end
 
--- Try to steal quota from peer nodes
+-- Try to steal quota from peer nodes 
 local function try_steal_quota(shared_dict, redis_key, ttl)
     local red = redis:new()
     red:set_timeout(redis_timeout)
@@ -221,10 +216,9 @@ end
 -- Process batch quota and update shared dictionary
 local function process_batch_quota(red, shared_dict, redis_key, ttl)
     local batch_quota = shared_dict:get(redis_key .. ":batch") or 0
-    local batch_used = shared_dict:get(redis_key .. ":used") or 0
 
     if batch_quota == 0 then
-        local batch_size = fetch_batch_quota(red, redis_key)
+        local batch_size, err = fetch_and_update_batch_quota(red, redis_key, ttl)
         if not batch_size then
             return nil, "Failed to fetch batch quota"
         end
@@ -271,32 +265,32 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
                 return false
             end
 
-            -- Update Redis with the exhausted batch
-            local success, err = update_redis_with_exhausted_batch(red, redis_key, batch_quota, ttl)
-            if not success then
+
+            local new_batch_size, err = fetch_and_update_batch_quota(red, redis_key, ttl)
+            if not new_batch_size then
                 return nil, err
             end
 
-            -- Fetch new batch quota
-            local new_batch_size = fetch_batch_quota(red, redis_key)
             if new_batch_size > 0 then
                 local success, err = set_new_batch(shared_dict, redis_key, new_batch_size, ttl)
                 if not success then
                     return nil, err
                 end
 
+                --Incrment only once for this request
                 local updated_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
+
                 if not updated_used then
-                    return nil, "Failed to increment used count after setting new batch: " .. err
+                   return nil, "Failed to increment used count after setting new batch: "..err
                 end
 
                 return true
             else
-                return false
+                return false -- No batch quota available
             end
         end
-    end
 
+    end
     return false
 end
 
