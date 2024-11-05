@@ -166,53 +166,6 @@ local function try_steal_quota(shared_dict, redis_key, ttl)
     return nil, "No quota available from peers"
 end
 
--- Handle quota steal requests from other nodes
-local function handle_steal_request()
-    local red = redis:new()
-    red:set_timeout(redis_timeout)
-    local ok, err = red:connect(redis_host, redis_port)
-    if not ok then
-        return
-    end
-
-    ok, err = red:subscribe(steal_request_channel)
-    if not ok then
-        return
-    end
-
-    while true do
-        local res, err = red:read_reply()
-        if res and res[1] == "message" then
-            local request = cjson.decode(res[3])
-            local shared_dict = ngx.shared.rate_limit_dict
-            
-            -- Check our local quota
-            local batch_quota = shared_dict:get(request.redis_key .. ":batch") or 0
-            local batch_used = shared_dict:get(request.redis_key .. ":used") or 0
-            local available = batch_quota - batch_used
-            
-            if available > 1 then
-                -- Share half of our available quota
-                local share_amount = math.floor(available / 2)
-                
-                -- Reduce our local quota
-                shared_dict:set(request.redis_key .. ":batch", batch_quota - share_amount)
-                
-                -- Send response
-                local resp_red = redis:new()
-                resp_red:connect(redis_host, redis_port)
-                local response = {
-                    donor_id = node_id,
-                    quota = share_amount
-                }
-                resp_red:publish(steal_response_channel .. request.requester_id, 
-                               cjson.encode(response))
-                close_redis(resp_red)
-            end
-        end
-    end
-end
-
 -- Process batch quota and update shared dictionary
 local function process_batch_quota(red, shared_dict, redis_key, ttl)
     local batch_quota = shared_dict:get(redis_key .. ":batch") or 0
