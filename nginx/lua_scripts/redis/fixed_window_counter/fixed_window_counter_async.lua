@@ -8,7 +8,7 @@ local redis_port = 6379            -- Redis server port
 local redis_timeout = 1000         -- 1 second timeout
 local max_idle_timeout = 10000     -- 10 seconds
 local pool_size = 100             -- Maximum number of idle connections in the pool
-local rate_limit = 500             -- Max requests allowed in the window
+local rate_limit = 10             -- Max requests allowed in the window
 local batch_percent = 0.1          -- Percentage of remaining requests to allow in a batch
 local min_batch_size = 1           -- Minimum size of batch
 local window_size = 60             -- Time window size in seconds
@@ -16,7 +16,7 @@ local window_size = 60             -- Time window size in seconds
 -- Quota stealing configuration
 local node_id = os.getenv("NODE_ID") or ngx.worker.pid()
 local steal_request_channel = "quota_steal_requests"
-local steal_response_channel = "quota_steal_responses:"
+local steal_offer_channel = "quota_steal_offers:"
 local steal_timeout = 1  -- 1 second timeout for steal requests
 
 -- Initialize Redis connection with pooling
@@ -129,40 +129,76 @@ local function try_steal_quota(shared_dict, redis_key, ttl)
         timestamp = ngx.now()
     }
     
-    ok, err = red:publish(steal_request_channel, cjson.encode(request))
+    local ok, err = red:publish(steal_request_channel, cjson.encode(request))
     if not ok then
+        red:close()
         return nil, "Failed to publish steal request"
     end
 
-    -- Subscribe to our response channel
-    ok, err = red:subscribe(steal_response_channel .. node_id)
+    -- Subscribe to offers channel
+    local ok, err = red:subscribe(steal_offer_channel .. node_id)
     if not ok then
-        return nil, "Failed to subscribe to response channel"
+        red:close()
+        return nil, "Failed to subscribe to offer channel"
     end
 
-    -- Wait for responses with timeout
+    -- Collect offers for a short time
+    local offers = {}
     local start_time = ngx.now()
     while (ngx.now() - start_time) < steal_timeout do
-        local res, err = red:read_reply()
+        local res, err = red:read_reply(100)  -- 100ms timeout
         if res and res[1] == "message" then
-            local response = cjson.decode(res[3])
-            if response.quota > 0 then
-                -- Update our local batch quota with stolen quota
-                ok, err = shared_dict:set(redis_key .. ":batch", response.quota, ttl)
-                if not ok then
-                    return nil, "Failed to set stolen quota"
-                end
-                -- Reset used count
-                ok, err = shared_dict:set(redis_key .. ":used", 0, ttl)
-                if not ok then
-                    return nil, "Failed to reset used count"
-                end
-                return response.quota
+            local success, offer = pcall(cjson.decode, res[3])
+            if success and offer and type(offer) == "table" and offer.quota and offer.donor_id then
+                offers[#offers + 1] = offer
             end
         end
-        ngx.sleep(0.1)
+    end
+
+    -- Unsubscribe before proceeding
+    local ok, err = red:unsubscribe()
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to unsubscribe: " .. err)
+    end
+
+    -- If we got offers, select the best one
+    if #offers > 0 then
+        -- Sort offers by quota size (descending)
+        table.sort(offers, function(a, b) return a.quota > b.quota end)
+        local chosen_offer = offers[1]
+        
+        -- Send acceptance to chosen donor
+        local accept_red = redis:new()
+        local ok, err = accept_red:connect(redis_host, redis_port)
+        if not ok then
+            return nil, "Failed to connect to Redis for acceptance"
+        end
+        
+        ok, err = accept_red:publish("quota_accept:" .. chosen_offer.donor_id, 
+                                   cjson.encode({accepted = true}))
+        if not ok then
+            accept_red:close()
+            return nil, "Failed to publish acceptance"
+        end
+        
+        accept_red:set_keepalive(max_idle_timeout, pool_size)
+
+        -- Update our local batch quota
+        ok, err = shared_dict:set(redis_key .. ":batch", chosen_offer.quota, ttl)
+        if not ok then
+            return nil, "Failed to set stolen quota"
+        end
+        
+        -- Reset used count
+        ok, err = shared_dict:set(redis_key .. ":used", 0, ttl)
+        if not ok then
+            return nil, "Failed to reset used count"
+        end
+        
+        return chosen_offer.quota
     end
     
+    red:close()
     return nil, "No quota available from peers"
 end
 
