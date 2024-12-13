@@ -1,55 +1,77 @@
 local redis = require "resty.redis"
+
+-- Redis connection settings
 local redis_host = "redis"
 local redis_port = 6379
-local rate_limit = 5 -- 5 requests per minute
-local window_size = 60 -- 60 second window
+local redis_timeout = 1000 -- 1 second timeout
+local max_idle_timeout = 10000 -- 10 seconds
+local pool_size = 100 -- Maximum number of idle connections in the pool
 
-local red = redis:new()
-red:set_timeout(1000) -- 1 second timeout
+-- Rate limiting parameters
+local rate_limit = 500 -- Maximum number of requests allowed per window
+local window_size = 60 -- Time window in seconds
 
-local ok, err = red:connect(redis_host, redis_port)
-if not ok then
-    ngx.log(ngx.ERR, "Failed to connect to Redis: ", err)
-    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-end
-
--- Fetch the token from the URL parameter
-local token = ngx.var.arg_token
-if not token then
-    ngx.log(ngx.ERR, "Token not provided")
-    ngx.exit(ngx.HTTP_BAD_REQUEST)
-end
-
--- Construct the Redis key using only the token
-local redis_key = "rate_limit:" .. token
-
--- Lua script for atomic rate limiting
+-- Lua script for atomic rate limiting with fixed window
 local limit_script = [[
     local key = KEYS[1]
     local limit = tonumber(ARGV[1])
-    local window = tonumber(ARGV[2])
+    local ttl = tonumber(ARGV[2])
     
     local current = redis.call('get', key)
-    if current and tonumber(current) >= limit then
-        return tonumber(current)
+    if current then
+        current = tonumber(current)
+        if current >= limit then
+            return limit + 1  -- Return a value greater than limit to indicate rate limit exceeded
+        end
+    else
+        current = 0
     end
     
-    current = redis.call('incr', key)
-    if tonumber(current) == 1 then
-        redis.call('expire', key, window)
+    current = current + 1
+    redis.call('set', key, current)
+    if current == 1 then
+        redis.call('expire', key, ttl)
     end
     
-    return tonumber(current)
+    return current
 ]]
 
--- Function to get or set the script SHA
+-- Helper function to initialize Redis connection
+local function init_redis()
+    local red = redis:new()
+    red:set_timeout(redis_timeout)
+    local ok, err = red:connect(redis_host, redis_port)
+    if not ok then
+        return nil, err
+    end
+    return red
+end
+
+-- Helper function to close Redis connection
+local function close_redis(red)
+    local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
+    if not ok then
+        return nil, err
+    end
+    return true
+end
+
+-- Helper function to get URL token
+local function get_token()
+    local token = ngx.var.arg_token
+    if not token then
+        return nil, "Token not provided"
+    end
+    return token
+end
+
+-- Function to get or set the script SHA in shared memory
 local function get_script_sha(red)
     local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
     if not sha then
         local new_sha, err = red:script("LOAD", limit_script)
         if not new_sha then
-            ngx.log(ngx.ERR, "Failed to load script: ", err)
-            return nil, err
+            return nil, "Failed to load script: " .. err
         end
         ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
         sha = new_sha
@@ -57,32 +79,94 @@ local function get_script_sha(red)
     return sha
 end
 
--- Get the script SHA
-local sha, err = get_script_sha(red)
-if not sha then
-    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-end
-
--- Run the Lua script
-local resp, err = red:evalsha(sha, 1, redis_key, rate_limit, window_size)
-
-if err then
-    if err:find("NOSCRIPT", 1, true) then
-        -- Script not found in Redis, reload it
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
-        sha, err = get_script_sha(red)
-        if not sha then
-            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-        end
-        resp, err = red:evalsha(sha, 1, redis_key, rate_limit, window_size)
+-- Function to run the rate limiting script
+local function run_rate_limit_script(red, redis_key, ttl)
+    local sha, err = get_script_sha(red)
+    if not sha then
+        return nil, err
     end
     
+    local resp, err = red:evalsha(sha, 1, redis_key, rate_limit, ttl)
+    
     if err then
-        ngx.log(ngx.ERR, "Failed to run rate limiting script: ", err)
+        if err:find("NOSCRIPT", 1, true) then
+            -- Script not found in Redis, reload it
+            ngx.shared.my_cache:delete("rate_limit_script_sha")
+            sha, err = get_script_sha(red)
+            if not sha then
+                return nil, err
+            end
+            resp, err = red:evalsha(sha, 1, redis_key, rate_limit, ttl)
+        end
+        
+        if err then
+            return nil, "Failed to run rate limiting script: " .. err
+        end
+    end
+    
+    return resp
+end
+
+-- Main rate limiting logic
+local function check_rate_limit(red, token)
+    
+    local service_name = ngx.var.service_name
+    local http_method = ngx.var.request_method
+
+    -- Get the current timestamp and round it down to the nearest minute
+    local current_time = ngx.now()
+    local window_start = math.floor(current_time / window_size) * window_size
+
+    -- Construct the Redis key using the token, http_method, service_name and the window start time
+    local redis_key = string.format("rate_limit:%s:%s:%s:%d", token, http_method, service_name, window_start)
+
+    -- Run the rate limiting script
+    local resp, err = run_rate_limit_script(red, redis_key, math.ceil(ttl))
+    if not resp then
+        return nil, err
+    end
+
+    -- Check if the rate limit has been exceeded
+    if resp > rate_limit then
+        return ngx.HTTP_TOO_MANY_REQUESTS
+    end
+
+    return ngx.HTTP_OK
+end
+
+-- Main function to initialize Redis and handle rate limiting
+local function main()
+    -- Get token from URL parameters
+    local token, err = get_token()
+    if not token then
+        ngx.log(ngx.ERR, "Failed to get token: ", err)
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
+
+    -- Initialize Redis connection
+    local red, err = init_redis()
+    if not red then
+        ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    -- Run rate limiting check with error handling
+    local res, status = pcall(check_rate_limit, red, token)
+    
+    -- Properly close Redis connection
+    local ok, close_err = close_redis(red)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to close Redis connection: ", close_err)
+    end
+
+    -- Handle any errors from the rate limiting check
+    if not res then
+        ngx.log(ngx.ERR, status)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
+        ngx.exit(status)
     end
 end
 
-if resp >= rate_limit then
-    ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
-end
+-- Run the main function
+main()

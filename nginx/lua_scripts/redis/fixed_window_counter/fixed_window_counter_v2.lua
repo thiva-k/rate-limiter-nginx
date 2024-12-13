@@ -17,7 +17,7 @@ local function init_redis()
     red:set_timeout(redis_timeout)
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        return nil, "Failed to connect to Redis: " .. err
+        return nil, err
     end
     return red
 end
@@ -40,46 +40,6 @@ local function get_token()
     return token
 end
 
--- Function to get the current count for a given key
-local function get_current_count(red, redis_key)
-    local count, err = red:get(redis_key)
-    if err then
-        return nil, "Failed to get counter from Redis: " .. err
-    end
-
-    -- Convert count to number or set to 0 if it doesn't exist
-    return tonumber(count) or 0
-end
-
--- Function to perform rate limiting transaction
-local function increment_transaction(red, redis_key, remaining_time)
-    -- Use Redis MULTI to begin a transaction
-    local ok, err = red:multi()
-    if not ok then
-        return nil, "Failed to start Redis transaction: " .. err
-    end
-
-    -- Increment the counter
-    ok, err = red:incr(redis_key)
-    if not ok then
-        return nil, "Failed to increment counter in Redis: " .. err
-    end
-
-    -- Set expiration time only if it's a new key (when count becomes 1)
-    ok, err = red:expire(redis_key, math.ceil(remaining_time), "NX")
-    if not ok then
-        return nil, "Failed to set expiration for key in Redis: " .. err
-    end
-
-    -- Execute the Redis transaction
-    local results, err = red:exec()
-    if not results then
-        return nil, "Failed to execute Redis transaction: " .. err
-    end
-
-    return results
-end
-
 -- Main rate limiting logic
 local function check_rate_limit(red, token)
     
@@ -93,24 +53,26 @@ local function check_rate_limit(red, token)
     -- Construct the Redis key using the token, http_method, service_name and the window start time
     local redis_key = string.format("rate_limit:%s:%s:%s:%d", token, http_method, service_name, window_start)
 
-    -- Get current count
-    local count, err = get_current_count(red, redis_key)
-    if not count then
-        return nil, err
+    -- Increment the counter first
+    local new_count, err = red:incr(redis_key)
+    if err then
+        ngx.log(ngx.ERR, "Failed to increment counter in Redis: ", err)
+        return ngx.HTTP_INTERNAL_SERVER_ERROR
     end
 
-    -- Check if rate limit is exceeded
-    if count >= rate_limit then
+    -- Set the expiration time for the Redis key if it's a new key (count == 1)
+    if new_count == 1 then
+        local remaining_time = window_size - (current_time % window_size)
+        local ok, err = red:expire(redis_key, math.ceil(remaining_time))
+        if not ok then
+            ngx.log(ngx.ERR, "Failed to set expiration for key in Redis: ", err)
+            return ngx.HTTP_INTERNAL_SERVER_ERROR
+        end
+    end
+
+    -- Check if the number of requests exceeds the rate limit
+    if new_count > rate_limit then
         return ngx.HTTP_TOO_MANY_REQUESTS
-    end
-
-    -- Calculate remaining time in the current window
-    local remaining_time = window_size - (current_time % window_size)
-
-    -- Perform rate limiting transaction
-    local results, err = increment_transaction(red, redis_key, remaining_time)
-    if not results then
-        return nil, err
     end
 
     return ngx.HTTP_OK
@@ -118,30 +80,24 @@ end
 
 -- Main function to initialize Redis and handle rate limiting
 local function main()
-    -- Get token from URL parameters
     local token, err = get_token()
     if not token then
         ngx.log(ngx.ERR, "Failed to get token: ", err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
-    -- Initialize Redis connection
     local red, err = init_redis()
     if not red then
         ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Run rate limiting check with error handling
     local res, status = pcall(check_rate_limit, red, token)
-    
-    -- Properly close Redis connection
-    local ok, close_err = close_redis(red)
+    local ok, err = close_redis(red)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to close Redis connection: ", close_err)
+        ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
     end
 
-    -- Handle any errors from the rate limiting check
     if not res then
         ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
