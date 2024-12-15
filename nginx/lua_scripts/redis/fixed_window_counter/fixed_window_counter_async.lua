@@ -61,7 +61,7 @@ local function calculate_ttl()
 end
 
 -- Fetch batch quota dynamically or statically based on configuration
-local function fetch_batch_quota(red, shared_dict, redis_key, token, window_start, dynamic, batch_percent)
+local function fetch_batch_quota(red, shared_dict, redis_key, token, window_start, dynamic)
     -- Calculate the key for the previous window
     local previous_window_start = window_start - window_size
     local previous_local_key = string.format("rate_limit:%s:%d:local_instance_count", token, previous_window_start)
@@ -128,7 +128,7 @@ local function process_batch_quota(red, shared_dict, redis_key, ttl, token, wind
     local batch_used = shared_dict:get(redis_key .. ":used") or 0
 
     if batch_quota == 0 then
-        local batch_size = fetch_batch_quota(red, shared_dict, redis_key, token, window_start, dynamic, batch_percent)
+        local batch_size = fetch_batch_quota(red, shared_dict, redis_key, token, window_start, dynamic)
         if not batch_size then
             return nil, "Failed to fetch batch quota"
         end
@@ -151,6 +151,12 @@ end
 
 -- Increment the used count and check if request is allowed
 local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl)
+    -- Increment the local instance count for all requests, allowed or rate-limited
+    local local_instance_count, err = shared_dict:incr(redis_key .. ":local_instance_count", 1, 0)
+    if err then
+        return nil, "Failed to increment local instance count: " .. err
+    end
+
     if batch_quota > 0 then
         local new_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
         if err then
@@ -158,11 +164,6 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
         end
 
         if new_used <= batch_quota then
-            -- Only increment local instance count for allowed requests
-            local local_instance_count, err = shared_dict:incr(redis_key .. ":local_instance_count", 1, 0)
-            if err then
-                return nil, "Failed to increment local instance count: " .. err
-            end
             return true  -- Request is allowed within batch quota
         else
             -- Batch exhausted; check global rate limit
@@ -182,8 +183,8 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
                 return nil, err
             end
 
-            -- Fetch new batch quota using local instance count
-            local new_batch_size = fetch_batch_quota(red, shared_dict, redis_key, token, ttl, true, batch_percent)
+            -- Fetch new batch quota
+            local new_batch_size = fetch_batch_quota(red, shared_dict, redis_key, token, ttl, true)
             if new_batch_size > 0 then
                 -- Set new batch quota and reset used count
                 local success, err = set_new_batch(shared_dict, redis_key, new_batch_size, ttl)
@@ -195,12 +196,6 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
                 local updated_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
                 if not updated_used then
                     return nil, "Failed to increment used count after setting new batch: " .. err
-                end
-
-                -- Only increment local instance count for allowed requests
-                local local_instance_count, err = shared_dict:incr(redis_key .. ":local_instance_count", 1, 0)
-                if err then
-                    return nil, "Failed to increment local instance count: " .. err
                 end
 
                 return true  -- Request is allowed with new batch quota
