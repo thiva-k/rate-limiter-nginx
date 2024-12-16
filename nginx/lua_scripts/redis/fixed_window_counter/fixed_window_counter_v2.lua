@@ -32,7 +32,7 @@ local function close_redis(red)
 end
 
 -- Helper function to get URL token
-local function get_user_url_token()
+local function get_token()
     local token = ngx.var.arg_token
     if not token then
         return nil, "Token not provided"
@@ -42,12 +42,16 @@ end
 
 -- Main rate limiting logic
 local function check_rate_limit(red, token)
+    
+    local service_name = ngx.var.service_name
+    local http_method = ngx.var.request_method
+
     -- Get the current timestamp and round it down to the nearest minute
     local current_time = ngx.now()
     local window_start = math.floor(current_time / window_size) * window_size
 
-    -- Construct the Redis key using the token and the window start time
-    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
+    -- Construct the Redis key using the token, http_method, service_name and the window start time
+    local redis_key = string.format("rate_limit:%s:%s:%s:%d", token, http_method, service_name, window_start)
 
     -- Increment the counter first
     local new_count, err = red:incr(redis_key)
@@ -76,7 +80,7 @@ end
 
 -- Main function to initialize Redis and handle rate limiting
 local function main()
-    local token, err = get_user_url_token()
+    local token, err = get_token()
     if not token then
         ngx.log(ngx.ERR, "Failed to get token: ", err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
@@ -97,7 +101,7 @@ local function main()
     if not res then
         ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    else
+    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
         ngx.exit(status)
     end
 end

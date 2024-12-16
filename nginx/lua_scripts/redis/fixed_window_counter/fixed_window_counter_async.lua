@@ -196,9 +196,15 @@ local function check_rate_limit(red, token)
     -- Calculate TTL
     local ttl = calculate_ttl()
 
-    -- Construct Redis key
-    local window_start = math.floor(ngx.now() / window_size) * window_size
-    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
+    local service_name = ngx.var.service_name
+    local http_method = ngx.var.request_method
+
+    -- Get the current timestamp and round it down to the nearest minute
+    local current_time = ngx.now()
+    local window_start = math.floor(current_time / window_size) * window_size
+
+    -- Construct the Redis key using the token, http_method, service_name and the window start time
+    local redis_key = string.format("rate_limit:%s:%s:%s:%d", token, http_method, service_name, window_start)
 
     -- Access shared dictionary
     local shared_dict, err = get_shared_dict()
@@ -274,7 +280,7 @@ local function main()
     if not res then
         ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    else
+    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
         ngx.exit(status)
     end
 end
