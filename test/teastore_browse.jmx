@@ -10,14 +10,9 @@
             <stringProp name="Argument.value">localhost</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="port" elementType="Argument">
-            <stringProp name="Argument.name">port</stringProp>
-            <stringProp name="Argument.value">8090</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
           <elementProp name="num_user_1" elementType="Argument">
             <stringProp name="Argument.name">num_user_1</stringProp>
-            <stringProp name="Argument.value">1</stringProp>
+            <stringProp name="Argument.value">2</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="num_user_2" elementType="Argument">
@@ -53,6 +48,11 @@
           <elementProp name="image" elementType="Argument">
             <stringProp name="Argument.name">image</stringProp>
             <stringProp name="Argument.value">/tools.descartes.teastore.image/rest</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="ports" elementType="Argument">
+            <stringProp name="Argument.name">ports</stringProp>
+            <stringProp name="Argument.value">8090,8091</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -142,7 +142,7 @@
           <stringProp name="filename">D:\Semester 7\CS4203 - Research and Development Project\Artifacts\rate-limiter-nginx\test\test_result.csv</stringProp>
         </ResultCollector>
         <hashTree/>
-        <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="HTTP Cookie Manager" enabled="true">
+        <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="HTTP Cookie Manager">
           <collectionProp name="CookieManager.cookies"/>
           <boolProp name="CookieManager.clearEachIteration">true</boolProp>
           <boolProp name="CookieManager.controlledByThreadGroup">false</boolProp>
@@ -159,7 +159,7 @@
         <hashTree/>
         <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1 - Home"/>
         <hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.1 - Get Categories"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.1 - Get Categories" enabled="true"/>
           <hashTree>
             <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode1.1}&quot; != &quot;200&quot;,)} </stringProp>
@@ -183,7 +183,7 @@
                   <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
                 </JSONPostProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -197,7 +197,7 @@ vars.put(&quot;responseCode1.2&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.2 - Is Logged In"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode1.2}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -237,7 +237,7 @@ vars.put(&quot;responseCode1.2&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -249,13 +249,13 @@ vars.put(&quot;responseCode1.3&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.3 - Get Store Icon Image"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.3 - Get Store Icon Image" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode1.3}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="1.3 - Get Store Icon Image">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="1.3 - Get Store Icon Image" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${image}/image/getWebImages</stringProp>
@@ -275,7 +275,7 @@ vars.put(&quot;responseCode1.3&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -292,7 +292,7 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode2.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -330,7 +330,7 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
                   <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
                 </JSONPostProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -345,13 +345,13 @@ vars.put(&quot;responseCode3.1&quot;, &quot;0&quot;)</stringProp>
         </hashTree>
         <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3 - List Products" enabled="true"/>
         <hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.1 - Get Category"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.1 - Get Category" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode3.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="3.1 - Get Category">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="3.1 - Get Category" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${persistence}/categories/${category}</stringProp>
@@ -363,7 +363,7 @@ vars.put(&quot;responseCode3.1&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -375,9 +375,9 @@ vars.put(&quot;responseCode3.2&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.2 - Get Category Count"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.2 - Get Category Count" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode3.2}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -403,7 +403,7 @@ vars.put(&quot;responseCode3.2&quot;, &quot;0&quot;)</stringProp>
                   <stringProp name="RegexExtractor.match_number">1</stringProp>
                 </RegexExtractor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -415,9 +415,9 @@ vars.put(&quot;responseCode3.3&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.3 - Get Product List"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.3 - Get Product List" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode3.3}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -445,7 +445,7 @@ vars.put(&quot;responseCode3.3&quot;, &quot;0&quot;)</stringProp>
                   <stringProp name="JSONPostProcessor.match_numbers">-1</stringProp>
                 </JSONPostProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -457,9 +457,9 @@ vars.put(&quot;responseCode3.4&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.4 - Get Product Images"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.4 - Get Product Images" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode3.4}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -512,7 +512,7 @@ vars.put(&quot;product_images_request_body&quot;, jsonObject.toPrettyString()) /
 </stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -524,9 +524,9 @@ vars.put(&quot;responseCode3.5&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.5 - Get Store Icon Image"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.5 - Get Store Icon Image" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode3.5}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -550,7 +550,7 @@ vars.put(&quot;responseCode3.5&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -567,7 +567,7 @@ vars.put(&quot;responseCode4.1&quot;, &quot;0&quot;)</stringProp>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="4.1 - Get Categories" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode4.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -583,7 +583,7 @@ vars.put(&quot;responseCode4.1&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -597,7 +597,7 @@ vars.put(&quot;responseCode4.2&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="4.2 - Is Logged In" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode4.2}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -619,7 +619,7 @@ vars.put(&quot;responseCode4.2&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -633,7 +633,7 @@ vars.put(&quot;responseCode4.3&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="4.3 - Get Product Details" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode4.3}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -650,7 +650,7 @@ vars.put(&quot;responseCode4.3&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -664,7 +664,7 @@ vars.put(&quot;responseCode4.4&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="4.4 - Get Product Image" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode4.4}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -688,7 +688,7 @@ vars.put(&quot;responseCode4.4&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -700,9 +700,9 @@ vars.put(&quot;responseCode4.5&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="4.5 - Get Product Recommendations"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="4.5 - Get Product Recommendations" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode4.5}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -765,7 +765,7 @@ vars.put(&quot;product_recommendations_request_body&quot;, orderItemsJson)
 </stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -777,13 +777,13 @@ vars.put(&quot;responseCode4.6&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <ForeachController guiclass="ForeachControlPanel" testclass="ForeachController" testname="4.6 - Get Product Details For Each Recommended Products">
+          <ForeachController guiclass="ForeachControlPanel" testclass="ForeachController" testname="4.6 - Get Product Details For Each Recommended Products" enabled="true">
             <stringProp name="ForeachController.inputVal">recommended_product_id</stringProp>
             <stringProp name="ForeachController.returnVal">current_recommended_product_id</stringProp>
             <boolProp name="ForeachController.useSeparator">true</boolProp>
           </ForeachController>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode4.6}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -800,7 +800,7 @@ vars.put(&quot;responseCode4.6&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -814,7 +814,7 @@ vars.put(&quot;responseCode4.7&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="4.7 - Get Recommended Product Images" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode4.7}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -867,7 +867,7 @@ vars.put(&quot;recommended_product_images_request_body&quot;, jsonObject.toPrett
 </stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -879,9 +879,9 @@ vars.put(&quot;responseCode4.8&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="4.8 - Get Store Icon Image"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="4.8 - Get Store Icon Image" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode4.8}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -905,7 +905,7 @@ vars.put(&quot;responseCode4.8&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -920,9 +920,9 @@ vars.put(&quot;responseCode5.1&quot;, &quot;0&quot;)</stringProp>
         </hashTree>
         <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5 - Add Product to Cart" enabled="true"/>
         <hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.1 - Add Product to Cart"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.1 - Add Product to Cart" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode5.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -968,7 +968,7 @@ vars.put(&quot;responseCode5.1&quot;, &quot;0&quot;)</stringProp>
 </stringProp>
                 </JSR223PostProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Get Product Ids in Cart">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Get Product Ids in Cart" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1009,7 +1009,7 @@ if (responseCode == &apos;200&apos;) {
             <boolProp name="ForeachController.useSeparator">true</boolProp>
           </ForeachController>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode5.2}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1025,7 +1025,7 @@ if (responseCode == &apos;200&apos;) {
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1039,7 +1039,7 @@ vars.put(&quot;responseCode5.3&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.3 - Get Store Icon Image" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode5.3}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1063,7 +1063,7 @@ vars.put(&quot;responseCode5.3&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1075,9 +1075,9 @@ vars.put(&quot;responseCode5.4&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.4 - Get Categories"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.4 - Get Categories" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode5.4}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1093,7 +1093,7 @@ vars.put(&quot;responseCode5.4&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1107,7 +1107,7 @@ vars.put(&quot;responseCode5.5&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.5 - Is Logged In" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode5.5}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1129,7 +1129,7 @@ vars.put(&quot;responseCode5.5&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1141,9 +1141,9 @@ vars.put(&quot;responseCode5.6&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.6 - Get Product Recommendations"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.6 - Get Product Recommendations" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode5.6}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1197,7 +1197,7 @@ vars.put(&quot;product_recommendations_request_body&quot;, orderItemsJson)
 </stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1209,13 +1209,13 @@ vars.put(&quot;responseCode5.7&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <ForeachController guiclass="ForeachControlPanel" testclass="ForeachController" testname="5.7 - Get Product Details For Each Recommended Products">
+          <ForeachController guiclass="ForeachControlPanel" testclass="ForeachController" testname="5.7 - Get Product Details For Each Recommended Products" enabled="true">
             <stringProp name="ForeachController.inputVal">recommended_product_id</stringProp>
             <stringProp name="ForeachController.returnVal">current_recommended_product_id</stringProp>
             <boolProp name="ForeachController.useSeparator">true</boolProp>
           </ForeachController>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode5.7}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1232,7 +1232,7 @@ vars.put(&quot;responseCode5.7&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1244,9 +1244,9 @@ vars.put(&quot;responseCode5.8&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.8 - Get Recommended Product Images"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="5.8 - Get Recommended Product Images" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode5.8}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1299,7 +1299,7 @@ vars.put(&quot;recommended_product_images_request_body&quot;, jsonObject.toPrett
 </stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1316,7 +1316,7 @@ vars.put(&quot;responseCode6.1&quot;, &quot;0&quot;)</stringProp>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="6.1 - Get Category" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode6.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1332,7 +1332,7 @@ vars.put(&quot;responseCode6.1&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1346,7 +1346,7 @@ vars.put(&quot;responseCode6.2&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="6.2 - Get Category Count" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode6.2}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1400,7 +1400,7 @@ vars.put(&quot;start_index&quot;, startIndex.toString())
 </stringProp>
                 </JSR223PostProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1414,7 +1414,7 @@ vars.put(&quot;responseCode6.3&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="6.3 - Get Product List" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode6.3}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1442,7 +1442,7 @@ vars.put(&quot;responseCode6.3&quot;, &quot;0&quot;)</stringProp>
                   <stringProp name="JSONPostProcessor.match_numbers">-1</stringProp>
                 </JSONPostProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1456,7 +1456,7 @@ vars.put(&quot;responseCode6.4&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="6.4 - Get Product Images" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode6.4}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1509,7 +1509,7 @@ vars.put(&quot;product_images_request_body&quot;, jsonObject.toPrettyString()) /
 </stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1521,9 +1521,9 @@ vars.put(&quot;responseCode6.5&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="6.5 - Get Store Icon Image"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="6.5 - Get Store Icon Image" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode6.5}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1547,7 +1547,7 @@ vars.put(&quot;responseCode6.5&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1562,9 +1562,9 @@ vars.put(&quot;responseCode7.1&quot;, &quot;0&quot;)</stringProp>
         </hashTree>
         <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="7 - Add Product 2 to Cart" enabled="true"/>
         <hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="7.1 - Add Product 2 to Cart"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="7.1 - Add Product 2 to Cart" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode7.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1599,7 +1599,7 @@ vars.put(&quot;responseCode7.1&quot;, &quot;0&quot;)</stringProp>
                   <stringProp name="JSONPostProcessor.match_numbers">-1</stringProp>
                 </JSONPostProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Get Product Ids in Cart">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Get Product Ids in Cart" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1640,7 +1640,7 @@ if (responseCode == &apos;200&apos;) {
             <boolProp name="ForeachController.useSeparator">true</boolProp>
           </ForeachController>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode7.2}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1656,7 +1656,7 @@ if (responseCode == &apos;200&apos;) {
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1670,7 +1670,7 @@ vars.put(&quot;responseCode7.3&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="7.3 - Get Store Icon Image" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode7.3}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1694,7 +1694,7 @@ vars.put(&quot;responseCode7.3&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1708,7 +1708,7 @@ vars.put(&quot;responseCode7.4&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="7.4 - Get Categories" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode7.4}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1724,7 +1724,7 @@ vars.put(&quot;responseCode7.4&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1738,7 +1738,7 @@ vars.put(&quot;responseCode7.5&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="7.5 - Is Logged In" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode7.5}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1760,7 +1760,7 @@ vars.put(&quot;responseCode7.5&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1774,7 +1774,7 @@ vars.put(&quot;responseCode7.6&quot;, &quot;0&quot;)</stringProp>
           </hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="7.6 - Get Product Recommendations" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode7.6}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1827,7 +1827,7 @@ vars.put(&quot;product_recommendations_request_body&quot;, orderItemsJson)
 </stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1845,7 +1845,7 @@ vars.put(&quot;responseCode7.7&quot;, &quot;0&quot;)</stringProp>
             <boolProp name="ForeachController.useSeparator">true</boolProp>
           </ForeachController>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode7.7}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1861,7 +1861,7 @@ vars.put(&quot;responseCode7.7&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1873,9 +1873,9 @@ vars.put(&quot;responseCode7.8&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="7.8 - Get Recommended Product Images"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="7.8 - Get Recommended Product Images" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode7.8}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
@@ -1928,7 +1928,7 @@ vars.put(&quot;recommended_product_images_request_body&quot;, jsonObject.toPrett
 </stringProp>
                 </JSR223PreProcessor>
                 <hashTree/>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1941,15 +1941,15 @@ vars.put(&quot;responseCode8.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="8 - Logout"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="8 - Logout" enabled="true"/>
         <hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="8.1 - Logout"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="8.1 - Logout" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode8.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="8.1 - Logout">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="8.1 - Logout" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/logout</stringProp>
@@ -1967,7 +1967,7 @@ vars.put(&quot;responseCode8.1&quot;, &quot;0&quot;)</stringProp>
                 </elementProp>
               </HTTPSamplerProxy>
               <hashTree>
-                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code">
+                <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Set Response Code" enabled="true">
                   <stringProp name="scriptLanguage">groovy</stringProp>
                   <stringProp name="parameters"></stringProp>
                   <stringProp name="filename"></stringProp>
@@ -1980,7 +1980,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -2015,6 +2015,28 @@ if (sampler instanceof HTTPSamplerProxy) {
     // Set the modified path back to the sampler
     httpSampler.setPath(currentPath);
 }
+</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">// Split the ports into an array
+def portArray = vars.get(&quot;ports&quot;).split(&quot;,&quot;) as List
+
+// Retrieve the current port index for this thread (or initialize if not set)
+def currentIndex = vars.getObject(&quot;current_port_index&quot;) ?: 0
+
+// Assign the current port based on the index
+def assignedPort = portArray[currentIndex % portArray.size()]
+
+// Update the variable for use in the sampler
+vars.put(&quot;port&quot;, assignedPort)
+
+// Increment the index for the next request
+vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.size())
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
@@ -2196,7 +2218,7 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1 - Home"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1 - Home" enabled="true"/>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.1 - Get Categories" enabled="true"/>
           <hashTree>
