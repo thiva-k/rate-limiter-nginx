@@ -7,9 +7,9 @@ local redis_port = 6379            -- Redis server port
 local redis_timeout = 1000         -- 1 second timeout
 local max_idle_timeout = 10000     -- 10 seconds
 local pool_size = 100              -- Maximum number of idle connections in the pool
-local rate_limit = 5               -- Max requests allowed in the window
-local max_percent_remaining = 0.1  -- Percentage of remaining requests to allow in a batch
-local batch_percent = 0.05         -- Static batch percentage
+local rate_limit = 20               -- Max requests allowed in the window
+local max_percent_remaining = 0.5  -- Percentage of remaining requests to allow in a batch
+local batch_percent = 0.5         -- Static batch percentage
 local window_size = 60             -- Time window size in seconds
 
 -- Initialize Redis connection with pooling
@@ -85,9 +85,11 @@ local function fetch_batch_quota(red, shared_dict, redis_key, token, window_star
     if dynamic and previous_local_count > 0 then
         -- Dynamically calculate batch quota based on local instance's previous window count
         local calculated_quota = math.ceil(remaining_quota * max_percent_remaining)
+        ngx.log(ngx.STDERR, "Quota Fetched: ", math.min(previous_local_count, calculated_quota))
         return math.min(previous_local_count, calculated_quota)
     else
         -- Static batch calculation (if dynamic is false or previous_local_count is 0)
+        ngx.log(ngx.STDERR, "Quota Fetched: ", math.ceil(remaining_quota * batch_percent))
         return math.ceil(remaining_quota * batch_percent)
     end
 end
@@ -104,6 +106,7 @@ local function update_redis_with_exhausted_batch(red, redis_key, batch_quota, tt
         red:expire(redis_key, ttl)
     end
 
+    ngx.log(ngx.STDERR, "Quota Updated to Redis: ", batch_quota)
     return true
 end
 
@@ -118,6 +121,8 @@ local function set_new_batch(shared_dict, redis_key, batch_size, ttl)
     if not ok then
         return nil, "Failed to reset used count in shared memory: " .. err
     end
+
+    ngx.log(ngx.STDERR, "New Batch Set: ", batch_size)
 
     return true
 end
@@ -157,6 +162,9 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
         return nil, "Failed to increment local instance count: " .. err
     end
 
+    ngx.log(ngx.STDERR, "Local Instance Count increment_and_check: ", local_instance_count)
+    ngx.log(ngx.STDERR, "Batch Quota increment_and_check: ", batch_quota)
+
     if batch_quota > 0 then
         local new_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
         if err then
@@ -164,6 +172,7 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
         end
 
         if new_used <= batch_quota then
+            ngx.log(ngx.STDERR, "Request Allowed ")
             return true  -- Request is allowed within batch quota
         else
             -- Batch exhausted; check global rate limit
@@ -197,9 +206,11 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
                 if not updated_used then
                     return nil, "Failed to increment used count after setting new batch: " .. err
                 end
-
+                ngx.log(ngx.STDERR, "Request Allowed ")
                 return true  -- Request is allowed with new batch quota
+
             else
+                ngx.log(ngx.STDERR, "Request Denied ")  
                 return false  -- No new batch quota available, reject request
             end
         end
