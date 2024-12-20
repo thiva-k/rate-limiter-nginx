@@ -165,35 +165,8 @@ local function increment_and_check(shared_dict, redis_key, red, batch_quota, tim
         return nil, "Failed to decrement batch quota: " .. err
     end
     
-    if new_quota >= 0 then
-        return true
-    end
-
-    -- Batch is exhausted, update Redis and fetch a new batch
-    local success, err = update_redis_with_exhausted_batch(red, shared_dict, redis_key)
-    if not success then
-        return nil, err
-    end
-
-    -- Fetch new batch quota
-    local new_batch_quota, ttl = fetch_batch_quota(red, redis_key)
-    if not new_batch_quota or new_batch_quota <= 0 then
-        return false
-    end
-
-    -- Store new batch quota in shared memory
-    local ok, err = shared_dict:set(redis_key .. ":batch", new_batch_quota - 1, ttl)
-    if not ok then
-        return nil, "Failed to set new batch quota in shared memory: " .. err
-    end
-    
-    -- Reset the timestamps for the new batch, including the current request
-    ok, err = shared_dict:rpush(redis_key .. ":timestamps", current_time)
-    if not ok then
-        return nil, "Failed to reset timestamps in shared memory: " .. err
-    end
-
     return true
+
 end
 
 -- Main rate limiting logic
