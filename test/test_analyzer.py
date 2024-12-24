@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Configuration
-warm_up_period = 0.5 * 60 * 1000  # 2 minutes in milliseconds (adjustable)
+warm_up_period = 2 * 60 * 1000  # 2 minutes in milliseconds (adjustable)
 file_path = "jmeter_results.csv"  # Replace with your file path
 output_file = "statistics_results.csv"  # File to save the statistics
 

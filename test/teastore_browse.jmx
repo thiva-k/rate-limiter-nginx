@@ -55,11 +55,6 @@
             <stringProp name="Argument.value">8090,8091</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="port" elementType="Argument">
-            <stringProp name="Argument.name">port</stringProp>
-            <stringProp name="Argument.value">8090</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
         </collectionProp>
       </elementProp>
     </TestPlan>
@@ -75,7 +70,7 @@
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -111,7 +106,7 @@
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -147,7 +142,7 @@
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table" enabled="true">
+        <ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -184,7 +179,7 @@
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ThreadsStateOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Active Threads Over Time" enabled="true">
+        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ThreadsStateOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Active Threads Over Time" enabled="false">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -229,7 +224,7 @@
           <boolProp name="exclude_checkbox_state">false</boolProp>
         </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
         <hashTree/>
-        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time" enabled="true">
+        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time" enabled="false">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -289,7 +284,7 @@
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1 - Home"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1 - Home" enabled="true"/>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.1 - Get Categories" enabled="true"/>
           <hashTree>
@@ -420,15 +415,15 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2 - Login"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2 - Login" enabled="true"/>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode2.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/login?name=user${__intSum(${__threadNum},-1,)}&amp;password=password</stringProp>
@@ -475,7 +470,7 @@ vars.put(&quot;responseCode3.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3 - List Products"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3 - List Products" enabled="true"/>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="3.1 - Get Category" enabled="true"/>
           <hashTree>
@@ -2112,7 +2107,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -2205,7 +2200,7 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
 </stringProp>
         </JSR223PostProcessor>
         <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer">
           <doubleProp>
             <name>throughput</name>
             <value>120.0</value>
@@ -2215,7 +2210,7 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
         </ConstantThroughputTimer>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
         <stringProp name="ThreadGroup.num_threads">${group_2}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
@@ -2335,7 +2330,7 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ThreadsStateOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Active Threads Over Time" enabled="true">
+        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ThreadsStateOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Active Threads Over Time" enabled="false">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -2380,7 +2375,7 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
           <boolProp name="exclude_checkbox_state">false</boolProp>
         </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
         <hashTree/>
-        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time" enabled="true">
+        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time" enabled="false">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -2573,13 +2568,13 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
         </hashTree>
         <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2 - Login" enabled="true"/>
         <hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login" enabled="true"/>
           <hashTree>
             <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode2.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/login?name=user${__intSum(${__threadNum},${group_1},-1,)}&amp;password=password</stringProp>
@@ -4263,7 +4258,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -4377,7 +4372,7 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -4486,7 +4481,7 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ThreadsStateOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Active Threads Over Time" enabled="true">
+        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ThreadsStateOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Active Threads Over Time" enabled="false">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -4531,7 +4526,7 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
           <boolProp name="exclude_checkbox_state">false</boolProp>
         </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
         <hashTree/>
-        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time" enabled="true">
+        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time" enabled="false">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -4730,7 +4725,7 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
               <stringProp name="WhileController.condition">${__javaScript(&quot;${responseCode2.1}&quot; != &quot;200&quot;,)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/login?name=user${__intSum(${__threadNum},${group_1},${group_2},-1,)}&amp;password=password</stringProp>
@@ -6414,7 +6409,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -8874,7 +8869,44 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
         </ResultCollector>
         <hashTree/>
       </hashTree>
-      <ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table">
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table" enabled="true">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -8911,7 +8943,7 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
         <stringProp name="filename">D:\Semester 7\CS4203 - Research and Development Project\Artifacts\rate-limiter-nginx\test\jmeter_results.csv</stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -9021,6 +9053,75 @@ logFile &lt;&lt; &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFor
         </objProp>
         <stringProp name="filename"></stringProp>
       </ResultCollector>
+      <hashTree/>
+      <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Log request" enabled="true">
+        <stringProp name="scriptLanguage">groovy</stringProp>
+        <stringProp name="parameters"></stringProp>
+        <stringProp name="filename"></stringProp>
+        <stringProp name="cacheKey">true</stringProp>
+        <stringProp name="script">// Get request start and end timestamps
+long startTime = prev.getStartTime() // Request start timestamp (epoch time in ms)
+long endTime = prev.getEndTime()     // Response end timestamp (epoch time in ms)
+
+// Format timestamps for readability
+def startTimeFormatted = new Date(startTime).format(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
+def endTimeFormatted = new Date(endTime).format(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
+
+// Get the status code and elapsed time
+String statusCode = prev.getResponseCode() // Response status code
+String labelName = sampler.getName()         // Name of the sampler (label)
+long elapsedTime = prev.getTime()          // Response elapsed time in ms
+String elapsedTimeFormatted = String.format(&quot;%2d&quot;, elapsedTime) + &quot; ms&quot;
+
+// Construct a single-line log entry
+String logEntry = &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFormatted}, &quot; +
+                  &quot;Status Code: ${statusCode}, Elapsed Time: ${elapsedTimeFormatted}, Label: ${labelName}\n&quot;
+
+// Log the entry
+def logFile = new File(&quot;D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/test/logfile.txt&quot;)
+logFile &lt;&lt; logEntry
+
+// Check for unexpected status codes and log response for debugging
+if (!(statusCode == &quot;200&quot; || statusCode == &quot;429&quot;)) {
+    // Gather additional error details
+    String responseData = prev.getResponseDataAsString() // Get response data (body)
+    String responseHeaders = prev.getResponseHeaders()   // Get response headers
+    String requestHeaders = sampler.getArgumentsAsQueryString() // Get request headers or query
+    String responseMessage = prev.getResponseMessage()   // Get response message
+    String stackTrace = prev.getErrorCount() &gt; 0 ? prev.getResultData() : &quot;No stack trace available&quot;
+
+    // Construct detailed error log entry
+    String detailedLogEntry = &quot;&quot;&quot;
+    ERROR DETECTED:
+    --------------------
+    Start Time: ${startTimeFormatted}
+    End Time: ${endTimeFormatted}
+    Status Code: ${statusCode}
+    Response Message: ${responseMessage}
+    Elapsed Time: ${elapsedTimeFormatted} ms
+    Label: ${labelName}
+
+    Request Headers/Query:
+    ${requestHeaders}
+
+    Response Headers:
+    ${responseHeaders}
+
+    Response Body:
+    ${responseData}
+
+    Stack Trace:
+    ${stackTrace}
+
+    --------------------
+    &quot;&quot;&quot;
+
+    // Log to a debug file
+    def debugLogFile = new File(&quot;D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/test/debug_log.txt&quot;)
+    debugLogFile &lt;&lt; detailedLogEntry
+}
+</stringProp>
+      </JSR223PostProcessor>
       <hashTree/>
     </hashTree>
   </hashTree>
