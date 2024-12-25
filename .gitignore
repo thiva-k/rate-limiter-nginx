@@ -1,4 +1,4 @@
 /logs
 /misc
-/test/jmeter_results.csv
-/test/logfile.txt
+/test/logs
+/test/report

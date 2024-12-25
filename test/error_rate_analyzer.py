@@ -2,14 +2,14 @@ import pandas as pd
 from datetime import datetime
 
 # Configuration Variables
-FILE_PATH = "C:/Users/ASUS/Desktop/Repos/rate-limiter-nginx/test/jmeter_results.csv"
+FILE_PATH = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/test/jmeter_results.csv"
 RATE_LIMIT = 100  # Maximum requests allowed per window
 WINDOW_SIZE = 60  # Window size in seconds
 
 # Output file names
-ERROR_DETAILS_FILE = "error_details.csv"
-CLIENT_STATS_FILE = "client_stats.csv"
-OVERALL_STATS_FILE = "overall_stats.csv"
+ERROR_DETAILS_FILE = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/test/result/error_details.csv"
+CLIENT_STATS_FILE = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/test/result/client_stats.csv"
+OVERALL_STATS_FILE = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/test/result/overall_stats.csv"
 
 def analyze_rate_limiting(file_path, rate_limit=100, window_size=60):
     """

@@ -8,7 +8,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Token bucket parameters
-local bucket_capacity = 1 -- Maximum tokens in the bucket
+local bucket_capacity = 10 -- Maximum tokens in the bucket
 local refill_rate = 1 -- Tokens generated per second
 local requested_tokens = 1 -- Number of tokens required per request
 
@@ -172,7 +172,10 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if status ~= ngx.HTTP_OK then
+    if not res then
+        ngx.log(ngx.ERR, status)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    elseif status ~= ngx.HTTP_OK then
         ngx.exit(status)
     end
 end
