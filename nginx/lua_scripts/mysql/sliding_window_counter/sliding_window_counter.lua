@@ -1,113 +1,148 @@
 local mysql = require "resty.mysql"
 
--- MySQL configuration
-local mysql_host = "mysql"
-local mysql_port = 3306
-local mysql_user = "root"
-local mysql_password = "root"
-local mysql_database = "rate_limit_db" -- Your database name
+-- MySQL connection settings
+local db_config = {
+    host = "mysql",
+    port = 3306,
+    database = "rate_limit_db",
+    user = "root",
+    password = "root",
+    charset = "utf8",
+    max_packet_size = 1024 * 1024
+}
 
-local function init_mysql()
+local window_size = 60 -- seconds
+local request_limit = 10
+local sub_window_count = 4
+
+-- Initialize MySQL connection
+local function connect_to_mysql()
     local db, err = mysql:new()
     if not db then
-        ngx.log(ngx.ERR, "Failed to instantiate MySQL: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        ngx.log(ngx.ERR, "Failed to create MySQL object: ", err)
+        return nil, err
     end
 
     db:set_timeout(1000) -- 1 second timeout
 
-    local ok, err, errcode, sqlstate = db:connect{
-        host = mysql_host,
-        port = mysql_port,
-        user = mysql_user,
-        password = mysql_password,
-        database = mysql_database
-    }
-
+    local ok, err, errno, sqlstate = db:connect(db_config)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+        ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err, " errno: ", errno, " sqlstate: ", sqlstate)
+        return nil, err
     end
-
     return db
 end
 
+-- Get the total requests in the sliding window
+local function get_total_requests(db, token, current_subwindow, sub_window_size)
+    ngx.log(ngx.DEBUG, "Fetching total requests for token: ", token)
+    local start_subwindow = current_subwindow - (sub_window_count - 1) * sub_window_size
 
--- Define the rate limiter parameters
-local max_count = 15 -- Max requests allowed in the window
-local window_length_secs = 10 -- Window size in seconds
-local granularity = 1 -- Size of each small interval in seconds
+    -- Corrected query: Remove unnecessary quoting
+    local query = string.format([[
+        SELECT subwindow, request_count
+        FROM rate_limit_requests
+        WHERE token = %s AND subwindow >= %d;
+    ]], ngx.quote_sql_str(token), start_subwindow)
 
--- Function to get the current time in seconds
-local function get_current_time_secs()
-    return ngx.now()
+    ngx.log(ngx.DEBUG, "Executing query to fetch requests: \n", query)
+    local res, err, errno, sqlstate = db:query(query)
+    if not res then
+        ngx.log(ngx.ERR, "Failed to query sliding window: ", err, " errno: ", errno, " sqlstate: ", sqlstate)
+        return nil, err
+    end
+
+    local total_requests = 0
+    local elapsed_time = ngx.time() % sub_window_size
+
+    for _, row in ipairs(res) do
+        local subwindow = tonumber(row.subwindow)
+        local count = tonumber(row.request_count)
+
+        if subwindow == start_subwindow then
+            total_requests = total_requests + math.ceil(((sub_window_size - elapsed_time) / sub_window_size) * count)
+        else
+            total_requests = total_requests + count
+        end
+        ngx.log(ngx.DEBUG, "Subwindow: ", subwindow, ", Count: ", count, ", Total requests: ", total_requests)
+    end
+
+    ngx.log(ngx.DEBUG, "Total requests calculated: ", total_requests)
+    return total_requests
 end
 
--- Function to check if the request is allowed (sliding window counter algorithm)
-local function allowed(token)
-    local db = init_mysql()
 
-    -- Get the current time and calculate the current time bucket
-    local now = get_current_time_secs()
-    local current_bucket = math.floor(now / granularity)
+-- Increment the current subwindow count
+local function increment_subwindow(db, token, current_subwindow)
+    ngx.log(ngx.DEBUG, "Incrementing request count for token: ", token, " in subwindow: ", current_subwindow)
 
-    -- Calculate the range of buckets that fall within the sliding window
-    local min_bucket = current_bucket - math.floor(window_length_secs / granularity)
-
-    -- Query to sum the requests from relevant buckets in the sliding window
+    -- Corrected query: Dynamically insert token and subwindow values
     local query = string.format([[
-        SELECT SUM(request_count) AS total_requests
-        FROM sliding_window_counter
-        WHERE token = '%s' AND bucket BETWEEN %d AND %d
-    ]], token, min_bucket, current_bucket)
+        INSERT INTO rate_limit_requests (token, subwindow, request_count)
+        VALUES (%s, %d, 1)
+        ON DUPLICATE KEY UPDATE request_count = request_count + 1;
+    ]], ngx.quote_sql_str(token), current_subwindow)
 
-    -- Execute the query to get the total number of requests in the current window
-    local res, err, errcode, sqlstate = db:query(query)
+    ngx.log(ngx.DEBUG, "Executing query to increment subwindow: \n", query)
+    local res, err, errno, sqlstate = db:query(query)
     if not res then
-        ngx.log(ngx.ERR, "Failed to query MySQL: ", err)
+        ngx.log(ngx.ERR, "Failed to increment subwindow count: ", err, " errno: ", errno, " sqlstate: ", sqlstate)
+        return nil, err
+    end
+
+    ngx.log(ngx.DEBUG, "Successfully incremented request count for subwindow: ", current_subwindow)
+    return true
+end
+
+
+-- Main rate-limiting logic
+local function rate_limit()
+    ngx.log(ngx.DEBUG, "Starting rate limit check")
+    local token = ngx.var.arg_token
+    if not token then
+        ngx.log(ngx.ERR, "Token not provided")
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
+
+    ngx.log(ngx.DEBUG, "Token received: ", token)
+    local db, err = connect_to_mysql()
+    if not db then
+        ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err)
+        ngx.log(ngx.DEBUG, "\n")
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local total_requests = tonumber(res[1].total_requests) or 0
+    local now = ngx.time()
+    local sub_window_size = window_size / sub_window_count
+    local current_subwindow = math.floor(now / sub_window_size) * sub_window_size
 
-    -- Check if the number of requests exceeds the rate limit
-    if total_requests >= max_count then
-        -- Too many requests in the current window, reject
-        return false
-    else
-        -- Increment the counter for the current bucket
-        local insert_query = string.format([[
-            INSERT INTO sliding_window_counter (token, bucket, request_count)
-            VALUES ('%s', %d, 1)
-            ON DUPLICATE KEY UPDATE request_count = request_count + 1
-        ]], token, current_bucket)
+    ngx.log(ngx.DEBUG, "Current subwindow calculated: ", current_subwindow)
 
-        local res, err, errcode, sqlstate = db:query(insert_query)
-        if not res then
-            ngx.log(ngx.ERR, "Failed to insert/update request count: ", err)
-            ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-        end
-
-        -- Optionally, cleanup old records (buckets) outside the sliding window
-        local cleanup_query = string.format([[
-            DELETE FROM sliding_window_counter WHERE bucket < %d
-        ]], min_bucket)
-
-        db:query(cleanup_query)
-
-        return true
+    local total_requests, err = get_total_requests(db, token, current_subwindow, sub_window_size)
+    if not total_requests then
+        ngx.log(ngx.ERR, "Failed to calculate total requests: ", err)
+        ngx.log(ngx.DEBUG, "\n")
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
-end
 
--- Fetch token from URL parameters and check if the request is allowed
-local token = ngx.var.arg_token
-if not token then
-    ngx.log(ngx.ERR, "Token not provided")
-    ngx.exit(ngx.HTTP_BAD_REQUEST)
-end
+    ngx.log(ngx.DEBUG, "Total requests so far: ", total_requests)
 
-if allowed(token) then
+    if total_requests + 1 > request_limit then
+        ngx.log(ngx.ERR, "Request limit exceeded for token: ", token)
+        ngx.log(ngx.DEBUG, "\n")
+        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+    end
+
+    local success, err = increment_subwindow(db, token, current_subwindow)
+    if not success then
+        ngx.log(ngx.ERR, "Failed to increment subwindow: ", err)
+        ngx.log(ngx.DEBUG, "\n")
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    ngx.log(ngx.DEBUG, "Request allowed for token: ", token)
+    ngx.log(ngx.DEBUG, "\n")
     ngx.say("Request allowed")
-else
-    ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
 end
+
+rate_limit()
