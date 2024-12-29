@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   load_balancer1:
-    image: thivaharan/nginx
+    image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/nginx:latest
     build:
       context: ./nginx
     ports:
@@ -13,7 +13,7 @@ services:
           - node.labels.type == loadbalancer1
 
   load_balancer2:
-    image: thivaharan/nginx
+    image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/nginx:latest
     build:
       context: ./nginx
     ports:

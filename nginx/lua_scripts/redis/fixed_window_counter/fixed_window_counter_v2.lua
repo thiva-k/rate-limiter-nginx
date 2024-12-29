@@ -8,7 +8,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
-local rate_limit = 10 -- 500 requests per minute
+local rate_limit = 6 -- 500 requests per minute
 local window_size = 60 -- 60 second window
 
 -- Helper function to initialize Redis connection
