@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   load_balancer1:
-    image: ${DOCKER_REGISTRY:-localhost}/loadbalancer:latest
+    image: thivaharan/nginx
     build:
       context: ./nginx
     ports:
@@ -13,7 +13,7 @@ services:
           - node.labels.type == loadbalancer1
 
   load_balancer2:
-    image: ${DOCKER_REGISTRY:-localhost}/loadbalancer:latest
+    image: thivaharan/nginx
     build:
       context: ./nginx
     ports:
