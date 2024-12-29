@@ -7,9 +7,9 @@ RATE_LIMIT = 100  # Maximum requests allowed per window
 WINDOW_SIZE = 60  # Window size in seconds
 
 # Output file names
-ERROR_DETAILS_FILE = "error_details.csv"
-CLIENT_STATS_FILE = "client_stats.csv"
-OVERALL_STATS_FILE = "overall_stats.csv"
+ERROR_DETAILS_FILE = "./test/error_details.csv"
+CLIENT_STATS_FILE = "./test/client_stats.csv"
+OVERALL_STATS_FILE = "./test/overall_stats.csv"
 
 def analyze_rate_limiting(file_path, rate_limit=100, window_size=60):
     """
