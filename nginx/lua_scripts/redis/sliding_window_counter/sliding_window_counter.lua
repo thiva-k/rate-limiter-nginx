@@ -10,7 +10,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 -- Rate limiting parameters
 local window_size = 60 -- Total window size in seconds
 local request_limit = 100 -- Max requests allowed in the window
-local sub_window_count = 4 -- Number of subwindows
+local sub_window_count = 2 -- Number of subwindows
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -144,8 +144,7 @@ local function main()
     end
 
     if status == ngx.HTTP_OK then
-        ngx.say(message)
-        ngx.exit(status)
+        return
     else
         if message then
             ngx.log(ngx.ERR, message)

@@ -8,7 +8,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
-local rate_limit = 500 -- Maximum number of requests allowed per window
+local rate_limit = 100 -- Maximum number of requests allowed per window
 local window_size = 60 -- Time window in seconds
 
 -- Lua script for atomic rate limiting with fixed window
@@ -80,13 +80,13 @@ local function get_script_sha(red)
 end
 
 -- Function to run the rate limiting script
-local function run_rate_limit_script(red, redis_key, ttl)
+local function run_rate_limit_script(red, redis_key, window_size)
     local sha, err = get_script_sha(red)
     if not sha then
         return nil, err
     end
     
-    local resp, err = red:evalsha(sha, 1, redis_key, rate_limit, ttl)
+    local resp, err = red:evalsha(sha, 1, redis_key, rate_limit, window_size)
     
     if err then
         if err:find("NOSCRIPT", 1, true) then
@@ -96,7 +96,7 @@ local function run_rate_limit_script(red, redis_key, ttl)
             if not sha then
                 return nil, err
             end
-            resp, err = red:evalsha(sha, 1, redis_key, rate_limit, ttl)
+            resp, err = red:evalsha(sha, 1, redis_key, rate_limit, window_size)
         end
         
         if err then
@@ -109,19 +109,15 @@ end
 
 -- Main rate limiting logic
 local function check_rate_limit(red, token)
-    
-    local service_name = ngx.var.service_name
-    local http_method = ngx.var.request_method
-
     -- Get the current timestamp and round it down to the nearest minute
     local current_time = ngx.now()
     local window_start = math.floor(current_time / window_size) * window_size
 
-    -- Construct the Redis key using the token, http_method, service_name and the window start time
-    local redis_key = string.format("rate_limit:%s:%s:%s:%d", token, http_method, service_name, window_start)
+    -- Construct the Redis key using the token and the window start time
+    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
 
-    -- Run the rate limiting script
-    local resp, err = run_rate_limit_script(red, redis_key, math.ceil(ttl))
+    -- Run the rate limiting script with window_size as TTL
+    local resp, err = run_rate_limit_script(red, redis_key, window_size)
     if not resp then
         return nil, err
     end
