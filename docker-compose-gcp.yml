@@ -36,7 +36,7 @@ services:
   mysql:
     image: mysql:8.4
     ports:
-      - "3306:3306"
+      - "3307:3306"  
     command: --mysql-native-password=ON
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -49,17 +49,21 @@ services:
         constraints:
           - node.labels.type == database
 
-  registry:
-    image: descartesresearch/teastore-registry
+  db:
+    image: descartesresearch/teastore-db
+    expose:
+      - "3306"
     ports:
-      - "8083:8080"
+      - "3306:3306"
     deploy:
       placement:
         constraints:
           - node.labels.type == teastore
 
-  db: 
-    image: descartesresearch/teastore-db
+  registry:
+    image: descartesresearch/teastore-registry
+    ports:
+      - "8083:8080"
     deploy:
       placement:
         constraints:
