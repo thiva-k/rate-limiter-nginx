@@ -3,8 +3,6 @@ version: '3.8'
 services:
   load_balancer1:
     image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/nginx:latest
-    build:
-      context: ./nginx
     ports:
       - target: 8080
         published: 8090
@@ -17,8 +15,6 @@ services:
 
   load_balancer2:
     image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/nginx:latest
-    build:
-      context: ./nginx
     ports:
       - target: 8080
         published: 8091
