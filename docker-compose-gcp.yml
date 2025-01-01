@@ -1,33 +1,29 @@
 version: '3.8'
 
 services:
-load_balancer1:
+  load_balancer1:
     image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/nginx:latest
     build:
       context: ./nginx
     ports:
-      - target: 8080
-        published: 8090
-        mode: host
+      - "8090:8080"
     deploy:
       placement:
         constraints:
           - node.labels.type == loadbalancer1
 
-load_balancer2:
+  load_balancer2:
     image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/nginx:latest
     build:
       context: ./nginx
     ports:
-      - target: 8080
-        published: 8091
-        mode: host
+      - "8091:8080"
     deploy:
       placement:
         constraints:
           - node.labels.type == loadbalancer2
 
-redis:
+  redis:
     image: redis/redis-stack:latest
     ports:
       - "6379:6379"
@@ -37,7 +33,7 @@ redis:
         constraints:
           - node.labels.type == database
 
-mysql:
+  mysql:
     image: mysql:8.4
     ports:
       - "3306:3306"
@@ -53,7 +49,7 @@ mysql:
         constraints:
           - node.labels.type == database
 
-registry:
+  registry:
     image: descartesresearch/teastore-registry
     ports:
       - "8083:8080"
@@ -62,7 +58,7 @@ registry:
         constraints:
           - node.labels.type == teastore
 
-persistence:
+  persistence:
     image: descartesresearch/teastore-persistence
     environment:
       HOST_NAME: "persistence"
@@ -74,7 +70,7 @@ persistence:
         constraints:
           - node.labels.type == teastore
 
-auth:
+  auth:
     image: descartesresearch/teastore-auth
     environment:
       HOST_NAME: "auth"
@@ -84,7 +80,7 @@ auth:
         constraints:
           - node.labels.type == teastore
 
-image:
+  image:
     image: descartesresearch/teastore-image
     environment:
       HOST_NAME: "image"
@@ -94,7 +90,7 @@ image:
         constraints:
           - node.labels.type == teastore
 
-recommender:
+  recommender:
     image: descartesresearch/teastore-recommender
     environment:
       HOST_NAME: "recommender"
@@ -104,7 +100,7 @@ recommender:
         constraints:
           - node.labels.type == teastore
 
-webui:
+  webui:
     image: descartesresearch/teastore-webui
     ports:
       - "8080:8080"
