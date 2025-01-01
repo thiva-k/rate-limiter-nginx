@@ -1,10 +1,7 @@
 @echo off
 
-REM Set the JMeter Home Directory
-set JMETER_HOME=D:\Semester 7\CS4203 - Research and Development Project\Artifacts\apache-jmeter-5.6.3
-
 REM Path to JMeter result file (.jtl or .csv)
-set RESULTS_FILE="D:\Semester 7\CS4203 - Research and Development Project\Artifacts\rate-limiter-nginx\test\logs\jmeter_results.csv"
+set RESULTS_FILE="%CD%\jmeter_results.csv"
 
 REM Output directory for the HTML report
 set OUTPUT_DIR="%CD%\report"
