@@ -58,12 +58,19 @@ services:
         constraints:
           - node.labels.type == teastore
 
+  db: 
+    image: descartesresearch/teastore-db
+    deploy:
+      placement:
+        constraints:
+          - node.labels.type == teastore
+
   persistence:
     image: descartesresearch/teastore-persistence
     environment:
       HOST_NAME: "persistence"
       REGISTRY_HOST: "registry"
-      DB_HOST: "mysql"
+      DB_HOST: "db"
       DB_PORT: "3306"
     deploy:
       placement:
