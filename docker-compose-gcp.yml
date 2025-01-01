@@ -6,7 +6,10 @@ services:
     build:
       context: ./nginx
     ports:
-      - "8090:8080"
+      - target: 8080
+        published: 8090
+        protocol: tcp
+        mode: host
     deploy:
       placement:
         constraints:
@@ -17,7 +20,10 @@ services:
     build:
       context: ./nginx
     ports:
-      - "8091:8080"
+      - target: 8080
+        published: 8091
+        protocol: tcp
+        mode: host
     deploy:
       placement:
         constraints:
@@ -26,8 +32,14 @@ services:
   redis:
     image: redis/redis-stack:latest
     ports:
-      - "6379:6379"
-      - "8001:8001"
+      - target: 6379
+        published: 6379
+        protocol: tcp
+        mode: host
+      - target: 8001
+        published: 8001
+        protocol: tcp
+        mode: host
     deploy:
       placement:
         constraints:
@@ -36,7 +48,10 @@ services:
   mysql:
     image: mysql:8.4
     ports:
-      - "3307:3306"  
+      - target: 3306
+        published: 3307
+        protocol: tcp
+        mode: host
     command: --mysql-native-password=ON
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -51,10 +66,11 @@ services:
 
   db:
     image: descartesresearch/teastore-db
-    expose:
-      - "3306"
     ports:
-      - "3306:3306"
+      - target: 3306
+        published: 3306
+        protocol: tcp
+        mode: host
     deploy:
       placement:
         constraints:
@@ -63,7 +79,10 @@ services:
   registry:
     image: descartesresearch/teastore-registry
     ports:
-      - "8083:8080"
+      - target: 8080
+        published: 8083
+        protocol: tcp
+        mode: host
     deploy:
       placement:
         constraints:
@@ -114,7 +133,10 @@ services:
   webui:
     image: descartesresearch/teastore-webui
     ports:
-      - "8080:8080"
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
     environment:
       HOST_NAME: "webui"
       REGISTRY_HOST: "registry"
