@@ -2,8 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Configuration
-file_path = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/jmeter/jmeter_results.csv"
-output_file = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/jmeter/results_analyzer/transactions_per_second.png"
+file_path = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/jmeter/result_analyzers/jmeter_results.csv"
+output_file = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/jmeter/result_analyzers/transactions_per_second.png"
 granularity = '1min'  # Granularity for resampling (e.g., '30S' for 30 seconds, '1min' for 1 minute)
 
 # Specify data types for columns
