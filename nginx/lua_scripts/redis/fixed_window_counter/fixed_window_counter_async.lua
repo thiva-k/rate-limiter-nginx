@@ -7,8 +7,8 @@ local redis_port = 6379            -- Redis server port
 local redis_timeout = 1000         -- 1 second timeout
 local max_idle_timeout = 10000     -- 10 seconds
 local pool_size = 100             -- Maximum number of idle connections in the pool
-local rate_limit = 500             -- Max requests allowed in the window
-local batch_percent = 0.1          -- Percentage of remaining requests to allow in a batch
+local rate_limit = 10             -- Max requests allowed in the window
+local batch_percent = 0.5          -- Percentage of remaining requests to allow in a batch
 local min_batch_size = 1           -- Minimum size of batch
 local window_size = 60             -- Time window size in seconds
 
@@ -193,18 +193,13 @@ end
 
 -- Rate limiting logic wrapper
 local function check_rate_limit(red, token)
-    -- Calculate TTL
-    local ttl = calculate_ttl()
-
-    local service_name = ngx.var.service_name
-    local http_method = ngx.var.request_method
 
     -- Get the current timestamp and round it down to the nearest minute
     local current_time = ngx.now()
     local window_start = math.floor(current_time / window_size) * window_size
 
     -- Construct the Redis key using the token, http_method, service_name and the window start time
-    local redis_key = string.format("rate_limit:%s:%s:%s:%d", token, http_method, service_name, window_start)
+    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
 
     -- Access shared dictionary
     local shared_dict, err = get_shared_dict()
@@ -232,13 +227,13 @@ local function check_rate_limit(red, token)
     end
 
     -- Process batch quota
-    local batch_quota, err = process_batch_quota(red, shared_dict, redis_key, ttl)
+    local batch_quota, err = process_batch_quota(red, shared_dict, redis_key, window_size)
     if not batch_quota then
         return unlock_and_return(nil, err)
     end
 
     -- Determine if request is allowed
-    local allowed, err = increment_and_check(shared_dict, redis_key, batch_quota, red, ttl)
+    local allowed, err = increment_and_check(shared_dict, redis_key, batch_quota, red, window_size)
     if err then
         return unlock_and_return(nil, err)
     end
