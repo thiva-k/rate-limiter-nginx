@@ -1,3 +1,6 @@
 /logs
 /misc
-/test/*.csv
+/test/logs
+jmeter/logs
+jmeter/*.log
+jmeter/*.csv
