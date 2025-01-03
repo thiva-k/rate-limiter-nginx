@@ -5,9 +5,14 @@
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="Benutzer definierte Variablen">
         <collectionProp name="Arguments.arguments">
-          <elementProp name="hostname" elementType="Argument">
-            <stringProp name="Argument.name">hostname</stringProp>
-            <stringProp name="Argument.value">localhost</stringProp>
+          <elementProp name="hosts" elementType="Argument">
+            <stringProp name="Argument.name">hosts</stringProp>
+            <stringProp name="Argument.value">35.202.210.136,34.170.199.132</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="ports" elementType="Argument">
+            <stringProp name="Argument.name">ports</stringProp>
+            <stringProp name="Argument.value">8090,8091</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="warm_up_users" elementType="Argument">
@@ -22,22 +27,37 @@
           </elementProp>
           <elementProp name="test_run_time" elementType="Argument">
             <stringProp name="Argument.name">test_run_time</stringProp>
-            <stringProp name="Argument.value">300</stringProp>
+            <stringProp name="Argument.value">600</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="group_1" elementType="Argument">
             <stringProp name="Argument.name">group_1</stringProp>
-            <stringProp name="Argument.value">60</stringProp>
+            <stringProp name="Argument.value">1</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="group_2" elementType="Argument">
             <stringProp name="Argument.name">group_2</stringProp>
-            <stringProp name="Argument.value">30</stringProp>
+            <stringProp name="Argument.value">25</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="group_3" elementType="Argument">
             <stringProp name="Argument.name">group_3</stringProp>
-            <stringProp name="Argument.value">10</stringProp>
+            <stringProp name="Argument.value">5</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="group_1_request_rate" elementType="Argument">
+            <stringProp name="Argument.name">group_1_request_rate</stringProp>
+            <stringProp name="Argument.value">30</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="group_2_request_rate" elementType="Argument">
+            <stringProp name="Argument.name">group_2_request_rate</stringProp>
+            <stringProp name="Argument.value">90</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="group_3_request_rate" elementType="Argument">
+            <stringProp name="Argument.name">group_3_request_rate</stringProp>
+            <stringProp name="Argument.value">120</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="ramp_up" elementType="Argument">
@@ -65,16 +85,11 @@
             <stringProp name="Argument.value">/tools.descartes.teastore.image/rest</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="ports" elementType="Argument">
-            <stringProp name="Argument.name">ports</stringProp>
-            <stringProp name="Argument.value">8090,8091</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
         </collectionProp>
       </elementProp>
     </TestPlan>
     <hashTree>
-      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group" enabled="false">
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group">
         <stringProp name="ThreadGroup.num_threads">${warm_up_users}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${warm_up_time}</stringProp>
@@ -2032,7 +2047,7 @@ logFile &lt;&lt; logEntry
         </JSR223PostProcessor>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${group_1}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -2069,7 +2084,7 @@ logFile &lt;&lt; logEntry
 </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="1.1 - Get Categories">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="1.1 - Get Categories" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${persistence}/categories?start=-1&amp;max=-1</stringProp>
@@ -3921,29 +3936,28 @@ if (sampler instanceof HTTPSamplerProxy) {
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">// Split the ports into an array
+          <stringProp name="script">// Split the ports and hosts into an array
+def hostArray = vars.get(&quot;hosts&quot;).split(&quot;,&quot;) as List
 def portArray = vars.get(&quot;ports&quot;).split(&quot;,&quot;) as List
 
-// Retrieve the current port index for this thread (or initialize if not set)
-def currentIndex = vars.getObject(&quot;current_port_index&quot;) ?: 0
+// Retrieve the current index for this thread (or initialize if not set)
+def currentIndex = vars.getObject(&quot;current_index&quot;) ?: 0
 
 // Assign the current port based on the index
 def assignedPort = portArray[currentIndex % portArray.size()]
+def assignedHost = hostArray[currentIndex % hostArray.size()]
 
 // Update the variable for use in the sampler
 vars.put(&quot;port&quot;, assignedPort)
+vars.put(&quot;hostname&quot;, assignedHost)
 
 // Increment the index for the next request
-vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.size())
+vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
-          <doubleProp>
-            <name>throughput</name>
-            <value>120.0</value>
-            <savedValue>0.0</savedValue>
-          </doubleProp>
+          <stringProp name="throughput">${group_1_request_rate}</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -5848,29 +5862,28 @@ if (sampler instanceof HTTPSamplerProxy) {
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">// Split the ports into an array
+          <stringProp name="script">// Split the ports and hosts into an array
+def hostArray = vars.get(&quot;hosts&quot;).split(&quot;,&quot;) as List
 def portArray = vars.get(&quot;ports&quot;).split(&quot;,&quot;) as List
 
-// Retrieve the current port index for this thread (or initialize if not set)
-def currentIndex = vars.getObject(&quot;current_port_index&quot;) ?: 0
+// Retrieve the current index for this thread (or initialize if not set)
+def currentIndex = vars.getObject(&quot;current_index&quot;) ?: 0
 
 // Assign the current port based on the index
 def assignedPort = portArray[currentIndex % portArray.size()]
+def assignedHost = hostArray[currentIndex % hostArray.size()]
 
 // Update the variable for use in the sampler
 vars.put(&quot;port&quot;, assignedPort)
+vars.put(&quot;hostname&quot;, assignedHost)
 
 // Increment the index for the next request
-vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.size())
+vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
-          <doubleProp>
-            <name>throughput</name>
-            <value>120.0</value>
-            <savedValue>0.0</savedValue>
-          </doubleProp>
+          <stringProp name="throughput">${group_2_request_rate}</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -5886,7 +5899,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         </ResponseAssertion>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${group_3}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -7775,29 +7788,28 @@ if (sampler instanceof HTTPSamplerProxy) {
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">// Split the ports into an array
+          <stringProp name="script">// Split the ports and hosts into an array
+def hostArray = vars.get(&quot;hosts&quot;).split(&quot;,&quot;) as List
 def portArray = vars.get(&quot;ports&quot;).split(&quot;,&quot;) as List
 
-// Retrieve the current port index for this thread (or initialize if not set)
-def currentIndex = vars.getObject(&quot;current_port_index&quot;) ?: 0
+// Retrieve the current index for this thread (or initialize if not set)
+def currentIndex = vars.getObject(&quot;current_index&quot;) ?: 0
 
 // Assign the current port based on the index
 def assignedPort = portArray[currentIndex % portArray.size()]
+def assignedHost = hostArray[currentIndex % hostArray.size()]
 
 // Update the variable for use in the sampler
 vars.put(&quot;port&quot;, assignedPort)
+vars.put(&quot;hostname&quot;, assignedHost)
 
 // Increment the index for the next request
-vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.size())
+vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
         <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
-          <doubleProp>
-            <name>throughput</name>
-            <value>120.0</value>
-            <savedValue>0.0</savedValue>
-          </doubleProp>
+          <stringProp name="throughput">${group_3_request_rate}</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
@@ -7813,7 +7825,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         </ResponseAssertion>
         <hashTree/>
       </hashTree>
-      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -7850,7 +7862,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table">
+      <ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -7887,7 +7899,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -7924,7 +7936,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="GraphVisualizer" testclass="ResultCollector" testname="Graph Results">
+      <ResultCollector guiclass="GraphVisualizer" testclass="ResultCollector" testname="Graph Results" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -7961,7 +7973,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-      <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time">
+      <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -8051,7 +8063,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         <boolProp name="exclude_checkbox_state">false</boolProp>
       </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
       <hashTree/>
-      <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.TransactionsPerSecondGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Transactions per Second">
+      <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.TransactionsPerSecondGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Transactions per Second" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
