@@ -7,12 +7,12 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="hosts" elementType="Argument">
             <stringProp name="Argument.name">hosts</stringProp>
-            <stringProp name="Argument.value">35.202.210.136,34.170.199.132</stringProp>
+            <stringProp name="Argument.value">34.171.42.38</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="ports" elementType="Argument">
             <stringProp name="Argument.name">ports</stringProp>
-            <stringProp name="Argument.value">8090,8091</stringProp>
+            <stringProp name="Argument.value">8090</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="warm_up_users" elementType="Argument">
@@ -52,6 +52,8 @@
           </elementProp>
         </collectionProp>
       </elementProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
       <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group" enabled="false">
@@ -1943,20 +1945,23 @@ if (sampler instanceof HTTPSamplerProxy) {
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">// Split the ports into an array
+          <stringProp name="script">// Split the ports and hosts into an array
+def hostArray = vars.get(&quot;hosts&quot;).split(&quot;,&quot;) as List
 def portArray = vars.get(&quot;ports&quot;).split(&quot;,&quot;) as List
 
-// Retrieve the current port index for this thread (or initialize if not set)
-def currentIndex = vars.getObject(&quot;current_port_index&quot;) ?: 0
+// Retrieve the current index for this thread (or initialize if not set)
+def currentIndex = vars.getObject(&quot;current_index&quot;) ?: 0
 
 // Assign the current port based on the index
 def assignedPort = portArray[currentIndex % portArray.size()]
+def assignedHost = hostArray[currentIndex % hostArray.size()]
 
 // Update the variable for use in the sampler
 vars.put(&quot;port&quot;, assignedPort)
+vars.put(&quot;hostname&quot;, assignedHost)
 
 // Increment the index for the next request
-vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.size())
+vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
@@ -2013,15 +2018,15 @@ logFile &lt;&lt; logEntry
         <hashTree/>
       </hashTree>
       <kg.apc.jmeter.threads.SteppingThreadGroup guiclass="kg.apc.jmeter.threads.SteppingThreadGroupGui" testclass="kg.apc.jmeter.threads.SteppingThreadGroup" testname="jp@gc - Stepping Thread Group">
-        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
-        <stringProp name="ThreadGroup.num_threads">100</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <stringProp name="ThreadGroup.num_threads">600</stringProp>
         <stringProp name="Threads initial delay">0</stringProp>
         <stringProp name="Start users count">5</stringProp>
         <stringProp name="Start users count burst">0</stringProp>
         <stringProp name="Start users period">5</stringProp>
         <stringProp name="Stop users count">10</stringProp>
         <stringProp name="Stop users period">1</stringProp>
-        <stringProp name="flighttime">300</stringProp>
+        <stringProp name="flighttime">180</stringProp>
         <stringProp name="rampUp">0</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
           <intProp name="LoopController.loops">-1</intProp>
@@ -3925,7 +3930,7 @@ vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer">
           <doubleProp>
             <name>throughput</name>
             <value>240.0</value>
@@ -5829,7 +5834,7 @@ if (sampler instanceof HTTPSamplerProxy) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -5924,7 +5929,7 @@ vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
           </collectionProp>
         </kg.apc.jmeter.timers.VariableThroughputTimer>
         <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer">
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
           <doubleProp>
             <name>throughput</name>
             <value>120.0</value>

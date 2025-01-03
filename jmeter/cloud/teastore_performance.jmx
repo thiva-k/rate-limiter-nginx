@@ -5,64 +5,79 @@
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="Benutzer definierte Variablen">
         <collectionProp name="Arguments.arguments">
-          <elementProp name="hosts" elementType="Argument">
-            <stringProp name="Argument.name">hosts</stringProp>
-            <stringProp name="Argument.value">35.202.210.136,34.170.199.132</stringProp>
+          <elementProp name="lb_1_hostname" elementType="Argument">
+            <stringProp name="Argument.name">lb_1_hostname</stringProp>
+            <stringProp name="Argument.value">${__P(lb_1_hostname,34.72.115.187)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="ports" elementType="Argument">
-            <stringProp name="Argument.name">ports</stringProp>
-            <stringProp name="Argument.value">8090,8091</stringProp>
+          <elementProp name="lb_2_hostname" elementType="Argument">
+            <stringProp name="Argument.name">lb_2_hostname</stringProp>
+            <stringProp name="Argument.value">${__P(lb_2_hostname,34.59.191.188)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="lb_1_port" elementType="Argument">
+            <stringProp name="Argument.name">lb_1_port</stringProp>
+            <stringProp name="Argument.value">${__P(lb_1_port,8090)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="lb_2_port" elementType="Argument">
+            <stringProp name="Argument.name">lb_2_port</stringProp>
+            <stringProp name="Argument.value">${__P(lb_2_port,8091)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="warm_up_users" elementType="Argument">
             <stringProp name="Argument.name">warm_up_users</stringProp>
-            <stringProp name="Argument.value">100</stringProp>
+            <stringProp name="Argument.value">${__P(warm_up_users,100)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="warm_up_time" elementType="Argument">
             <stringProp name="Argument.name">warm_up_time</stringProp>
-            <stringProp name="Argument.value">30</stringProp>
+            <stringProp name="Argument.value">${__P(warm_up_time,10)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="test_run_time" elementType="Argument">
             <stringProp name="Argument.name">test_run_time</stringProp>
-            <stringProp name="Argument.value">600</stringProp>
+            <stringProp name="Argument.value">${__P(test_run_time,600)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="group_1" elementType="Argument">
             <stringProp name="Argument.name">group_1</stringProp>
-            <stringProp name="Argument.value">1</stringProp>
+            <stringProp name="Argument.value">${__P(group_1,70)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="group_2" elementType="Argument">
             <stringProp name="Argument.name">group_2</stringProp>
-            <stringProp name="Argument.value">25</stringProp>
+            <stringProp name="Argument.value">${__P(group_2,25)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="group_3" elementType="Argument">
             <stringProp name="Argument.name">group_3</stringProp>
-            <stringProp name="Argument.value">5</stringProp>
+            <stringProp name="Argument.value">${__P(group_3,5)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="group_1_request_rate" elementType="Argument">
             <stringProp name="Argument.name">group_1_request_rate</stringProp>
-            <stringProp name="Argument.value">30</stringProp>
+            <stringProp name="Argument.value">${__P(group_1_request_rate,30)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="group_2_request_rate" elementType="Argument">
             <stringProp name="Argument.name">group_2_request_rate</stringProp>
-            <stringProp name="Argument.value">90</stringProp>
+            <stringProp name="Argument.value">${__P(group_2_request_rate,90)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="group_3_request_rate" elementType="Argument">
             <stringProp name="Argument.name">group_3_request_rate</stringProp>
-            <stringProp name="Argument.value">120</stringProp>
+            <stringProp name="Argument.value">${__P(group_3_request_rate,120)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="ramp_up" elementType="Argument">
             <stringProp name="Argument.name">ramp_up</stringProp>
-            <stringProp name="Argument.value">10</stringProp>
+            <stringProp name="Argument.value">${__P(ramp_up,10)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="log_file" elementType="Argument">
+            <stringProp name="Argument.name">log_file</stringProp>
+            <stringProp name="Argument.value">${__P(log_file,${__P(user.dir)}/logs/warm_up_logs.txt)} </stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="auth" elementType="Argument">
@@ -102,13 +117,13 @@
         </elementProp>
       </SetupThreadGroup>
       <hashTree>
-        <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="HTTP Cookie Manager" enabled="true">
+        <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="HTTP Cookie Manager">
           <collectionProp name="CookieManager.cookies"/>
           <boolProp name="CookieManager.clearEachIteration">true</boolProp>
           <boolProp name="CookieManager.controlledByThreadGroup">false</boolProp>
         </CookieManager>
         <hashTree/>
-        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
           <collectionProp name="HeaderManager.headers">
             <elementProp name="" elementType="Header">
               <stringProp name="Header.name">Content-Type</stringProp>
@@ -1935,7 +1950,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -1973,29 +1988,39 @@ if (sampler instanceof HTTPSamplerProxy) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner" enabled="true">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">// Split the ports into an array
-def portArray = vars.get(&quot;ports&quot;).split(&quot;,&quot;) as List
+          <stringProp name="script">// Split the hostnames and ports into arrays (based on the new variables)
+def hostArray = [
+    vars.get(&quot;lb_1_hostname&quot;),
+    vars.get(&quot;lb_2_hostname&quot;)
+] as List
 
-// Retrieve the current port index for this thread (or initialize if not set)
-def currentIndex = vars.getObject(&quot;current_port_index&quot;) ?: 0
+def portArray = [
+    vars.get(&quot;lb_1_port&quot;),
+    vars.get(&quot;lb_2_port&quot;)
+] as List
+
+// Retrieve the current index for this thread (or initialize if not set)
+def currentIndex = vars.getObject(&quot;current_index&quot;) ?: 0
 
 // Assign the current port based on the index
 def assignedPort = portArray[currentIndex % portArray.size()]
+def assignedHost = hostArray[currentIndex % hostArray.size()]
 
 // Update the variable for use in the sampler
 vars.put(&quot;port&quot;, assignedPort)
+vars.put(&quot;hostname&quot;, assignedHost)
 
 // Increment the index for the next request
-vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.size())
+vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer">
           <doubleProp>
             <name>throughput</name>
             <value>120.0</value>
@@ -2004,20 +2029,25 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
-        <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="JSR223 PostProcessor" enabled="true">
+        <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="JSR223 PostProcessor">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">prev.setIgnore()</stringProp>
-        </JSR223PostProcessor>
-        <hashTree/>
-        <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Log request" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">// Get request start and end timestamps
+          <stringProp name="script">// Ignore this sample if necessary
+prev.setIgnore()
+
+// Retrieve the file name from JMeter variable
+def resultFile = vars.get(&quot;log_file&quot;)
+
+// Ensure the log file exists or create it if it doesn&apos;t
+def file = new File(resultFile)
+if (!file.exists()) {
+    // Create CSV header if the file doesn&apos;t exist
+    file &lt;&lt; &quot;Start Time,End Time,Label,Status Code,Elapsed Time (ms),Response Size (bytes),Response Message\n&quot;
+}
+
+// Get request start and end timestamps
 long startTime = prev.getStartTime() // Request start timestamp (epoch time in ms)
 long endTime = prev.getEndTime()     // Response end timestamp (epoch time in ms)
 
@@ -2025,29 +2055,22 @@ long endTime = prev.getEndTime()     // Response end timestamp (epoch time in ms
 def startTimeFormatted = new Date(startTime).format(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
 def endTimeFormatted = new Date(endTime).format(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
 
-// Get the status code and elapsed time
-String statusCode = prev.getResponseCode()  // Response status code
-String labelName = sampler.getName()        // Name of the sampler (label)
-long elapsedTime = prev.getTime()           // Response elapsed time in ms
-String elapsedTimeFormatted = String.format(&quot;%2d&quot;, elapsedTime) + &quot; ms&quot;
+// Get the status code, elapsed time, and response size
+String statusCode = prev.getResponseCode() // Response status code
+String labelName = sampler.getName()       // Name of the sampler (label)
+long elapsedTime = prev.getTime()          // Response elapsed time in ms
+long responseSize = prev.getResponseData().length // Response size in bytes
+String responseMessage = prev.getResponseMessage() // Response message
 
-// Construct a single-line log entry
-String logEntry = &quot;Start Time: ${startTimeFormatted}, End Time: ${endTimeFormatted}, &quot; +
-                  &quot;Status Code: ${statusCode}, Elapsed Time: ${elapsedTimeFormatted}, Label: ${labelName}\n&quot;
+// Construct CSV line entry
+String csvEntry = &quot;${startTimeFormatted},${endTimeFormatted},${labelName},${statusCode},${elapsedTime},${responseSize},${responseMessage}\n&quot;
 
-// Define the log file and ensure the directory exists
-def logDirectory = new File(&quot;D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/test/logs&quot;)
-if (!logDirectory.exists()) {
-    logDirectory.mkdirs() // Create the directory if it doesn&apos;t exist
-}
-
-def logFile = new File(logDirectory, &quot;warm_up_logs.txt&quot;)
-logFile &lt;&lt; logEntry
-</stringProp>
+// Append the result to the CSV file
+file &lt;&lt; csvEntry</stringProp>
         </JSR223PostProcessor>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
         <stringProp name="ThreadGroup.num_threads">${group_1}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -3931,14 +3954,21 @@ if (sampler instanceof HTTPSamplerProxy) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner" enabled="true">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">// Split the ports and hosts into an array
-def hostArray = vars.get(&quot;hosts&quot;).split(&quot;,&quot;) as List
-def portArray = vars.get(&quot;ports&quot;).split(&quot;,&quot;) as List
+          <stringProp name="script">// Split the hostnames and ports into arrays (based on the new variables)
+def hostArray = [
+    vars.get(&quot;lb_1_hostname&quot;),
+    vars.get(&quot;lb_2_hostname&quot;)
+] as List
+
+def portArray = [
+    vars.get(&quot;lb_1_port&quot;),
+    vars.get(&quot;lb_2_port&quot;)
+] as List
 
 // Retrieve the current index for this thread (or initialize if not set)
 def currentIndex = vars.getObject(&quot;current_index&quot;) ?: 0
@@ -3973,7 +4003,7 @@ vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
         </ResponseAssertion>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
         <stringProp name="ThreadGroup.num_threads">${group_2}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -5857,14 +5887,21 @@ if (sampler instanceof HTTPSamplerProxy) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner" enabled="true">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">// Split the ports and hosts into an array
-def hostArray = vars.get(&quot;hosts&quot;).split(&quot;,&quot;) as List
-def portArray = vars.get(&quot;ports&quot;).split(&quot;,&quot;) as List
+          <stringProp name="script">// Split the hostnames and ports into arrays (based on the new variables)
+def hostArray = [
+    vars.get(&quot;lb_1_hostname&quot;),
+    vars.get(&quot;lb_2_hostname&quot;)
+] as List
+
+def portArray = [
+    vars.get(&quot;lb_1_port&quot;),
+    vars.get(&quot;lb_2_port&quot;)
+] as List
 
 // Retrieve the current index for this thread (or initialize if not set)
 def currentIndex = vars.getObject(&quot;current_index&quot;) ?: 0
@@ -5899,7 +5936,7 @@ vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
         </ResponseAssertion>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
         <stringProp name="ThreadGroup.num_threads">${group_3}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -7783,14 +7820,21 @@ if (sampler instanceof HTTPSamplerProxy) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner" enabled="true">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">// Split the ports and hosts into an array
-def hostArray = vars.get(&quot;hosts&quot;).split(&quot;,&quot;) as List
-def portArray = vars.get(&quot;ports&quot;).split(&quot;,&quot;) as List
+          <stringProp name="script">// Split the hostnames and ports into arrays (based on the new variables)
+def hostArray = [
+    vars.get(&quot;lb_1_hostname&quot;),
+    vars.get(&quot;lb_2_hostname&quot;)
+] as List
+
+def portArray = [
+    vars.get(&quot;lb_1_port&quot;),
+    vars.get(&quot;lb_2_port&quot;)
+] as List
 
 // Retrieve the current index for this thread (or initialize if not set)
 def currentIndex = vars.getObject(&quot;current_index&quot;) ?: 0
