@@ -13,10 +13,11 @@ local db_config = {
 
 local window_size = 60 -- seconds
 local request_limit = 10
-local sub_window_count = 4
+local sub_window_count = 12
 
 -- Initialize MySQL connection
 local function connect_to_mysql()
+    ngx.log(ngx.DEBUG, "Initializing MySQL connection")
     local db, err = mysql:new()
     if not db then
         ngx.log(ngx.ERR, "Failed to create MySQL object: ", err)
@@ -30,7 +31,22 @@ local function connect_to_mysql()
         ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err, " errno: ", errno, " sqlstate: ", sqlstate)
         return nil, err
     end
+    ngx.log(ngx.DEBUG, "MySQL connection established")
     return db
+end
+
+-- Close MySQL connection
+local function close_mysql_connection(db)
+    if not db then
+        return
+    end
+    ngx.log(ngx.DEBUG, "Closing MySQL connection")
+    local ok, err = db:set_keepalive(10000, 100)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to set MySQL connection keepalive: ", err)
+        db:close() -- Ensure the connection is closed if keepalive fails
+    end
+    ngx.log(ngx.DEBUG, "MySQL connection closed or set to keepalive")
 end
 
 -- Get the total requests in the sliding window
@@ -38,8 +54,7 @@ local function get_total_requests(db, token, current_subwindow, sub_window_size)
     ngx.log(ngx.DEBUG, "Fetching total requests for token: ", token)
     local start_subwindow = current_subwindow - (sub_window_count - 1) * sub_window_size
 
-    -- Corrected query: Remove unnecessary quoting
-    local query = string.format([[
+    local query = string.format([[ 
         SELECT subwindow, request_count
         FROM rate_limit_requests
         WHERE token = %s AND subwindow >= %d;
@@ -71,13 +86,11 @@ local function get_total_requests(db, token, current_subwindow, sub_window_size)
     return total_requests
 end
 
-
 -- Increment the current subwindow count
 local function increment_subwindow(db, token, current_subwindow)
     ngx.log(ngx.DEBUG, "Incrementing request count for token: ", token, " in subwindow: ", current_subwindow)
 
-    -- Corrected query: Dynamically insert token and subwindow values
-    local query = string.format([[
+    local query = string.format([[ 
         INSERT INTO rate_limit_requests (token, subwindow, request_count)
         VALUES (%s, %d, 1)
         ON DUPLICATE KEY UPDATE request_count = request_count + 1;
@@ -94,7 +107,6 @@ local function increment_subwindow(db, token, current_subwindow)
     return true
 end
 
-
 -- Main rate-limiting logic
 local function rate_limit()
     ngx.log(ngx.DEBUG, "Starting rate limit check")
@@ -108,7 +120,6 @@ local function rate_limit()
     local db, err = connect_to_mysql()
     if not db then
         ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err)
-        ngx.log(ngx.DEBUG, "\n")
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
@@ -121,7 +132,7 @@ local function rate_limit()
     local total_requests, err = get_total_requests(db, token, current_subwindow, sub_window_size)
     if not total_requests then
         ngx.log(ngx.ERR, "Failed to calculate total requests: ", err)
-        ngx.log(ngx.DEBUG, "\n")
+        close_mysql_connection(db)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
@@ -129,20 +140,20 @@ local function rate_limit()
 
     if total_requests + 1 > request_limit then
         ngx.log(ngx.ERR, "Request limit exceeded for token: ", token)
-        ngx.log(ngx.DEBUG, "\n")
+        close_mysql_connection(db)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     end
 
     local success, err = increment_subwindow(db, token, current_subwindow)
     if not success then
         ngx.log(ngx.ERR, "Failed to increment subwindow: ", err)
-        ngx.log(ngx.DEBUG, "\n")
+        close_mysql_connection(db)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
     ngx.log(ngx.DEBUG, "Request allowed for token: ", token)
-    ngx.log(ngx.DEBUG, "\n")
     ngx.say("Request allowed")
+    close_mysql_connection(db)
 end
 
 rate_limit()
