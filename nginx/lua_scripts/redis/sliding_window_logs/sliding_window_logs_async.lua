@@ -9,7 +9,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
-local rate_limit = 11 -- 500 requests per minute
+local rate_limit = 100 -- 500 requests per minute
 local window_size = 60 -- 60 second window
 local batch_percent = 0.1 -- 10% of remaining quota
 local min_batch_size = 1 -- Minimum batch size to use batching

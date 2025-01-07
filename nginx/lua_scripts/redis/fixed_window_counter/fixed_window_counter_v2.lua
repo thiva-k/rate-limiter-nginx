@@ -8,7 +8,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
-local rate_limit = 100 -- 500 requests per minute
+local rate_limit = 100
 local window_size = 60 -- 60 second window
 
 -- Helper function to initialize Redis connection
@@ -43,15 +43,13 @@ end
 -- Main rate limiting logic
 local function check_rate_limit(red, token)
     
-    local service_name = ngx.var.service_name
-    local http_method = ngx.var.request_method
 
     -- Get the current timestamp and round it down to the nearest minute
     local current_time = ngx.now()
     local window_start = math.floor(current_time / window_size) * window_size
 
     -- Construct the Redis key using the token, http_method, service_name and the window start time
-    local redis_key = string.format("rate_limit:%s:%s:%s:%d", token, http_method, service_name, window_start)
+    local redis_key = string.format("rate_limit:%s:%d", token, window_start)
 
     -- Increment the counter first
     local new_count, err = red:incr(redis_key)
