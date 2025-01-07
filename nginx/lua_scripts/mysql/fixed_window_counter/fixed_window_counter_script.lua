@@ -12,13 +12,8 @@ local db_config = {
 local rate_limit = 5
 local window_size = 60
 
-local function handle_rate_limit()
-    local token = ngx.var.arg_token
-    if not token then
-        ngx.say("Token is required")
-        ngx.exit(ngx.HTTP_BAD_REQUEST)
-    end
-
+-- Initialize SQL connection
+local function init_sql_connection()
     local db, err = mysql:new()
     if not db then
         ngx.log(ngx.ERR, "Failed to instantiate MySQL: ", err)
@@ -32,6 +27,33 @@ local function handle_rate_limit()
         ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
+
+    return db
+end
+
+-- Close SQL connection
+local function close_sql_connection(db)
+    local ok, err = db:set_keepalive(10000, 100)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to return MySQL connection to the pool: ", err)
+    end
+end
+
+-- Get token from query parameters
+local function get_token()
+    local token = ngx.var.arg_token
+    if not token then
+        ngx.say("Token is required")
+        ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
+    return token
+end
+
+-- Main rate limit logic
+local function handle_rate_limit()
+    local token = get_token()
+
+    local db = init_sql_connection()
 
     local query = string.format(
         "CALL RateLimitCheck('%s', %d, %d, @status)",
@@ -65,15 +87,11 @@ local function handle_rate_limit()
     if status == "TOO_MANY_REQUESTS" then
         ngx.status = ngx.HTTP_TOO_MANY_REQUESTS
         ngx.say("Too many requests")
-        return
+    else
+        ngx.say("Request allowed")
     end
 
-    ngx.say("Request allowed")
-
-    local ok, err = db:set_keepalive(10000, 100)
-    if not ok then
-        ngx.log(ngx.ERR, "Failed to return MySQL connection to the pool: ", err)
-    end
+    close_sql_connection(db)
 end
 
 handle_rate_limit()
