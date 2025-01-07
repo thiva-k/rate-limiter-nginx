@@ -3,7 +3,7 @@ local redis = require "resty.redis"
 -- Redis connection settings
 local redis_host = "redis"
 local redis_port = 6379
-local redis_timeout = 1000 -- 1 second timeout
+local redis_timeout = 1000 -- 1 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
@@ -36,7 +36,7 @@ local function close_redis(red)
 end
 
 -- Helper function to get URL token
-local function get_user_url_token()
+local function get_request_token()
     local token = ngx.var.arg_token
     if not token then
         return nil, "Token not provided"
@@ -53,47 +53,50 @@ local function rate_limit(red, token)
 
     local results, err = red:mget(tokens_key, last_access_key)
     if not results then
-        ngx.log(ngx.ERR, "Failed to execute Redis MGET: ", err)
-        return ngx.HTTP_INTERNAL_SERVER_ERROR
+        return nil, "Failed to execute Redis MGET: " .. err
     end
 
+    -- This code internally scales the request rate, bucket capacity, and requested tokens by a factor of 1000.
+    -- This scaling is done to facilitate operations in milliseconds, providing finer granularity and precision
+    -- in rate limiting calculations.
     local now = ngx.now() * 1000 -- Current timestamp in milliseconds
-    local last_tokens = tonumber(results[1]) or bucket_capacity
-    local last_access = tonumber(results[2]) or now
+    local last_token_count = tonumber(results[1]) or (bucket_capacity * 1000)
+    local last_access_time = tonumber(results[2]) or now
 
     -- Calculate the number of tokens to be added due to the elapsed time since the last access
-    local elapsed = math.max(0, now - last_access)
-    local add_tokens = elapsed * refill_rate / 1000
-    local new_tokens = math.floor(math.min(bucket_capacity, last_tokens + add_tokens) * 1000 + 0.5) / 1000
+    local elapsed_time_ms = math.max(0, now - last_access_time)
+    local tokens_to_add = elapsed_time_ms * refill_rate
+    local new_token_count = math.min(bucket_capacity * 1000, last_token_count + tokens_to_add)
 
-    -- Calculate TTL for the Redis keys
+    -- Calculate TTL for the Redis keys in seconds
     local ttl = math.floor(bucket_capacity / refill_rate * 2)
 
+    -- Calculate next rest time in unix timestamp with milliseconds
+    local next_reset_time = math.ceil(last_access_time + (1 / refill_rate) * 1000)
+
     -- Check if there are enough tokens for the request
-    if new_tokens >= requested_tokens then
+    if new_token_count >= (requested_tokens * 1000) then
         -- Deduct tokens and update Redis state
-        new_tokens = new_tokens - requested_tokens
+        new_token_count = new_token_count - (requested_tokens * 1000)
 
         red:init_pipeline()
-        red:set(tokens_key, new_tokens, "EX", ttl)
+        red:set(tokens_key, new_token_count, "EX", ttl)
         red:set(last_access_key, now, "EX", ttl)
         local results, err = red:commit_pipeline()
         if not results then
-            ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
-            return ngx.HTTP_INTERNAL_SERVER_ERROR
+            return nil, "Failed to execute Redis pipeline: " .. err
         end
 
-        ngx.say("Request allowed")
-        return ngx.HTTP_OK
+        return true, "allowed", new_token_count / 1000, next_reset_time
     else
         -- Not enough tokens, rate limit the request
-        return ngx.HTTP_TOO_MANY_REQUESTS
+        return true, "rejected", new_token_count / 1000, next_reset_time
     end
 end
 
 -- Main function to initialize Redis and handle rate limiting
 local function main()
-    local token, err = get_user_url_token()
+    local token, err = get_request_token()
     if not token then
         ngx.log(ngx.ERR, "Failed to get token: ", err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
@@ -105,18 +108,32 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local res, status = pcall(rate_limit, red, token)
+    local pcall_status, rate_limit_result, message, remaining_tokens, next_reset_time = pcall(rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then
         ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
     end
 
-    if not res then
-        ngx.log(ngx.ERR, status)
+    if not pcall_status then
+        ngx.log(ngx.ERR, rate_limit_result)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    if not rate_limit_result then
+        ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     else
-        ngx.exit(status)
+        ngx.header["X-RateLimit-Remaining"] = remaining_tokens
+        ngx.header["X-RateLimit-Limit"] = bucket_capacity
+        ngx.header["X-RateLimit-Reset"] = next_reset_time
+
+        if message == "rejected" then
+            ngx.log(ngx.ERR, "Rate limit exceeded for token: ", token)
+            ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+        else
+            ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
+        end
     end
 end
 
