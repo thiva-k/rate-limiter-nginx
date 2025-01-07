@@ -3,7 +3,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 # Define the NGINX endpoint URLs
-urls = ["http://localhost:8090/auth", "http://localhost:8090/auth"]
+urls = ["http://localhost:8090/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1", 
+        "http://localhost:8090/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1"]
 
 # Function to send a request and print the response
 def send_request(client_id, token, url, latencies):
@@ -13,7 +14,7 @@ def send_request(client_id, token, url, latencies):
     latency = end_time - start_time
     latencies.append(latency)
     current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + f".{int((time.time() % 1) * 1_000_000):06d}"
-    print(f"{current_time} - Client {client_id} - Token {token} - URL {url} - Status Code: {response.status_code} - Latency: {latency:.6f} seconds")
+    print(f"{current_time} - Client {client_id} - Token {token} - Status Code: {response.status_code} - Latency: {latency:.6f} seconds")
     return response.status_code
 
 # Test the rate-limiting algorithm with multiple requests from multiple users
@@ -57,7 +58,7 @@ def test_rate_limiter_concurrent(num_requests, num_users):
     return latencies
 
 if __name__ == "__main__":
-    num_requests = 11 # Number of concurrent requests
+    num_requests = 10 # Number of concurrent requests
     num_runs = 1  # Number of times to run the test
     num_users = 1  # Number of users
 
