@@ -8,7 +8,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
-local rate_limit = 100 -- Maximum number of requests allowed per window
+local rate_limit = 10 -- Maximum number of requests allowed per window
 local window_size = 60 -- Time window in seconds
 
 -- Lua script for atomic rate limiting with fixed window
@@ -17,24 +17,14 @@ local limit_script = [[
     local limit = tonumber(ARGV[1])
     local ttl = tonumber(ARGV[2])
     
-    local current = redis.call('get', key)
-    if current then
-        current = tonumber(current)
-        if current >= limit then
-            return limit + 1  -- Return a value greater than limit to indicate rate limit exceeded
-        end
-    else
-        current = 0
-    end
-    
-    current = current + 1
-    redis.call('set', key, current)
+    local current = redis.call('incr', key)
     if current == 1 then
         redis.call('expire', key, ttl)
     end
-    
+
     return current
 ]]
+
 
 -- Helper function to initialize Redis connection
 local function init_redis()
