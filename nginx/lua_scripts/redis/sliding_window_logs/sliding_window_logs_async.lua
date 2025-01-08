@@ -14,6 +14,23 @@ local window_size = 60 -- 60 second window
 local batch_percent = 0.5 -- 10% of remaining quota
 local min_batch_size = 1 -- Minimum batch size to use batching
 
+-- Lua script to fetch batch quota
+local lua_script = [[
+    local key = KEYS[1]
+    local window_start = tonumber(ARGV[1])
+    local rate_limit = tonumber(ARGV[2])
+
+    -- Remove expired entries
+    redis.call("ZREMRANGEBYSCORE", key, 0, window_start)
+
+    -- Get the count of remaining members
+    local count = redis.call("ZCARD", key)
+
+    return count
+]]
+
+local script_sha -- Cache the script SHA
+
 -- Helper function to initialize Redis connection
 local function init_redis()
     local red = redis:new()
@@ -48,27 +65,23 @@ local function fetch_batch_quota(red, redis_key)
     local current_time = ngx.now()
     local window_start = current_time - window_size
 
-    -- Start a Redis transaction
-    local ok, err = red:multi()
-    if not ok then
-        return nil, "Failed to start Redis transaction: " .. err
+    -- Cache the script SHA if not already cached
+    if not script_sha then
+        local sha, err = red:script("load", lua_script)
+        if not sha then
+            return nil, "Failed to load Lua script into Redis: " .. err
+        end
+        script_sha = sha
     end
 
-    -- Queue commands in the transaction
-    red:zremrangebyscore(redis_key, 0, window_start)
-    red:zcard(redis_key)
-
-    -- Execute the transaction
-    local results, err = red:exec()
-    if not results then
-        return nil, "Failed to execute Redis transaction: " .. err
+    -- Execute the Lua script
+    local res, err = red:evalsha(script_sha, 1, redis_key, window_start, rate_limit, batch_percent, min_batch_size)
+    if not res then
+        return nil, "Failed to execute Redis Lua script: " .. err
     end
 
-    -- Parse the results
-    local removed = results[1]
-    local count = results[2]
+    count = tonumber(res) 
 
-    -- Calculate remaining quota and batch size
     local remaining = math.max(0, rate_limit - count)
     if remaining == 0 then
         return 0, window_size  -- No more requests allowed in this window
@@ -82,25 +95,28 @@ end
 
 -- Function to update Redis with the exhausted batch
 local function update_redis_with_exhausted_batch(red, shared_dict, redis_key)
-    local multi_result, err = red:multi()
-    if not multi_result then
-        return false, "Failed to start Redis transaction: " .. err
-    end
+    -- Prepare batch ZADD arguments
+    local zadd_args = {}
+    local list_key = redis_key .. ":timestamps"
+    local timestamps_len = shared_dict:llen(list_key)
 
-    local timestamps_len = shared_dict:llen(redis_key .. ":timestamps")
     for i = 1, timestamps_len do
-        local ts, err = shared_dict:lpop(redis_key .. ":timestamps")
+        local ts, err = shared_dict:lpop(list_key)
         if ts then
-            red:zadd(redis_key, ts, ts)
+            -- Add the timestamp twice: once as score and once as member
+            table.insert(zadd_args, ts)
+            table.insert(zadd_args, ts)
         else
-            red:discard()
-            return false, "Failed to pop timestamp from shared dict: " .. err
+            return false, "Failed to pop timestamp from shared dict: " .. (err or "unknown error")
         end
     end
 
-    local exec_result, err = red:exec()
-    if not exec_result then
-        return false, "Failed to execute Redis transaction: " .. err
+    -- Only execute ZADD if there are timestamps to process
+    if #zadd_args > 0 then
+        local ok, err = red:zadd(redis_key, unpack(zadd_args))
+        if not ok then
+            return false, "Failed to update Redis with exhausted batch: " .. err
+        end
     end
 
     return true
