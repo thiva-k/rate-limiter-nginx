@@ -9,7 +9,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
-local rate_limit = 100 -- 500 requests per minute
+local rate_limit = 15 -- 500 requests per minute
 local window_size = 60 -- 60 second window
 local batch_percent = 0.5 -- 10% of remaining quota
 local min_batch_size = 1 -- Minimum batch size to use batching
@@ -75,7 +75,7 @@ local function fetch_batch_quota(red, redis_key)
     end
 
     -- Execute the Lua script
-    local res, err = red:evalsha(script_sha, 1, redis_key, window_start, rate_limit, batch_percent, min_batch_size)
+    local res, err = red:evalsha(script_sha, 1, redis_key, window_start, rate_limit)
     if not res then
         return nil, "Failed to execute Redis Lua script: " .. err
     end
@@ -87,8 +87,7 @@ local function fetch_batch_quota(red, redis_key)
         return 0, window_size  -- No more requests allowed in this window
     end
 
-    local batch_size = math.floor(remaining * batch_percent)
-    batch_size = math.max(math.min(batch_size, remaining), min_batch_size)
+    local batch_size = math.ceil(remaining * batch_percent)
 
     return batch_size, window_size
 end
@@ -147,11 +146,6 @@ local function process_batch_quota(shared_dict, redis_key, red)
             local ok, err = shared_dict:set(redis_key .. ":batch", new_quota, ttl)
             if not ok then
                 return nil, "Failed to set batch quota in shared memory: " .. err
-            end
-            -- Reset the timestamps for the new batch (list will be empty)
-            ok, err = shared_dict:delete(redis_key .. ":timestamps")
-            if not ok then
-                return nil, "Failed to reset timestamps in shared memory: " .. err
             end
             batch_quota = new_quota
         else

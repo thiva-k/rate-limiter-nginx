@@ -85,11 +85,9 @@ local function fetch_batch_quota(red, shared_dict, redis_key, token, window_star
     if dynamic and previous_local_count > 0 then
         -- Dynamically calculate batch quota based on local instance's previous window count
         local calculated_quota = math.ceil(remaining_quota * max_percent_remaining)
-        ngx.log(ngx.STDERR, "Quota Fetched: ", math.min(previous_local_count, calculated_quota))
         return math.min(previous_local_count, calculated_quota)
     else
         -- Static batch calculation (if dynamic is false or previous_local_count is 0)
-        ngx.log(ngx.STDERR, "Quota Fetched: ", math.ceil(remaining_quota * batch_percent))
         return math.ceil(remaining_quota * batch_percent)
     end
 end
