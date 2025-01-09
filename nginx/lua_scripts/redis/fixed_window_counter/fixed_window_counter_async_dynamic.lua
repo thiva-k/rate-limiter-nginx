@@ -173,16 +173,6 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
             ngx.log(ngx.STDERR, "Request Allowed ")
             return true  -- Request is allowed within batch quota
         else
-            -- Batch exhausted; check global rate limit
-            local current_count, err = red:get(redis_key)
-            if err then
-                return nil, "Failed to GET from Redis: " .. err
-            end
-            current_count = tonumber(current_count) or 0
-
-            if current_count >= rate_limit then
-                return false  -- Rate limit exceeded
-            end
 
             -- Update Redis with the exhausted batch
             local success, err = update_redis_with_exhausted_batch(red, redis_key, batch_quota, ttl)

@@ -146,16 +146,6 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
         if new_used <= batch_quota then
             return true  -- Request is allowed within batch quota
         else
-            -- Batch exhausted; check global rate limit
-            local current_count, err = red:get(redis_key)
-            if err then
-                return nil, "Failed to GET from Redis: " .. err
-            end
-            current_count = tonumber(current_count) or 0
-
-            if current_count >= rate_limit then
-                return false  -- Rate limit exceeded
-            end
 
             -- Update Redis with the exhausted batch
             local success, err = update_redis_with_exhausted_batch(red, redis_key, batch_quota, ttl)
@@ -166,12 +156,12 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
             -- Fetch new batch quota
             local new_batch_size = fetch_batch_quota(red, redis_key)
             if new_batch_size > 0 then
-                -- Set new batch quota and reset used count
-                local success, err = set_new_batch(shared_dict, redis_key, new_batch_size, ttl)
-                if not success then
-                    return nil, err
-                end
-
+            -- Set new batch quota and reset used count
+            local success, err = set_new_batch(shared_dict, redis_key, new_batch_size, ttl)
+            if not success then
+                return nil, err
+            end
+                
                 -- Increment used count for the current request
                 local updated_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
                 if not updated_used then
