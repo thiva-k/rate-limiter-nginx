@@ -151,9 +151,9 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
             if not success then
                 return nil, err
             end
-            return true  -- Allow this request (it's the 10th one)
+            return true  -- Allow this request 
         else
-            -- Fetch new batch quota without updating Redis (for 11th request onwards)
+            -- Fetch new batch quota without updating Redis 
             local new_batch_size = fetch_batch_quota(red, redis_key)
             if new_batch_size > 0 then
                 -- Set new batch quota and reset used count
