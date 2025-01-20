@@ -93,7 +93,7 @@ echo group_2_request_rate=%GROUP_2_REQUEST_RATE% >> %LOG_DIR%\jmeter.properties
 echo group_3_request_rate=%GROUP_3_REQUEST_RATE% >> %LOG_DIR%\jmeter.properties
 
 REM Run JMeter test
-"C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\bin\jmeter.bat" -n -t %TEST_PLAN% -l %RESULT_FILE% -j %JMETER_LOG% ^
+"%JMETER_HOME%\bin\jmeter.bat" -n -t %TEST_PLAN% -l %RESULT_FILE% -j %JMETER_LOG% ^
 -Jlb_1_hostname=%LB_1_HOSTNAME% ^
 -Jlb_2_hostname=%LB_2_HOSTNAME% ^
 -Jlb_1_port=%LB_1_PORT% ^
