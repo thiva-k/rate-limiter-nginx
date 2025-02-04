@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 # Define the NGINX endpoint URL
-url = "http://localhost:8090/auth"  # Replace with your actual endpoint
+url = "http://localhost:8090/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1"  # Replace with your actual endpoint
 
 # Function to send a request and print the response
 def send_request(client_id, token):

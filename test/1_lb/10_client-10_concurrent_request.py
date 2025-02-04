@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 # Define the NGINX endpoint URL
-url = "http://localhost:8090/auth"  # Replace with your actual endpoint
+url = "http://localhost:8090/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1"  # Replace with your actual endpoint
 
 # Function to send a request and print the response
 def send_request(client_id, token):
@@ -22,7 +22,7 @@ def test_rate_limiter_concurrent(num_clients):
             futures = [executor.submit(send_request, client_id, tokens[client_id]) for client_id in range(num_clients)]
             for future in futures:
                 future.result()
-            time.sleep(0.1)  # Short delay between requests
+            time.sleep(0.05)  # Short delay between requests
 
         # Send a request that should be rate-limited
         print("Sending requests that should be rate-limited:")

@@ -8,8 +8,8 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Token bucket parameters
-local bucket_capacity = 10 -- Maximum tokens in the bucket
-local refill_rate = 1 -- Tokens generated per second
+local bucket_capacity = 5 -- Maximum tokens in the bucket
+local refill_rate = 5 / 3 -- Tokens generated per second
 local requested_tokens = 1 -- Number of tokens required per request
 
 -- Helper function to initialize Redis connection
@@ -66,7 +66,7 @@ local function rate_limit(red, token)
     -- Calculate the number of tokens to be added due to the elapsed time since the last access
     local elapsed_time_ms = math.max(0, now - last_access_time)
     local tokens_to_add = elapsed_time_ms * refill_rate
-    local new_token_count = math.min(bucket_capacity * 1000, last_token_count + tokens_to_add)
+    local new_token_count = math.floor(math.min(bucket_capacity * 1000, last_token_count + tokens_to_add))
 
     -- Calculate TTL for the Redis keys in seconds
     local ttl = math.floor(bucket_capacity / refill_rate * 2)

@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 # Define the NGINX endpoint URLs
 urls = ["http://localhost:8090/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1", 
-        "http://localhost:8090/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1"]
+        "http://localhost:8091/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1"]
 
 # Function to send a request and print the response
 def send_request(client_id, token, url, latencies):
