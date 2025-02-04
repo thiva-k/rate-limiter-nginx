@@ -3,7 +3,7 @@ local redis = require "resty.redis"
 -- Redis connection settings
 local redis_host = "redis"
 local redis_port = 6379
-local redis_timeout = 1000 -- 1 second timeout
+local redis_timeout = 1000 -- 1 second
 
 -- Leaky bucket parameters
 local bucket_capacity = 10 -- Maximum tokens in the bucket

@@ -3,7 +3,7 @@ local redis = require "resty.redis"
 -- Redis connection settings
 local redis_host = "redis"
 local redis_port = 6379
-local redis_timeout = 1000 -- 1 second timeout
+local redis_timeout = 1000 -- 1 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
@@ -150,7 +150,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local res, status = pcall(rate_limit, red, token)
+    local success, result = pcall(rate_limit, red, token)
 
     if not release_lock(red, token) then
         ngx.log(ngx.ERR, "Failed to release lock")
@@ -161,11 +161,11 @@ local function main()
         ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
     end
 
-    if not res then
-        ngx.log(ngx.ERR, status)
+    if not success then
+        ngx.log(ngx.ERR, "Unexpected error: ", result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    else
-        ngx.exit(status)
+    elseif result ~= ngx.HTTP_OK then
+        ngx.exit(result)
     end
 end
 

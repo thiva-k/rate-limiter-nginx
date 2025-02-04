@@ -81,24 +81,57 @@ local rate_limit_script = [[
         return {1, new_token_count, now}
     else
         -- Not enough tokens, rate limit the request
-        return {0, new_token_count, now}
+        return {-1, new_token_count, now}
     end
 ]]
 
 -- TODO: have to ask about shared memory
 -- Load the Lua script into Redis if not already cached
-local function load_script_to_redis(red)
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
-    if not sha then
+local function load_script_to_redis(red, reload)
+    local function load_new_script()
         local new_sha, err = red:script("LOAD", rate_limit_script)
         if not new_sha then
             return nil, err
         end
         ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
-        sha = new_sha
+        return new_sha
+    end
+
+    if reload then
+        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        return load_new_script()
+    end
+
+    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+    if not sha then
+        sha = load_new_script()
     end
 
     return sha
+end
+
+local function execute_rate_limit_script(red, tokens_key, last_access_key, requested_tokens, ttl)
+    local sha, err = load_script_to_redis(red, false)
+    if not sha then
+        return nil, "Failed to load script: " .. err
+    end
+
+    local results, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+
+    if err and err:find("NOSCRIPT", 1, true) then
+        -- Script not found in Redis, reload it
+        sha, err = load_script_to_redis(red, true)
+        if not sha then
+            return nil, err
+        end
+        results, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+    end
+
+    if err then
+        return nil, err
+    end
+
+    return results
 end
 
 -- Main rate limiting logic
@@ -110,26 +143,7 @@ local function rate_limit(red, token)
     -- Calculate TTL for the Redis keys
     local ttl = math.floor(bucket_capacity / refill_rate * 2)
 
-    -- -- Load or retrieve the Lua script SHA
-    local sha, err = load_script_to_redis(red)
-    if not sha then
-        ngx.log(ngx.ERR, "Failed to load script: ", err)
-        return nil, "Failed to load script: " .. err
-    end
-
-    local results, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
-
-    if err and err:find("NOSCRIPT", 1, true) then
-        -- Script not found in Redis, reload it
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
-        sha, err = load_script_to_redis(red)
-        if not sha then
-            return nil, err
-        end
-
-        results, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
-    end
-
+    local results, err = execute_rate_limit_script(red, tokens_key, last_access_key, requested_tokens, ttl)
     if err then
         return nil, err
     end
