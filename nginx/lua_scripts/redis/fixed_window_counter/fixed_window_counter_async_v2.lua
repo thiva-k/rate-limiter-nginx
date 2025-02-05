@@ -6,10 +6,9 @@ local redis_host = "redis"         -- Redis server host
 local redis_port = 6379            -- Redis server port
 local redis_timeout = 1000         -- 1 second timeout
 local max_idle_timeout = 10000     -- 10 seconds
-local pool_size = 100              -- Maximum number of idle connections in the pool
-local rate_limit = 20               -- Max requests allowed in the window
-local max_percent_remaining = 0.5  -- Percentage of remaining requests to allow in a batch
-local batch_percent = 0.5         -- Static batch percentage
+local pool_size = 100             -- Maximum number of idle connections in the pool
+local rate_limit = 10             -- Max requests allowed in the window
+local batch_percent = 0.5          -- Percentage of remaining requests to allow in a batch
 local window_size = 60             -- Time window size in seconds
 
 -- Initialize Redis connection with pooling
@@ -60,36 +59,23 @@ local function calculate_ttl()
     return math.max(1, math.ceil(ttl))  -- Ensure TTL is at least 1 second
 end
 
--- Fetch batch quota dynamically or statically based on configuration
-local function fetch_batch_quota(red, shared_dict, redis_key, token, window_start, dynamic)
-    -- Calculate the key for the previous window
-    local previous_window_start = window_start - window_size
-    local previous_local_key = string.format("rate_limit:%s:%d:local_instance_count", token, previous_window_start)
-
-    -- Get the previous local instance count
-    local previous_local_count = shared_dict:get(previous_local_key) or 0
-
-    -- Get the current count from Redis
+-- Fetch batch quota from Redis
+local function fetch_batch_quota(red, redis_key)
     local count, err = red:get(redis_key)
     if err then
         return nil, "Failed to GET from Redis: " .. err
     end
 
     count = tonumber(count) or 0
-    local remaining_quota = rate_limit - count
+    local remaining = rate_limit - count
 
-    if remaining_quota <= 0 then
-        return 0 -- No remaining quota
+    if remaining <= 0 then
+        return 0
     end
 
-    if dynamic and previous_local_count > 0 then
-        -- Dynamically calculate batch quota based on local instance's previous window count
-        local calculated_quota = math.ceil(remaining_quota * max_percent_remaining)
-        return math.min(previous_local_count, calculated_quota)
-    else
-        -- Static batch calculation (if dynamic is false or previous_local_count is 0)
-        return math.ceil(remaining_quota * batch_percent)
-    end
+    local batch_size = math.ceil(remaining * batch_percent)
+
+    return batch_size
 end
 
 -- Update Redis with the exhausted batch count and set TTL if necessary
@@ -104,7 +90,6 @@ local function update_redis_with_exhausted_batch(red, redis_key, batch_quota, tt
         red:expire(redis_key, ttl)
     end
 
-    ngx.log(ngx.STDERR, "Quota Updated to Redis: ", batch_quota)
     return true
 end
 
@@ -120,18 +105,16 @@ local function set_new_batch(shared_dict, redis_key, batch_size, ttl)
         return nil, "Failed to reset used count in shared memory: " .. err
     end
 
-    ngx.log(ngx.STDERR, "New Batch Set: ", batch_size)
-
     return true
 end
 
 -- Process batch quota and update shared dictionary
-local function process_batch_quota(red, shared_dict, redis_key, ttl, token, window_start, dynamic)
+local function process_batch_quota(red, shared_dict, redis_key, ttl)
     local batch_quota = shared_dict:get(redis_key .. ":batch") or 0
     local batch_used = shared_dict:get(redis_key .. ":used") or 0
 
     if batch_quota == 0 then
-        local batch_size = fetch_batch_quota(red, shared_dict, redis_key, token, window_start, dynamic)
+        local batch_size = fetch_batch_quota(red, redis_key)
         if not batch_size then
             return nil, "Failed to fetch batch quota"
         end
@@ -154,51 +137,47 @@ end
 
 -- Increment the used count and check if request is allowed
 local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl)
-    -- Increment the local instance count for all requests, allowed or rate-limited
-    local local_instance_count, err = shared_dict:incr(redis_key .. ":local_instance_count", 1, 0)
-    if err then
-        return nil, "Failed to increment local instance count: " .. err
-    end
-
-    ngx.log(ngx.STDERR, "Local Instance Count increment_and_check: ", local_instance_count)
-    ngx.log(ngx.STDERR, "Batch Quota increment_and_check: ", batch_quota)
-
     if batch_quota > 0 then
         local new_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
         if err then
             return nil, "Failed to increment used count: " .. err
         end
 
-        if new_used <= batch_quota then
-            ngx.log(ngx.STDERR, "Request Allowed ")
+        if new_used < batch_quota then
             return true  -- Request is allowed within batch quota
-        else
-
-            -- Update Redis with the exhausted batch
+        elseif new_used == batch_quota then
+            -- Update Redis with the exhausted batch on the last allowed request
             local success, err = update_redis_with_exhausted_batch(red, redis_key, batch_quota, ttl)
             if not success then
                 return nil, err
             end
-
-            -- Fetch new batch quota
-            local new_batch_size = fetch_batch_quota(red, shared_dict, redis_key, token, ttl, true)
+            return true  -- Allow this request 
+        else
+            -- Fetch new batch quota without updating Redis 
+            local new_batch_size = fetch_batch_quota(red, redis_key)
             if new_batch_size > 0 then
                 -- Set new batch quota and reset used count
                 local success, err = set_new_batch(shared_dict, redis_key, new_batch_size, ttl)
                 if not success then
                     return nil, err
                 end
-
+                
                 -- Increment used count for the current request
                 local updated_used, err = shared_dict:incr(redis_key .. ":used", 1, 0)
                 if not updated_used then
                     return nil, "Failed to increment used count after setting new batch: " .. err
                 end
-                ngx.log(ngx.STDERR, "Request Allowed ")
-                return true  -- Request is allowed with new batch quota
 
+                if new_batch_size == 1 then
+                    -- Update Redis with the exhausted batch on the first request of the new batch
+                    local success, err = update_redis_with_exhausted_batch(red, redis_key, new_batch_size, ttl)
+                    if not success then
+                        return nil, err
+                    end
+                end
+
+                return true  -- Request is allowed with new batch quota
             else
-                ngx.log(ngx.STDERR, "Request Denied ")  
                 return false  -- No new batch quota available, reject request
             end
         end
@@ -207,16 +186,15 @@ local function increment_and_check(shared_dict, redis_key, batch_quota, red, ttl
     return false  -- No batch quota available, reject request
 end
 
+
 -- Rate limiting logic wrapper
-local function check_rate_limit(red, token, dynamic)
-    -- Calculate TTL
-    local ttl = calculate_ttl()
+local function check_rate_limit(red, token)
 
     -- Get the current timestamp and round it down to the nearest minute
     local current_time = ngx.now()
     local window_start = math.floor(current_time / window_size) * window_size
 
-    -- Construct the Redis key using the token and the window start time
+    -- Construct the Redis key using the token, http_method, service_name and the window start time
     local redis_key = string.format("rate_limit:%s:%d", token, window_start)
 
     -- Access shared dictionary
@@ -245,13 +223,13 @@ local function check_rate_limit(red, token, dynamic)
     end
 
     -- Process batch quota
-    local batch_quota, err = process_batch_quota(red, shared_dict, redis_key, ttl, token, window_start, dynamic)
+    local batch_quota, err = process_batch_quota(red, shared_dict, redis_key, window_size)
     if not batch_quota then
         return unlock_and_return(nil, err)
     end
 
     -- Determine if request is allowed
-    local allowed, err = increment_and_check(shared_dict, redis_key, batch_quota, red, ttl)
+    local allowed, err = increment_and_check(shared_dict, redis_key, batch_quota, red, window_size)
     if err then
         return unlock_and_return(nil, err)
     end
@@ -282,7 +260,7 @@ local function main()
     end
 
     -- Use pcall to handle errors in rate limiting logic
-    local res, status = pcall(check_rate_limit, red, token, true)  -- Set dynamic to true or false as needed
+    local res, status = pcall(check_rate_limit, red, token)
     
     -- Close Redis connection (return to pool)
     local ok, err = close_redis(red)

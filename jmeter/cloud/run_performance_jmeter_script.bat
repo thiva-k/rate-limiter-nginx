@@ -1,7 +1,7 @@
 @echo off
 REM Set JMeter parameters
-set LB_1_HOSTNAME=34.105.131.163
-set LB_2_HOSTNAME=34.30.98.150
+set LB_1_HOSTNAME=35.197.219.120
+set LB_2_HOSTNAME=34.121.42.134
 set LB_1_PORT=8090
 set LB_2_PORT=8091
 
@@ -10,8 +10,8 @@ set WARM_UP_TIME=30
 set TEST_RUN_TIME=600
 set RAMP_UP=10
 
-set GROUP_1=70
-set GROUP_2=25
+set GROUP_1=75
+set GROUP_2=20
 set GROUP_3=5
 set GROUP_1_REQUEST_RATE=30
 set GROUP_2_REQUEST_RATE=90
@@ -69,6 +69,12 @@ echo. > %LOG_DIR%\warm_up_results.csv
 
 REM Copy run_generate_report.bat to the log directory
 copy run_generate_report.bat %LOG_DIR%
+
+REM Copy error rate analyzer script to the log directory
+copy "..\result_analyzers\error_rate_analyzer.py" %LOG_DIR%\error_rate_analyzer.py
+
+REM Copy perfomance analyzer script to the log directory
+copy "..\result_analyzers\perfomance_analyzer.py" %LOG_DIR%\perfomance_analyzer.py
 
 REM Save all jmeter properties to a file
 echo lb_1_hostname=%LB_1_HOSTNAME% > %LOG_DIR%\jmeter.properties
