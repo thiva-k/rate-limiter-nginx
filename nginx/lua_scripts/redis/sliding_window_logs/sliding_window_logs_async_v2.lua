@@ -127,13 +127,6 @@ local function process_batch_quota(shared_dict, redis_key, red)
     local timestamps_len = shared_dict:llen(redis_key .. ":timestamps")
 
     if not batch_quota or batch_quota == 0 or not timestamps_len then
-        -- Update Redis with the previously exhausted batch if it exists
-        if timestamps_len and timestamps_len > 0 then
-            local success, err = update_redis_with_exhausted_batch(red, shared_dict, redis_key)
-            if not success then
-                return nil, err
-            end
-        end
 
         -- Fetch new batch quota
         local new_quota, ttl = fetch_batch_quota(red, redis_key)
@@ -173,6 +166,16 @@ local function increment_and_check(shared_dict, redis_key, red, batch_quota, tim
     local new_quota, err = shared_dict:incr(redis_key .. ":batch", -1, 0)
     if err then
         return nil, "Failed to decrement batch quota: " .. err
+    end
+
+    if new_quota == 0 then
+        -- Update Redis with the exhausted batch
+        if length and length > 0 then
+            local success, err = update_redis_with_exhausted_batch(red, shared_dict, redis_key)
+            if not success then
+                return nil, err
+            end
+        end
     end
     
     return true
