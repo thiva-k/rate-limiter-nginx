@@ -6,8 +6,8 @@ local redis_port = 6379
 local redis_timeout = 1000 -- 1 second timeout
 
 -- Leaky bucket parameters
-local bucket_capacity = 10 -- Maximum tokens in the bucket
-local leak_rate = 1 -- Tokens leaked per second
+local max_delay = 3000 -- 3 second,
+local leak_rate = 1 -- Requests leaked per second
 local requested_tokens = 1 -- Number of tokens required per request
 
 -- Lock settings
@@ -73,7 +73,7 @@ local function release_lock(red, token)
 end
 
 -- Helper function to get URL token
-local function get_user_url_token()
+local function get_request_token()
     local token = ngx.var.arg_token
     if not token then
         return nil, "Token not provided"
@@ -88,32 +88,34 @@ local function rate_limit(red, token)
     local tokens_key = "rate_limit:" .. token .. ":tokens"
     local last_access_key = "rate_limit:" .. token .. ":last_access"
 
+    -- Calculate bucket capacity based on max delay and leak rate
+    local bucket_capacity = math.floor(max_delay / 1000 * leak_rate)
+
     local results, err = red:mget(tokens_key, last_access_key)
     if not results then
-        ngx.log(ngx.ERR, "Failed to execute Redis MGET: ", err)
-        return ngx.HTTP_INTERNAL_SERVER_ERROR
+        return nil, "Failed to execute Redis MGET: " .. err
     end
 
     local now = ngx.now() * 1000 -- Current timestamp in milliseconds
-    local last_tokens = tonumber(results[1]) or 0
-    local last_access = tonumber(results[2]) or now
+    local last_token_count = tonumber(results[1]) or 0
+    local last_access_time = tonumber(results[2]) or now
 
     -- Calculate the number of tokens that have leaked due to the elapsed time since the last leak
-    local elapsed = math.max(0, now - last_access)
-    local leaked_tokens = math.floor(elapsed * leak_rate / 1000)
-    local bucket_level = math.max(0, last_tokens - leaked_tokens)
+    local elapsed_time_ms = math.max(0, now - last_access_time)
+    local leaked_tokens_count = math.floor(elapsed_time_ms * leak_rate / 1000)
+    local bucket_level = math.max(0, last_token_count - leaked_tokens_count)
 
     -- Verify if the current token level is below the bucket capacity.
     if bucket_level + requested_tokens <= bucket_capacity then
         -- Calculate the delay between requests based on the leak rate in milliseconds
-        local delay_between_requests = 1 / leak_rate * 1000
+        local default_delay = 1 / leak_rate * 1000
 
         -- Assumption: Atleast 1ms delay will be there between request processing
         -- If time difference either 0 or greater than delay_between_requests then no need to add delay
-        local time_diff = now - last_access
+        local time_diff = now - last_access_time
         local delay = 0
-        if time_diff < 0 or (time_diff > 0 and time_diff < delay_between_requests) then
-            delay = -time_diff + delay_between_requests
+        if time_diff < 0 or (time_diff > 0 and time_diff < default_delay) then
+            delay = -time_diff + default_delay
         end
 
         -- For the first request no need to increment the bucket level as we allow it immediately
@@ -124,28 +126,30 @@ local function rate_limit(red, token)
         -- Calculate TTL for the Redis keys
         local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
+        last_access_time = now + delay
+
         red:init_pipeline()
         red:set(tokens_key, bucket_level, "EX", ttl)
-        red:set(last_access_key, now + delay, "EX", ttl)
+        red:set(last_access_key, last_access_time, "EX", ttl)
         local results, err = red:commit_pipeline()
         if not results then
-            ngx.log(ngx.ERR, "Failed to execute Redis pipeline: ", err)
-            return ngx.HTTP_INTERNAL_SERVER_ERROR
+            return nil, "Failed to execute Redis pipeline" .. err
         end
 
-        ngx.sleep(delay / 1000)
+        -- Convert delay to seconds
+        local delay = math.floor(delay) / 1000
 
-        ngx.say("Request allowed")
-        return ngx.HTTP_OK
+        ngx.sleep(delay)
+        return true, "allowed"
     else
         -- Not enough tokens, rate limit the request
-        return ngx.HTTP_TOO_MANY_REQUESTS
+        return true, "rejected"
     end
 end
 
 -- Main function to initialize Redis and handle rate limiting
 local function main()
-    local token, err = get_user_url_token()
+    local token, err = get_request_token()
     if not token then
         ngx.log(ngx.ERR, "Failed to get token: ", err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
@@ -164,7 +168,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local res, status = pcall(rate_limit, red, token)
+    local pcall_status, rate_limit_result, message = pcall(rate_limit, red, token)
 
     if not release_lock(red, token) then
         ngx.log(ngx.ERR, "Failed to release lock")
@@ -175,11 +179,21 @@ local function main()
         ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
     end
 
-    if not res then
-        ngx.log(ngx.ERR, status)
+    if not pcall_status then
+        ngx.log(ngx.ERR, rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    if not rate_limit_result then
+        ngx.log(ngx.ERR, "Failed to rate limit: ", message)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    if message == "rejected" then
+        ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
+        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     else
-        ngx.exit(status)
+        ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
 end
 
