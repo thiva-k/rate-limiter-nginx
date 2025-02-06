@@ -123,17 +123,17 @@ local function main()
     if not rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    else
-        ngx.header["X-RateLimit-Remaining"] = remaining_tokens
-        ngx.header["X-RateLimit-Limit"] = bucket_capacity
-        ngx.header["X-RateLimit-Reset"] = next_reset_time
+    end
 
-        if message == "rejected" then
-            ngx.log(ngx.ERR, "Rate limit exceeded for token: ", token)
-            ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
-        else
-            ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
-        end
+    ngx.header["X-RateLimit-Remaining"] = remaining_tokens
+    ngx.header["X-RateLimit-Limit"] = bucket_capacity
+    ngx.header["X-RateLimit-Reset"] = next_reset_time
+
+    if message == "rejected" then
+        ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
+        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+    else
+        ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
 end
 
