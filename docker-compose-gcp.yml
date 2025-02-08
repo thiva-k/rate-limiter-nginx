@@ -69,41 +69,6 @@ services:
         constraints:
           - node.hostname==loadbalancer2
 
-  redis:
-    image: redis/redis-stack:latest
-    ports:
-      - target: 6379
-        published: 6379
-        protocol: tcp
-        mode: host
-      - target: 8001
-        published: 8001
-        protocol: tcp
-        mode: host
-    deploy:
-      placement:
-        constraints:
-          - node.labels.type == database
-
-  mysql:
-    image: mysql:8.4
-    ports:
-      - target: 3306
-        published: 3307
-        protocol: tcp
-        mode: host
-    command: --mysql-native-password=ON
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: rate_limit_db
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./init:/docker-entrypoint-initdb.d
-    deploy:
-      placement:
-        constraints:
-          - node.labels.type == database
-
   db:
     image: descartesresearch/teastore-db
     ports:
