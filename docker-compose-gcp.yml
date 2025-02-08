@@ -42,8 +42,6 @@ services:
         published: 12000
         protocol: tcp
         mode: host
-    networks:
-      - redis_net
     deploy:
       placement:
         constraints:
@@ -66,8 +64,6 @@ services:
         published: 12000
         protocol: tcp
         mode: host
-    networks:
-      - redis_net
     deploy:
       placement:
         constraints:
