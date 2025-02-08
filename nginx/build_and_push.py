@@ -4,9 +4,10 @@ import subprocess
 GCP_PROJECT_ID = "triple-throttlers-446213"  # Replace with your GCP project ID
 REGION = "us-central1"  # Replace with your desired region
 REPOSITORY = "nginx"  # Replace with your Artifact Registry repository name
-IMAGE_NAME = "nginx"
+IMAGE_NAME = "crdt2"
 TAG = "latest"
 DOCKERFILE_PATH = "./nginx"  # Path to your Dockerfile and context directory
+DOCKERFILE_NAME = "Dockerfile.2"  # Specify the Dockerfile to use
 
 # Full image name for Artifact Registry
 FULL_IMAGE_NAME = f"{REGION}-docker.pkg.dev/{GCP_PROJECT_ID}/{REPOSITORY}/{IMAGE_NAME}:{TAG}"
@@ -33,8 +34,8 @@ def authenticate_gcp():
 
 def build_image():
     """Build the Docker image."""
-    print(f"Building Docker image {FULL_IMAGE_NAME}...")
-    command = f"docker build -t {FULL_IMAGE_NAME} {DOCKERFILE_PATH}"
+    print(f"Building Docker image {FULL_IMAGE_NAME} using {DOCKERFILE_NAME}...")
+    command = f"docker build -t {FULL_IMAGE_NAME} -f {DOCKERFILE_PATH}/{DOCKERFILE_NAME} {DOCKERFILE_PATH}"
     if not run_command(command):
         print("Failed to build image")
         exit(1)

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   load_balancer1:
-    image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/nginx:latest
+    image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/crdt1:latest
     ports:
       - target: 8080
         published: 8090
@@ -14,7 +14,7 @@ services:
           - node.labels.type == loadbalancer1
 
   load_balancer2:
-    image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/nginx:latest
+    image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/crdt2:latest
     ports:
       - target: 8080
         published: 8091
@@ -24,6 +24,54 @@ services:
       placement:
         constraints:
           - node.labels.type == loadbalancer2
+
+  redis-enterprise-1:
+    image: redislabs/redis:latest
+    cap_add:
+      - sys_resource
+    ports:
+      - target: 8443
+        published: 8443
+        protocol: tcp
+        mode: host  
+      - target: 9443
+        published: 9443
+        protocol: tcp
+        mode: host
+      - target: 12000
+        published: 12000
+        protocol: tcp
+        mode: host
+    networks:
+      - redis_net
+    deploy:
+      placement:
+        constraints:
+          - node.hostname==database
+
+  redis-enterprise-2:
+    image: redislabs/redis:latest
+    cap_add:
+      - sys_resource
+    ports:
+      - target: 8443
+        published: 8443
+        protocol: tcp
+        mode: host
+      - target: 9443
+        published: 9443
+        protocol: tcp
+        mode: host
+      - target: 12000
+        published: 12000
+        protocol: tcp
+        mode: host
+    networks:
+      - redis_net
+    deploy:
+      placement:
+        constraints:
+          - node.hostname==loadbalancer2
 
   redis:
     image: redis/redis-stack:latest

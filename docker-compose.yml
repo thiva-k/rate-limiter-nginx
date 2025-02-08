@@ -4,6 +4,7 @@ services:
   load_balancer1:
     build:
       context: ./nginx
+      dockerfile: Dockerfile.1
     ports:
       - "8090:8080"
     depends_on:
@@ -13,12 +14,11 @@ services:
       - auth
       - image
       - recommender
-      - webui
-      - redis
-
+     
   load_balancer2:
     build:
       context: ./nginx
+      dockerfile: Dockerfile.2
     ports:
       - "8091:8080"
     depends_on:
@@ -27,26 +27,29 @@ services:
       - persistence
       - auth
       - image
-      - recommender
-      - webui
-      - redis
+      - recommender      
 
-  redis:
-    image: redis/redis-stack:latest
+  redis-enterprise-1:
+    image: redislabs/redis:latest
+    cap_add:
+      - sys_resource
+    container_name: rs1_node1
+    hostname: rs1_node1
     ports:
-      - "6379:6379"
-      - "8001:8001"
+      - "8443:8443"
+      - "12000:12000"
+      - "9443:9443"
 
-  mysql:
-    image: mysql:8.4
+  redis-enterprise-2:
+    image: redislabs/redis:latest
+    cap_add:
+      - sys_resource
+    container_name: rs1_node2
+    hostname: rs1_node2
     ports:
-      - "3307:3306"
-    command: --mysql-native-password=ON
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: rate_limit_db
-    volumes:
-      - ./init/init_sliding_window_logs.sql:/docker-entrypoint-initdb.d/init.sql
+      - "8445:8443"
+      - "12002:12000"
+      - "9445:9443"
 
   registry:
     image: descartesresearch/teastore-registry
@@ -102,16 +105,6 @@ services:
       - "8087:8080"
     environment:
       HOST_NAME: "recommender"
-      REGISTRY_HOST: "registry"
-
-  webui:
-    image: descartesresearch/teastore-webui
-    expose:
-      - "8080"
-    ports:
-      - "8080:8080"
-    environment:
-      HOST_NAME: "webui"
       REGISTRY_HOST: "registry"
 
 networks:
