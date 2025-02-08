@@ -45,7 +45,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.hostname==database
+          - node.hostname==loadbalancer1
 
   redis-enterprise-2:
     image: redislabs/redis:latest
