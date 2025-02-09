@@ -1,8 +1,8 @@
 local redis = require "resty.redis"
 
 -- Redis connection settings
-local redis_host = "redis"
-local redis_port = 6379
+local redis_host = "redis-enterprise-2"
+local redis_port = 12000
 local redis_timeout = 1000 -- 1 second timeout
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
@@ -10,7 +10,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 -- Rate limiting parameters
 local window_size = 60 -- Total window size in seconds
 local request_limit = 100 -- Max requests allowed in the window
-local sub_window_count = 6 -- Number of subwindows
+local sub_window_count = 4 -- Number of subwindows
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -59,7 +59,7 @@ local function get_script_sha(red)
             local elapsed_time = now % sub_window_size
 
             -- Get current window count
-            local current_key = key_prefix .. ":" .. current_window_key
+            local current_key = key_prefix .. current_window_key
             local current_count = tonumber(redis.call('GET', current_key) or 0)
 
             -- Calculate total requests across all subwindows
@@ -67,7 +67,7 @@ local function get_script_sha(red)
 
             for i = 1, sub_window_count do
                 local previous_window_key = current_window_key - (i * sub_window_size)
-                local previous_key = key_prefix .. ":" .. previous_window_key
+                local previous_key = key_prefix .. previous_window_key
                 local previous_count = tonumber(redis.call('GET', previous_key) or 0)
 
                 -- Apply weight for the oldest window
@@ -108,7 +108,7 @@ local function check_rate_limit(red, token)
     end
 
     -- Construct the Redis key prefix using the token
-    local key_prefix = "rate_limit:" .. token
+    local key_prefix = "rate_limit:{" .. token .. "}"
 
     -- Run the Lua script
     local result, err = red:evalsha(sha, 1, key_prefix, window_size, request_limit, sub_window_count)
