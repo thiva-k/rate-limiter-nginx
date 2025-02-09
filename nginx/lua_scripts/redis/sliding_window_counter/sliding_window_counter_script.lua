@@ -9,8 +9,8 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
 local window_size = 60 -- Total window size in seconds
-local request_limit = 10 -- Max requests allowed in the window
-local sub_window_count = 4 -- Number of subwindows
+local request_limit = 100 -- Max requests allowed in the window
+local sub_window_count = 6 -- Number of subwindows
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -18,7 +18,7 @@ local function init_redis()
     red:set_timeout(redis_timeout)
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
-        return nil, "Failed to connect to Redis: " .. err
+        return nil, err
     end
     return red
 end
@@ -43,45 +43,57 @@ end
 
 -- Helper function to get script SHA
 local function get_script_sha(red)
-    local sha = ngx.shared.my_cache:get("sliding_window_script_sha")
+    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
     if not sha then
         local redis_script = [[
-            local token = KEYS[1]
-            local current_time = tonumber(ARGV[1])
-            local window_size = tonumber(ARGV[2])
+            local key_prefix = KEYS[1]
+            local window_size = tonumber(ARGV[1])
+            local request_limit = tonumber(ARGV[2])
             local sub_window_count = tonumber(ARGV[3])
-            local request_limit = tonumber(ARGV[4])
-            
+
+            -- Get current time and calculate sub-window parameters
+            local time = redis.call('TIME')
+            local now = tonumber(time[1])
             local sub_window_size = window_size / sub_window_count
-            local current_window_key = math.floor(current_time / sub_window_size) * sub_window_size
-            local total_requests = 0
-            local elapsed_time = current_time % sub_window_size
-            
-            for i = 0, sub_window_count - 1 do
+            local current_window_key = math.floor(now / sub_window_size) * sub_window_size
+            local elapsed_time = now % sub_window_size
+
+            -- Get current window count
+            local current_key = key_prefix .. ":" .. current_window_key
+            local current_count = tonumber(redis.call('GET', current_key) or 0)
+
+            -- Calculate total requests across all subwindows
+            local total_requests = current_count
+
+            for i = 1, sub_window_count do
                 local previous_window_key = current_window_key - (i * sub_window_size)
-                local count = tonumber(redis.call('GET', token .. ':' .. previous_window_key)) or 0
-                
-                if i == sub_window_count - 1 then
-                    total_requests = total_requests + ((sub_window_size - elapsed_time) / sub_window_size) * count
+                local previous_key = key_prefix .. ":" .. previous_window_key
+                local previous_count = tonumber(redis.call('GET', previous_key) or 0)
+
+                -- Apply weight for the oldest window
+                if i == sub_window_count then
+                    total_requests = total_requests + ((sub_window_size - elapsed_time) / sub_window_size) * previous_count
                 else
-                    total_requests = total_requests + count
+                    total_requests = total_requests + previous_count
                 end
             end
-            
+
+            -- Check if the request limit is exceeded
             if total_requests + 1 > request_limit then
-                return 1 -- Rate limit exceeded
+                return 1
             end
-            
-            redis.call('INCR', token .. ':' .. current_window_key)
-            redis.call('EXPIRE', token .. ':' .. current_window_key, window_size)
-            return 0 -- Request allowed
+
+            -- Increment the count for the current window
+            redis.call('INCR', current_key)
+            redis.call('EXPIRE', current_key, window_size)
+
+            return 0
         ]]
-        
         local new_sha, err = red:script("LOAD", redis_script)
         if not new_sha then
             return nil, "Failed to load script: " .. err
         end
-        ngx.shared.my_cache:set("sliding_window_script_sha", new_sha)
+        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
         sha = new_sha
     end
     return sha
@@ -89,22 +101,29 @@ end
 
 -- Main rate limiting logic
 local function check_rate_limit(red, token)
-    local now = ngx.time()
+    -- Get the script SHA
     local sha, err = get_script_sha(red)
     if not sha then
         return ngx.HTTP_INTERNAL_SERVER_ERROR, err
     end
 
-    local result, err = red:evalsha(sha, 1, "rate_limit:" .. token, now, window_size, sub_window_count, request_limit)
+    -- Construct the Redis key prefix using the token
+    local key_prefix = "rate_limit:" .. token
+
+    -- Run the Lua script
+    local result, err = red:evalsha(sha, 1, key_prefix, window_size, request_limit, sub_window_count)
+
     if err then
         if err:find("NOSCRIPT", 1, true) then
-            ngx.shared.my_cache:delete("sliding_window_script_sha")
+            -- Script not found in Redis, reload it
+            ngx.shared.my_cache:delete("rate_limit_script_sha")
             sha, err = get_script_sha(red)
             if not sha then
                 return ngx.HTTP_INTERNAL_SERVER_ERROR, err
             end
-            result, err = red:evalsha(sha, 1, "rate_limit:" .. token, now, window_size, sub_window_count, request_limit)
+            result, err = red:evalsha(sha, 1, key_prefix, window_size, request_limit, sub_window_count)
         end
+
         if err then
             return ngx.HTTP_INTERNAL_SERVER_ERROR, "Failed to run rate limiting script: " .. err
         end
@@ -131,18 +150,19 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local success, status, message = pcall(check_rate_limit, red, token)
+    local success, status, err = pcall(check_rate_limit, red, token)
     local ok, close_err = close_redis(red)
     if not ok then
         ngx.log(ngx.ERR, "Failed to close Redis connection: ", close_err)
     end
 
     if not success then
-        ngx.log(ngx.ERR, "Error executing rate limit check: ", status)
+        ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
-
-    if status == ngx.HTTP_TOO_MANY_REQUESTS then
+    elseif err then
+        ngx.log(ngx.ERR, err)
+        ngx.exit(status)
+    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
         ngx.exit(status)
     end
 end
