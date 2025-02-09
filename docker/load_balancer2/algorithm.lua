@@ -3,7 +3,7 @@ local redis = require "resty.redis"
 -- Redis connection settings
 local redis_host = "redis"
 local redis_port = 6379
-local redis_timeout = 1000 -- 1 second
+local redis_timeout = 1000 -- 1 second timeout
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
@@ -11,10 +11,15 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 local max_delay = 3000 -- 3 second,
 local leak_rate = 1 -- Requests leaked per second
 
--- Helper function to initialize Redis connection
+-- Lock settings
+local lock_timeout = 1000 -- Lock timeout in milliseconds
+local max_retries = 100 -- Maximum number of retries to acquire the lock
+local retry_delay = 10 -- Delay between retries in milliseconds
+
+-- Helper function to initialize Re dis connection
 local function init_redis()
     local red = redis:new()
-    red:set_timeout(redis_timeout)
+    red:set_timeout(redis_timeout) -- 1 second timeout
 
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
@@ -34,6 +39,51 @@ local function close_redis(red)
     return true
 end
 
+-- Function to acquire a lock with retries
+local function acquire_lock(red, token)
+    -- Unique lock key for each user
+    local lock_key = "rate_limit_lock:" .. token
+
+    for i = 1, max_retries do
+        local lock_value = ngx.now() * 1000 -- Current timestamp as lock value
+        local res, err = red:set(lock_key, lock_value, "NX", "PX", lock_timeout)
+        if res == "OK" then
+            -- ngx.log(ngx.ERR, "Lock acquired for token: ", token, " with value: ", lock_value, " on attempt: ", i)
+            return true, lock_value
+        elseif err then
+            return false
+        end
+        -- Delay before retrying
+
+        local delay = math.min((retry_delay / 1000) * (1.5 ^ i), 1) -- Exponential backoff and  cap max to 1 second
+        -- ngx.log(ngx.ERR, "Retrying to acquire lock for token: ", token, " on attempt: ", i, " with delay: ", delay)
+        ngx.sleep(delay) -- Convert milliseconds to seconds
+    end
+
+    return false -- Failed to acquire lock after max retries
+end
+
+-- Function to release a lock
+local function release_lock(red, token, lock_value)
+    local lock_key = "rate_limit_lock:" .. token
+
+    local script = [[
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+            return redis.call("del", KEYS[1])
+        else
+            return 0
+        end
+    ]]
+
+    local res, err = red:eval(script, 1, lock_key, lock_value)
+    if not res then
+        return nil, err
+    end
+
+    -- ngx.log(ngx.ERR, "Lock released for token: ", token, " with value: ", lock_value)
+    return true
+end
+
 -- Helper function to get URL token
 local function get_request_token()
     local token = ngx.var.arg_token
@@ -44,122 +94,60 @@ local function get_request_token()
     return token
 end
 
--- Function to load the script into Redis if not already cached
-local function load_script_to_redis(red, reload)
-    -- Lua script to implement leaky bucket algorithm
-    local rate_limit_script = [[
-        local queue_key = KEYS[1]
-        local bucket_capacity = tonumber(ARGV[1])
-        local leak_rate = tonumber(ARGV[2])
-        local ttl = tonumber(ARGV[3])
-
-        local redis_time = redis.call("TIME")
-        local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
-
-        -- Get the head of the queue to check the last leak time
-        local results = redis.call("zrevrange", queue_key, 0, 0, "WITHSCORES")
-        local last_leak_time = now
-        if #results > 0 then
-            last_leak_time = tonumber(results[2])
-        end
-
-        -- remove old entries and get the current queue length
-        redis.call("zremrangebyscore", queue_key, 0, now)
-        local queue_length = tonumber(redis.call("zcard", queue_key)) or 0
-
-        if queue_length + 1 <= bucket_capacity then
-            local default_delay = math.floor(1 / leak_rate * 1000000)
-
-            local delay = 0
-            local time_diff = now - last_leak_time
-            if time_diff ~= 0 then
-                delay = math.max(0, default_delay - time_diff)
-            end
-
-            local leak_time = now + delay
-
-            redis.call("zadd", queue_key, leak_time, leak_time)
-            redis.call("expire", queue_key, ttl)
-
-            return delay
-        else
-            return -1
-        end
-    ]]
-
-    local function load_new_script()
-        local new_sha, err = red:script("LOAD", rate_limit_script)
-        if not new_sha then
-            return nil, err
-        end
-        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
-        return new_sha
-    end
-
-    if reload then
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
-        return load_new_script()
-    end
-
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
-    if not sha then
-        sha = load_new_script()
-    end
-
-    return sha
-end
-
--- Execute the leaky bucket logic atomically
-local function execute_rate_limit_script(red, queue_key, bucket_capacity, ttl)
-    local sha, err = load_script_to_redis(red, false)
-    if not sha then
-        return nil, "Failed to load script: " .. err
-    end
-
-    local result, err = red:evalsha(sha, 1, queue_key, bucket_capacity, leak_rate, ttl)
-
-    if err then
-        if err:find("NOSCRIPT", 1, true) then
-            -- Script not found in Redis, reload it
-            sha, err = load_script_to_redis(red, true)
-            if not sha then
-                return nil, err
-            end
-            result, err = red:evalsha(sha, 1, queue_key, bucket_capacity, leak_rate, ttl)
-        end
-
-        if err then
-            return nil, err
-        end
-    end
-
-    return result
-end
-
--- Main function for rate limiting
+-- Main rate limiting logic
 local function rate_limit(red, token)
-    -- Redis keys for token count and last access time
+    -- Redis key for the sorted set queue
     local queue_key = "rate_limit:" .. token .. ":queue"
 
     -- Calculate bucket capacity based on max delay and leak rate
     local bucket_capacity = math.floor(max_delay / 1000 * leak_rate)
 
-    -- Calculate TTL for the Redis keys
-    local ttl = math.floor(bucket_capacity / leak_rate * 2)
+    -- Current timestamp in milliseconds
+    local now = ngx.now() * 1000
 
-    -- Execute leaky bucket logic
-    local result, err = execute_rate_limit_script(red, queue_key, bucket_capacity, ttl)
-    if not result then
-        return nil, "Failed to run rate limiting script" .. err
+    -- Get the head of the queue to check the last leak time, remove old entries and get the current queue length
+    red:multi()
+    red:zrevrange(queue_key, 0, 0, "WITHSCORES")
+    red:zremrangebyscore(queue_key, 0, now)
+    red:zcard(queue_key)
+    local results, err = red:exec()
+    if not results then
+        return nil, "Failed to execute Redis transaction: " .. err
     end
 
-    -- Handle the result
-    if result == -1 then
-        return true, "rejected"
-    else
-        -- Nginx sleep supports second with milliseconds precision
-        local delay = math.floor(result / 1000 + 0.5) / 1000 -- Round to 3 decimal places
+    local last_leak_time = now
+    if #results[1] > 0 then
+        last_leak_time = tonumber(results[1][2])
+    end
+
+    local queue_length = tonumber(results[3]) or 0
+
+    if queue_length + 1 <= bucket_capacity then
+        local default_delay = math.floor(1 / leak_rate * 1000)
+
+        local delay = 0
+        local time_diff = now - last_leak_time
+        if time_diff ~= 0 then
+            delay = math.max(0, default_delay - time_diff)
+        end
+
+        local leak_time = now + delay
+        local ttl = math.floor(bucket_capacity / leak_rate * 2)
+
+        red:multi()
+        red:zadd(queue_key, leak_time, leak_time)
+        red:expire(queue_key, ttl)
+        local results, err = red:exec()
+        if not results then
+            return nil, "Failed to execute Redis transaction: " .. err
+        end
+
+        -- Convert delay to seconds
+        delay = math.floor(delay) / 1000
+
         return true, "allowed", delay
+    else
+        return true, "rejected"
     end
 end
 
@@ -177,7 +165,23 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message, delay, queue_length_key = pcall(rate_limit, red, token)
+    local ok, lock_value = acquire_lock(red, token)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to acquire lock")
+        close_redis(red)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    local now = ngx.now()
+
+    local pcall_status, rate_limit_result, message, delay = pcall(rate_limit, red, token)
+
+    local last = ngx.now()
+    ngx.log(ngx.ERR, "Time_taken: ", last - now)
+
+    if not release_lock(red, token, lock_value) then
+        ngx.log(ngx.ERR, "Failed to release lock")
+    end
 
     local ok, err = close_redis(red)
     if not ok then

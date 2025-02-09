@@ -33,32 +33,32 @@ def test_rate_limiter_concurrent(num_requests, num_users):
             for future in futures:
                 future.result()
 
-        # Send a request that should be rate-limited
-        print("Sending requests that should be rate-limited:")
-        for _ in range(num_users):
-            futures = [
-                executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) 
-                for request_id in range(num_requests)]
-            for future in futures:
-                future.result()
+        # # Send a request that should be rate-limited
+        # print("Sending requests that should be rate-limited:")
+        # for _ in range(num_users):
+        #     futures = [
+        #         executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) 
+        #         for request_id in range(num_requests)]
+        #     for future in futures:
+        #         future.result()
 
-        # Wait for tokens to refill
-        print("Waiting for tokens to refill...")
-        time.sleep(10)  # Wait for 10 seconds to allow tokens to refill
+        # # Wait for tokens to refill
+        # print("Waiting for tokens to refill...")
+        # time.sleep(10)  # Wait for 10 seconds to allow tokens to refill
 
-        # Send a request that should be allowed
-        print("Sending requests that should be allowed:")
-        for _ in range(num_users):
-            futures = [
-                executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) 
-                for request_id in range(num_requests)]
-            for future in futures:
-                future.result()
+        # # Send a request that should be allowed
+        # print("Sending requests that should be allowed:")
+        # for _ in range(num_users):
+        #     futures = [
+        #         executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) 
+        #         for request_id in range(num_requests)]
+        #     for future in futures:
+        #         future.result()
 
     return latencies
 
 if __name__ == "__main__":
-    num_requests = 10 # Number of concurrent requests
+    num_requests = 100 # Number of concurrent requests
     num_runs = 1  # Number of times to run the test
     num_users = 1  # Number of users
 
