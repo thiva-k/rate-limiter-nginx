@@ -55,29 +55,39 @@ end
 local function acquire_lock(red, token)
     -- Unique lock key for each user
     local lock_key = "rate_limit_lock:" .. token
-    local lock_value = ngx.now() * 1000 -- Current timestamp as lock value
 
     for i = 1, max_retries do
+        local lock_value = ngx.now() * 1000 -- Current timestamp as lock value
         local res, err = red:set(lock_key, lock_value, "NX", "PX", lock_timeout)
         if res == "OK" then
-            return true
+            return true, lock_value
         elseif err then
             return false
         end
+
         -- Delay before retrying
-        ngx.sleep(retry_delay / 1000) -- Convert milliseconds to seconds
+        local delay = (retry_delay / 1000) -- Convert milliseconds to seconds
+        ngx.sleep(delay)
     end
 
     return false -- Failed to acquire lock after max retries
 end
 
 -- Function to release a lock
-local function release_lock(red, token)
+local function release_lock(red, token, lock_value)
     local lock_key = "rate_limit_lock:" .. token
 
-    local res, err = red:del(lock_key)
+    local script = [[
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+            return redis.call("del", KEYS[1])
+        else
+            return 0
+        end
+    ]]
+
+    local res, err = red:eval(script, 1, lock_key, lock_value)
     if not res then
-        return false
+        return nil, err
     end
 
     return true
@@ -143,7 +153,8 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not acquire_lock(red, token) then
+    local ok, lock_value = acquire_lock(red, token)
+    if not ok then
         ngx.log(ngx.ERR, "Failed to acquire lock")
         close_redis(red)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
@@ -151,7 +162,7 @@ local function main()
 
     local pcall_status, rate_limit_result, message, remaining_tokens, next_reset_time = pcall(rate_limit, red, token)
 
-    if not release_lock(red, token) then
+    if not release_lock(red, token, lock_value) then
         ngx.log(ngx.ERR, "Failed to release lock")
     end
 

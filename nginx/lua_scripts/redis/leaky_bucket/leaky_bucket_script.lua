@@ -4,13 +4,12 @@ local redis = require "resty.redis"
 local redis_host = "redis"
 local redis_port = 6379
 local redis_timeout = 1000 -- 1 second
+local max_idle_timeout = 10000 -- 10 seconds
+local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Leaky bucket parameters
 local max_delay = 3000 -- 3 second,
 local leak_rate = 1 -- Requests leaked per second
-local requested_tokens = 1 -- Number of tokens required per request
-local max_idle_timeout = 10000 -- 10 seconds
-local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -49,46 +48,39 @@ end
 local function load_script_to_redis(red, reload)
     -- Lua script to implement leaky bucket algorithm
     local rate_limit_script = [[
-        local tokens_key = KEYS[1]
-        local last_access_key = KEYS[2]
+        local queue_key = KEYS[1]
         local bucket_capacity = tonumber(ARGV[1])
         local leak_rate = tonumber(ARGV[2])
-        local requested = tonumber(ARGV[3])
-        local ttl = tonumber(ARGV[4])
-        
+        local ttl = tonumber(ARGV[3])
+
         local redis_time = redis.call("TIME")
         local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
 
-        local values = redis.call("mget", tokens_key, last_access_key)
-        local last_token_count = tonumber(values[1]) or 0
-        local last_access_time = tonumber(values[2]) or now
-        
-        local elapsed_time_us = math.max(0, now - last_access_time)
-        local leaked_tokens_count = math.floor(elapsed_time_us * leak_rate / 1000000)
-        local bucket_level = math.max(0, last_token_count - leaked_tokens_count)
+        -- Get the head of the queue to check the last leak time
+        local results = redis.call("zrevrange", queue_key, 0, 0, "WITHSCORES")
+        local last_leak_time = now
+        if #results > 0 then
+            last_leak_time = tonumber(results[2])
+        end
 
-        if bucket_level + requested <= bucket_capacity then
-            -- Calculate default delay between requests based on leak rate in microseconds
+        -- remove old entries and get the current queue length
+        redis.call("zremrangebyscore", queue_key, 0, now)
+        local queue_length = tonumber(redis.call("zcard", queue_key)) or 0
+
+        if queue_length + 1 <= bucket_capacity then
             local default_delay = math.floor(1 / leak_rate * 1000000)
 
-            -- Assumption: At least 1us delay will be there between request processing
-            -- If time difference either 0 or greater than default_delay then no need to add delay
-            local time_diff = now - last_access_time
             local delay = 0
-            if time_diff < 0 or (time_diff > 0 and time_diff < default_delay) then
-                delay = -time_diff + default_delay
+            local time_diff = now - last_leak_time
+            if time_diff ~= 0 then
+                delay = math.max(0, default_delay - time_diff)
             end
 
-            -- For the first request no need to increment the bucket level as we allow it immediately
-            if delay ~= 0 or bucket_level ~= 0 then
-                bucket_level = bucket_level + requested
-            end
-            
-            last_access_time = now + delay
+            local leak_time = now + delay
 
-            redis.call("set", tokens_key, bucket_level, "EX", ttl)
-            redis.call("set", last_access_key, last_access_time, "EX", ttl)
-            
+            redis.call("zadd", queue_key, leak_time, leak_time)
+            redis.call("expire", queue_key, ttl)
+
             return delay
         else
             return -1
@@ -118,13 +110,13 @@ local function load_script_to_redis(red, reload)
 end
 
 -- Execute the leaky bucket logic atomically
-local function execute_rate_limit_script(red, tokens_key, last_access_key, bucket_capacity, ttl)
+local function execute_rate_limit_script(red, queue_key, bucket_capacity, ttl)
     local sha, err = load_script_to_redis(red, false)
     if not sha then
         return nil, "Failed to load script: " .. err
     end
 
-    local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
+    local result, err = red:evalsha(sha, 1, queue_key, bucket_capacity, leak_rate, ttl)
 
     if err then
         if err:find("NOSCRIPT", 1, true) then
@@ -133,7 +125,7 @@ local function execute_rate_limit_script(red, tokens_key, last_access_key, bucke
             if not sha then
                 return nil, err
             end
-            result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, leak_rate, requested_tokens, ttl)
+            result, err = red:evalsha(sha, 1, queue_key, bucket_capacity, leak_rate, ttl)
         end
 
         if err then
@@ -147,8 +139,7 @@ end
 -- Main function for rate limiting
 local function rate_limit(red, token)
     -- Redis keys for token count and last access time
-    local tokens_key = "rate_limit:" .. token .. ":tokens"
-    local last_access_key = "rate_limit:" .. token .. ":last_access"
+    local queue_key = "rate_limit:" .. token .. ":queue"
 
     -- Calculate bucket capacity based on max delay and leak rate
     local bucket_capacity = math.floor(max_delay / 1000 * leak_rate)
@@ -157,7 +148,7 @@ local function rate_limit(red, token)
     local ttl = math.floor(bucket_capacity / leak_rate * 2)
 
     -- Execute leaky bucket logic
-    local result, err = execute_rate_limit_script(red, tokens_key, last_access_key, bucket_capacity, ttl)
+    local result, err = execute_rate_limit_script(red, queue_key, bucket_capacity, ttl)
     if not result then
         return nil, "Failed to run rate limiting script" .. err
     end
@@ -166,10 +157,9 @@ local function rate_limit(red, token)
     if result == -1 then
         return true, "rejected"
     else
-        -- Nginx sleep supports second with milliseconds precision 
+        -- Nginx sleep supports second with milliseconds precision
         local delay = math.floor(result / 1000 + 0.5) / 1000 -- Round to 3 decimal places
-        ngx.sleep(delay)
-        return true, "allowed"
+        return true, "allowed", delay
     end
 end
 
@@ -187,7 +177,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message = pcall(rate_limit, red, token)
+    local pcall_status, rate_limit_result, message, delay, queue_length_key = pcall(rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then
@@ -208,6 +198,7 @@ local function main()
         ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     else
+        ngx.sleep(delay)
         ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
 end
