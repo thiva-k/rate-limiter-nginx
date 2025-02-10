@@ -95,12 +95,12 @@ local function main()
     end
 
     if not success then
-        ngx.log(ngx.ERR, status)  -- In pcall, status contains the error
+        ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     elseif err then
         ngx.log(ngx.ERR, err)
         ngx.exit(status)
-    else
+    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
         ngx.exit(status)
     end
 end
