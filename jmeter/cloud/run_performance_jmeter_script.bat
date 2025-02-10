@@ -1,13 +1,13 @@
 @echo off
 REM Set JMeter parameters
-set LB_1_HOSTNAME=localhost
-set LB_2_HOSTNAME=localhost
+set LB_1_HOSTNAME=35.197.193.204
+set LB_2_HOSTNAME=35.184.106.1
 set LB_1_PORT=8090
 set LB_2_PORT=8091
 
 set WARM_UP_USERS=100
-set WARM_UP_TIME=30
-set TEST_RUN_TIME=300
+set WARM_UP_TIME=60
+set TEST_RUN_TIME=600
 set RAMP_UP=10
 
 set GROUP_1=75

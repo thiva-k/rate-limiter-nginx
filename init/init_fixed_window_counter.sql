@@ -1,77 +1,58 @@
--- Initialize the database
+-- Create the rate limit table
 CREATE DATABASE IF NOT EXISTS rate_limit_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
--- Switch to the database
 USE rate_limit_db;
 
--- Create the rate-limiting table
-CREATE TABLE IF NOT EXISTS rate_limit_fixed_window (
-    token VARCHAR(255) PRIMARY KEY,  -- The token used for rate limiting (e.g., user ID or API key)
-    count INT DEFAULT 0,             -- The current request count for the token
-    expires_at DOUBLE DEFAULT 0      -- The expiration timestamp of the current rate limit window
+-- Table to track rate limits per token
+CREATE TABLE IF NOT EXISTS rate_limit_log (
+    token VARCHAR(255) NOT NULL,
+    window_start BIGINT UNSIGNED NOT NULL,
+    request_count INT UNSIGNED NOT NULL,
+    PRIMARY KEY (token, window_start)
 );
 
--- Optional: Create a debug log table for logging
-CREATE TABLE IF NOT EXISTS debug_log (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    message TEXT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Drop the procedure if it already exists
-DROP PROCEDURE IF EXISTS RateLimitCheck;
-
--- Change the delimiter for procedure creation
 DELIMITER //
 
--- Create the stored procedure
-CREATE PROCEDURE RateLimitCheck(
-    IN p_token VARCHAR(255),         -- Input: The token
-    IN p_rate_limit INT,             -- Input: Max requests per window
-    IN p_window_size INT,            -- Input: Time window in seconds
-    OUT p_status VARCHAR(20)         -- Output: Result status (ALLOWED/TOO_MANY_REQUESTS)
+CREATE PROCEDURE check_rate_limit(
+    IN p_input_token VARCHAR(255),
+    IN p_window_size INT,
+    IN p_rate_limit INT
 )
 BEGIN
-    DECLARE v_count INT DEFAULT 0;
-    DECLARE v_expires_at DOUBLE DEFAULT 0;
-    DECLARE v_current_time DOUBLE;
+    DECLARE v_current_time BIGINT UNSIGNED;
+    DECLARE v_window_start BIGINT UNSIGNED;
+    DECLARE v_current_count INT UNSIGNED DEFAULT 0;
 
-    SET v_current_time = UNIX_TIMESTAMP(NOW());
+    SET v_current_time = UNIX_TIMESTAMP();
 
-    -- Fetch the token details
-    SELECT IFNULL(count, 0), IFNULL(expires_at, 0) INTO v_count, v_expires_at
-    FROM rate_limit_fixed_window
-    WHERE token = p_token;
+    -- Calculate window start time
+    SET v_window_start = FLOOR(v_current_time / p_window_size) * p_window_size;
 
-    IF v_count = 0 AND v_expires_at = 0 THEN
-        -- Insert a new record
-        INSERT INTO rate_limit_fixed_window (token, count, expires_at)
-        VALUES (p_token, 1, v_current_time + p_window_size);
-        SET p_status = 'ALLOWED';
-    ELSEIF v_current_time >= v_expires_at THEN
-        -- Reset the count if the window expired
-        UPDATE rate_limit_fixed_window
-        SET count = 1, expires_at = v_current_time + p_window_size
-        WHERE token = p_token;
-        SET p_status = 'ALLOWED';
+    START TRANSACTION;
+
+    -- Check if an entry exists for the current window
+    SELECT IFNULL(request_count, 0) 
+    INTO v_current_count
+    FROM rate_limit_log
+    WHERE token = p_input_token AND window_start = v_window_start
+    FOR UPDATE;
+
+    IF v_current_count = 0 THEN
+        INSERT INTO rate_limit_log (token, window_start, request_count)
+        VALUES (p_input_token, v_window_start, 1);
+        SELECT 0 AS is_limited;
     ELSE
-        -- Within the same window
-        IF v_count + 1 > p_rate_limit THEN
-            SET p_status = 'TOO_MANY_REQUESTS';
+        IF v_current_count + 1 > p_rate_limit THEN
+            SELECT 1 AS is_limited;
         ELSE
-            -- Increment the request count
-            UPDATE rate_limit_fixed_window
-            SET count = count + 1
-            WHERE token = p_token;
-            SET p_status = 'ALLOWED';
+            UPDATE rate_limit_log
+            SET request_count = request_count + 1
+            WHERE token = p_input_token AND window_start = v_window_start;
+            SELECT 0 AS is_limited;
         END IF;
     END IF;
-END;
-//
 
--- Reset the delimiter back to `;`
+    COMMIT;
+END //
+
 DELIMITER ;
-
--- Optional test query to verify the procedure
--- CALL RateLimitCheck('test_token', 5, 60, @status);
--- SELECT @status;

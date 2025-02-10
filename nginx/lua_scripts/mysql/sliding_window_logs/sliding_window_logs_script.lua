@@ -26,7 +26,8 @@ local function init_mysql()
         port = mysql_port,
         user = mysql_user,
         password = mysql_password,
-        database = mysql_database
+        database = mysql_database,
+        max_packet_size = 1024 * 1024
     }
 
     if not ok then
@@ -48,16 +49,20 @@ end
 -- Main rate limiting logic
 local function check_rate_limit(db, token)
     local query = string.format(
-        "CALL check_rate_limit('%s', %d, %d);",
+        "CALL check_sliding_window_limit('%s', %d, %d);",
         token, window_size, rate_limit
     )
+    
     local res, err = db:query(query)
-    if not res or #res == 0 then
-        return ngx.HTTP_INTERNAL_SERVER_ERROR, "Failed to execute procedure or fetch result: " .. (err or "unknown error")
+    if not res then
+        return ngx.HTTP_INTERNAL_SERVER_ERROR, "Failed to execute procedure: " .. (err or "unknown error")
+    end
+    
+    if #res == 0 then
+        return ngx.HTTP_INTERNAL_SERVER_ERROR, "No result returned from procedure"
     end
     
     local is_limited = tonumber(res[1].is_limited)    
-
     if is_limited == 1 then
         return ngx.HTTP_TOO_MANY_REQUESTS
     else
@@ -79,19 +84,23 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local success, status, err = pcall(check_rate_limit, db, token)
+    local status, err
+    local success = pcall(function()
+        status, err = check_rate_limit(db, token)
+    end)
+
     local ok, close_err = db:set_keepalive(10000, 50)
     if not ok then
         ngx.log(ngx.ERR, "Failed to set keepalive for MySQL connection: ", close_err)
     end
 
     if not success then
-        ngx.log(ngx.ERR, status)
+        ngx.log(ngx.ERR, status)  -- In pcall, status contains the error
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     elseif err then
         ngx.log(ngx.ERR, err)
         ngx.exit(status)
-    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
+    else
         ngx.exit(status)
     end
 end
