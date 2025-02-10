@@ -54,7 +54,7 @@ services:
       MYSQL_DATABASE: rate_limit_db
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./init:/docker-entrypoint-initdb.d
+      - ./init/init_sliding_window_logs.sql:/docker-entrypoint-initdb.d/init.sql
     deploy:
       placement:
         constraints:
