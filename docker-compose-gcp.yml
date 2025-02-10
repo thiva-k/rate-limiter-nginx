@@ -52,8 +52,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: rate_limit_db
-    volumes:
-      - mysql_data:/var/lib/mysql
     deploy:
       placement:
         constraints:
