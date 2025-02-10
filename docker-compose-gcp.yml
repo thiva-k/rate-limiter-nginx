@@ -42,7 +42,7 @@ services:
           - node.labels.type == database
 
   mysql:
-    image: mysql:8.4
+    image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/mysql:latest
     ports:
       - target: 3306
         published: 3307
