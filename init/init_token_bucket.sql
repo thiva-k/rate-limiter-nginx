@@ -32,7 +32,7 @@ BEGIN
     DECLARE v_new_token_count BIGINT;
     DECLARE v_final_token_count BIGINT;
 
-    INSERT ignore INTO user (user_token) VALUES (p_user_token);
+    INSERT IGNORE INTO user (user_token) VALUES (p_user_token);
 
     -- Start transaction to handle concurrency
     START TRANSACTION;
