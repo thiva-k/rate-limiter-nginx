@@ -11,9 +11,9 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 50 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
-local rate_limit = 5
+local rate_limit = 10
 local window_size = 60 -- 60-second window
-local sub_window_size = 3 -- 10-second sub-window
+local sub_window_count = 3 -- 10-second sub-window
 
 -- Helper function to initialize MySQL connection
 local function init_mysql()
@@ -62,7 +62,7 @@ local function check_rate_limit(db, token)
     -- Call the procedure and capture the OUT parameter
     local query = string.format(
         "CALL check_sliding_window_counter_limit('%s', %d, %d, %d, @is_limited);",
-        token, window_size, rate_limit, sub_window_size
+        token, window_size, rate_limit, sub_window_count
     )
     
     local res, err = db:query(query)
