@@ -6,7 +6,7 @@ local mysql_port = 3306
 local mysql_user = "root"
 local mysql_password = "root"
 local mysql_database = "rate_limit_db"
-local mysql_timeout = 1000 -- 1 second
+local mysql_timeout = 3000 -- 3 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
