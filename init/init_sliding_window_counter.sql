@@ -1,80 +1,92 @@
--- Set authentication to native password
+CREATE DATABASE IF NOT EXISTS rate_limit_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
-
--- Use the rate_limit_db
 USE rate_limit_db;
-CREATE TABLE rate_limit_requests (
+
+-- Table to store request counts for each sub-window
+CREATE TABLE IF NOT EXISTS sliding_window_log (
     token VARCHAR(255) NOT NULL,
-    subwindow BIGINT NOT NULL,
-    request_count INT DEFAULT 0,
-    PRIMARY KEY (token, subwindow)
+    window_start INT NOT NULL, -- Timestamp rounded down to the start of the sub-window
+    count INT DEFAULT 0, -- Request count for that sub-window
+    PRIMARY KEY (token, window_start)
 );
 
-CREATE TABLE debug_log (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    log_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    log_message TEXT
+CREATE TABLE IF NOT EXISTS user (
+    user_token VARCHAR(255) PRIMARY KEY
 );
-
 
 DELIMITER //
 
-CREATE PROCEDURE rate_limit_check(
-    IN p_token VARCHAR(255),
-    IN p_current_subwindow BIGINT,
+CREATE PROCEDURE check_sliding_window_counter_limit(
+    IN p_input_token VARCHAR(255),
     IN p_window_size INT,
-    IN p_sub_window_count INT,
     IN p_request_limit INT,
-    OUT result INT
+    IN p_sub_window_count INT,
+    OUT o_is_limited INT
 )
 BEGIN
-    DECLARE start_subwindow BIGINT;
-    DECLARE total_requests INT;
+    DECLARE v_current_time INT;
+    DECLARE v_sub_window_size INT;
+    DECLARE v_current_window_key INT;
+    DECLARE v_elapsed_time INT;
+    DECLARE v_total_requests INT;
+    DECLARE v_count INT;
+    DECLARE v_iterator INT DEFAULT 1;
+    DECLARE v_previous_window_key INT;
 
-    -- Helper to insert debug logs
-    DECLARE log_message TEXT;
-    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
-        BEGIN
-            ROLLBACK;
-        END;
+    -- Get current timestamp in seconds (rounded down to the nearest second)
+    SET v_current_time = UNIX_TIMESTAMP(CURRENT_TIMESTAMP);
+    SET v_sub_window_size = p_window_size / p_sub_window_count;
+    SET v_current_window_key = FLOOR(v_current_time / v_sub_window_size) * v_sub_window_size;
+    SET v_elapsed_time = v_current_time % v_sub_window_size;
+    SET v_total_requests = 0;
 
-    -- Calculate the earliest subwindow within the sliding window
-    SET start_subwindow = p_current_subwindow - (p_sub_window_count - 1) * (p_window_size / p_sub_window_count);
-    SET log_message = CONCAT('Start subwindow: ', start_subwindow);
-    INSERT INTO debug_log (log_message) VALUES (log_message);
+    INSERT IGNORE INTO user (user_token) VALUES (p_input_token);
 
-    -- Calculate the total requests in the sliding window
-    SELECT SUM(request_count)
-    INTO total_requests
-    FROM rate_limit_requests
-    WHERE token = p_token AND subwindow >= start_subwindow;
+    START TRANSACTION;
 
-    IF total_requests IS NULL THEN
-        SET total_requests = 0;
-    END IF;
+    SELECT 1 INTO @lock_dummy FROM user WHERE user_token = p_input_token FOR UPDATE;
 
-    SET log_message = CONCAT('Total requests calculated: ', total_requests);
-    INSERT INTO debug_log (log_message) VALUES (log_message);
+    -- Count the requests in the current sub-window
+    SELECT IFNULL(count, 0) INTO v_count 
+    FROM sliding_window_log 
+    WHERE token = p_input_token 
+    AND window_start = v_current_window_key;
 
-    -- Check if the limit is exceeded
-    IF total_requests >= p_request_limit THEN
-        SET result = 0; -- Limit exceeded
-        SET log_message = CONCAT('Rate limit exceeded for token: ', p_token);
-        INSERT INTO debug_log (log_message) VALUES (log_message);
+    SET v_total_requests = v_total_requests + v_count;
+
+    -- Add the requests from previous sub-windows, with a weight applied to the oldest window
+    WHILE v_iterator <= p_sub_window_count DO
+        SET v_previous_window_key = v_current_window_key - (v_iterator * v_sub_window_size);
+
+        -- Get the request count for the previous sub-window
+        SELECT IFNULL(count, 0) INTO v_count 
+        FROM sliding_window_log 
+        WHERE token = p_input_token 
+        AND window_start = v_previous_window_key;
+
+        -- Apply weight for the oldest window
+        IF v_iterator = p_sub_window_count THEN
+            SET v_total_requests = v_total_requests + ((v_sub_window_size - v_elapsed_time) / v_sub_window_size) * v_count;
+        ELSE
+            SET v_total_requests = v_total_requests + v_count;
+        END IF;
+
+        SET v_iterator = v_iterator + 1;
+    END WHILE;
+
+    -- Check if the total requests exceed the limit
+    IF v_total_requests + 1 > p_request_limit THEN
+        SET o_is_limited = 1;
     ELSE
-        -- Increment or insert the current subwindow count
-        INSERT INTO rate_limit_requests (token, subwindow, request_count)
-        VALUES (p_token, p_current_subwindow, 1)
-        ON DUPLICATE KEY UPDATE request_count = request_count + 1;
+        -- Increment the count for the current sub-window
+        INSERT INTO sliding_window_log (token, window_start, count)
+        VALUES (p_input_token, v_current_window_key, 1)
+        ON DUPLICATE KEY UPDATE count = count + 1;
 
-        SET log_message = CONCAT('Incremented count for token: ', p_token, ' in subwindow: ', p_current_subwindow);
-        INSERT INTO debug_log (log_message) VALUES (log_message);
-
-        SET result = 1; -- Request allowed
-        SET log_message = CONCAT('Request allowed for token: ', p_token);
-        INSERT INTO debug_log (log_message) VALUES (log_message);
+        SET o_is_limited = 0;
     END IF;
-END
-//
+
+    COMMIT;
+END //
 
 DELIMITER ;

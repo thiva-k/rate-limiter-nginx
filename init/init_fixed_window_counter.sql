@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS rate_limit_log (
     PRIMARY KEY (token, window_start)
 );
 
+CREATE TABLE user (
+    user_token VARCHAR(255) PRIMARY KEY
+);
+
 DELIMITER //
 
 CREATE PROCEDURE check_rate_limit(
@@ -29,7 +33,11 @@ BEGIN
     -- Calculate window start time
     SET v_window_start = FLOOR(v_current_time / p_window_size) * p_window_size;
 
+    INSERT IGNORE INTO user (user_token) VALUES (p_input_token);
+
     START TRANSACTION;
+
+    SELECT 1 INTO @lock_dummy FROM user WHERE user_token = p_input_token FOR UPDATE;
 
     -- Check if an entry exists for the current window
     SELECT IFNULL(request_count, 0) 

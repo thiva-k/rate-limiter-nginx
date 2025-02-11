@@ -9,6 +9,10 @@ CREATE TABLE IF NOT EXISTS sliding_window_log (
     PRIMARY KEY (token, request_time)
 );
 
+CREATE TABLE user (
+    user_token VARCHAR(255) PRIMARY KEY
+);
+
 DELIMITER //
 
 CREATE PROCEDURE check_sliding_window_limit(
@@ -24,7 +28,11 @@ BEGIN
     -- Get current timestamp with millisecond precision
     SET v_current_time = CURRENT_TIMESTAMP(3);
 
+    INSERT IGNORE INTO user (user_token) VALUES (p_input_token);
+
     START TRANSACTION;
+
+    SELECT 1 INTO @lock_dummy FROM user WHERE user_token = p_input_token FOR UPDATE;
 
     -- Remove outdated requests outside the sliding window
     DELETE FROM sliding_window_log
