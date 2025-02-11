@@ -16,7 +16,8 @@ DELIMITER //
 CREATE PROCEDURE check_rate_limit(
     IN p_input_token VARCHAR(255),
     IN p_window_size INT,
-    IN p_rate_limit INT
+    IN p_rate_limit INT,
+    OUT o_is_limited INT
 )
 BEGIN
     DECLARE v_current_time BIGINT UNSIGNED;
@@ -40,15 +41,15 @@ BEGIN
     IF v_current_count = 0 THEN
         INSERT INTO rate_limit_log (token, window_start, request_count)
         VALUES (p_input_token, v_window_start, 1);
-        SELECT 0 AS is_limited;
+        SET o_is_limited = 0;
     ELSE
         IF v_current_count + 1 > p_rate_limit THEN
-            SELECT 1 AS is_limited;
+            SET o_is_limited = 1;
         ELSE
             UPDATE rate_limit_log
             SET request_count = request_count + 1
             WHERE token = p_input_token AND window_start = v_window_start;
-            SELECT 0 AS is_limited;
+            SET o_is_limited = 0;
         END IF;
     END IF;
 
