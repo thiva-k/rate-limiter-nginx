@@ -7,6 +7,8 @@ local mysql_user = "root"
 local mysql_password = "root"
 local mysql_database = "rate_limit_db"
 local mysql_timeout = 1000 -- 1 second timeout
+local max_idle_timeout = 10000 -- 10 seconds
+local pool_size = 50 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
 local rate_limit = 5
@@ -32,8 +34,23 @@ local function init_mysql()
     if not ok then
         return nil, "Failed to connect to MySQL: " .. (err or "unknown error")
     end
-    
+
     return db
+end
+
+-- Helper function to close MySQL connection
+local function close_mysql(db)
+    -- Consume any remaining result sets
+    local res, err = db:read_result()
+    while err == "again" do
+        res, err = db:read_result()
+    end
+    -- Set the connection to keepalive or close it
+    local ok, err = db:set_keepalive(max_idle_timeout, pool_size)
+    if not ok then
+        return nil, "Failed to set keepalive for MySQL connection: " .. (err or "unknown error")
+    end
+    return true
 end
 
 -- Helper function to get URL token
@@ -52,12 +69,11 @@ local function check_rate_limit(db, token)
         token, window_size, rate_limit
     )
     local res, err = db:query(query)
-    if not res or #res == 0 then
+    if not res then
         return ngx.HTTP_INTERNAL_SERVER_ERROR, "Failed to execute procedure or fetch result: " .. (err or "unknown error")
     end
-    
-    local is_limited = tonumber(res[1].is_limited)    
 
+    local is_limited = tonumber(res[1].is_limited)
     if is_limited == 1 then
         return ngx.HTTP_TOO_MANY_REQUESTS
     else
@@ -80,9 +96,10 @@ local function main()
     end
 
     local success, status, err = pcall(check_rate_limit, db, token)
-    local ok, close_err = db:set_keepalive(10000, 50)
+    
+    local ok, close_err = close_mysql(db)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to set keepalive for MySQL connection: ", close_err)
+        ngx.log(ngx.ERR, "Failed to close MySQL connection: ", close_err)
     end
 
     if not success then
