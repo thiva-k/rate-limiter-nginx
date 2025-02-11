@@ -58,7 +58,7 @@ def test_rate_limiter_concurrent(num_requests, num_users):
     return latencies
 
 if __name__ == "__main__":
-    num_requests = 1 # Number of concurrent requests
+    num_requests = 10 # Number of concurrent requests
     num_runs = 1  # Number of times to run the test
     num_users = 1  # Number of users
 

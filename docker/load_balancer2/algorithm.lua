@@ -1,86 +1,53 @@
-local redis = require "resty.redis"
+local mysql = require "resty.mysql"
 
--- Redis connection settings
-local redis_host = "redis"
-local redis_port = 6379
-local redis_timeout = 1000 -- 1 second timeout
+-- MySQL connection settings
+local mysql_host = "mysql"
+local mysql_port = 3306
+local mysql_user = "root"
+local mysql_password = "root"
+local mysql_database = "rate_limit_db"
+local mysql_timeout = 1000 -- 1 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
--- Leaky bucket parameters
-local max_delay = 3000 -- 3 second,
-local leak_rate = 1 -- Requests leaked per second
+-- Token bucket parameters
+local bucket_capacity = 10 -- Maximum tokens in the bucket
+local refill_rate = 1 -- Tokens generated per second
+local requested_tokens = 1 -- Number of tokens required per request
 
--- Lock settings
-local lock_timeout = 1000 -- Lock timeout in milliseconds
-local max_retries = 100 -- Maximum number of retries to acquire the lock
-local retry_delay = 10 -- Delay between retries in milliseconds
+-- Helper function to initialize MySQL connection
+local function init_mysql()
+    local db, err = mysql:new()
+    if not db then
+        ngx.log(ngx.ERR, "Failed to create MySQL object: ", err)
+        return nil, err
+    end
 
--- Helper function to initialize Re dis connection
-local function init_redis()
-    local red = redis:new()
-    red:set_timeout(redis_timeout) -- 1 second timeout
+    db:set_timeout(mysql_timeout)
 
-    local ok, err = red:connect(redis_host, redis_port)
+    local ok, err, errcode, sqlstate = db:connect{
+        host = mysql_host,
+        port = mysql_port,
+        user = mysql_user,
+        password = mysql_password,
+        database = mysql_database
+    }
     if not ok then
+        ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err)
         return nil, err
     end
 
-    return red
+    return db
 end
 
--- Helper function to close Redis connection
-local function close_redis(red)
-    local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
+-- Helper function to close MySQL connection
+local function close_mysql(db)
+    local ok, err = db:set_keepalive(max_idle_timeout, pool_size)
     if not ok then
+        ngx.log(ngx.ERR, "Failed to set MySQL keepalive: ", err)
         return nil, err
     end
 
-    return true
-end
-
--- Function to acquire a lock with retries
-local function acquire_lock(red, token)
-    -- Unique lock key for each user
-    local lock_key = "rate_limit_lock:" .. token
-
-    for i = 1, max_retries do
-        local lock_value = ngx.now() * 1000 -- Current timestamp as lock value
-        local res, err = red:set(lock_key, lock_value, "NX", "PX", lock_timeout)
-        if res == "OK" then
-            -- ngx.log(ngx.ERR, "Lock acquired for token: ", token, " with value: ", lock_value, " on attempt: ", i)
-            return true, lock_value
-        elseif err then
-            return false
-        end
-        -- Delay before retrying
-
-        local delay = math.min((retry_delay / 1000) * (1.5 ^ i), 1) -- Exponential backoff and  cap max to 1 second
-        -- ngx.log(ngx.ERR, "Retrying to acquire lock for token: ", token, " on attempt: ", i, " with delay: ", delay)
-        ngx.sleep(delay) -- Convert milliseconds to seconds
-    end
-
-    return false -- Failed to acquire lock after max retries
-end
-
--- Function to release a lock
-local function release_lock(red, token, lock_value)
-    local lock_key = "rate_limit_lock:" .. token
-
-    local script = [[
-        if redis.call("get", KEYS[1]) == ARGV[1] then
-            return redis.call("del", KEYS[1])
-        else
-            return 0
-        end
-    ]]
-
-    local res, err = red:eval(script, 1, lock_key, lock_value)
-    if not res then
-        return nil, err
-    end
-
-    -- ngx.log(ngx.ERR, "Lock released for token: ", token, " with value: ", lock_value)
     return true
 end
 
@@ -90,68 +57,38 @@ local function get_request_token()
     if not token then
         return nil, "Token not provided"
     end
-
     return token
 end
 
--- Main rate limiting logic
-local function rate_limit(red, token)
-    -- Redis key for the sorted set queue
-    local queue_key = "rate_limit:" .. token .. ":queue"
+-- Main rate limiting logic using stored procedure
+local function rate_limit(db, token)
+    local query = string.format([[
+        CALL rate_limit(%s, %d, %f, %d, @result)
+    ]], ngx.quote_sql_str(token), bucket_capacity, refill_rate, requested_tokens)
 
-    -- Calculate bucket capacity based on max delay and leak rate
-    local bucket_capacity = math.floor(max_delay / 1000 * leak_rate)
-
-    -- Current timestamp in milliseconds
-    local now = ngx.now() * 1000
-
-    -- Get the head of the queue to check the last leak time, remove old entries and get the current queue length
-    red:multi()
-    red:zrevrange(queue_key, 0, 0, "WITHSCORES")
-    red:zremrangebyscore(queue_key, 0, now)
-    red:zcard(queue_key)
-    local results, err = red:exec()
-    if not results then
-        return nil, "Failed to execute Redis transaction: " .. err
+    local res, err, errcode, sqlstate = db:query(query)
+    if not res then
+        return nil, "Failed to execute stored procedure: " .. err
     end
 
-    local last_leak_time = now
-    if #results[1] > 0 then
-        last_leak_time = tonumber(results[1][2])
+    local res, err, errcode, sqlstate = db:query("SELECT @result")
+    if not res then
+        return nil, "Failed to get stored procedure result: " .. err
     end
 
-    local queue_length = tonumber(results[3]) or 0
+    local rate_limit_result = tonumber(res[1]["@result"])
 
-    if queue_length + 1 <= bucket_capacity then
-        local default_delay = math.floor(1 / leak_rate * 1000)
+    local cjson = require "cjson"
+    ngx.log(ngx.ERR, "Rate limit result: ", cjson.encode(res))
 
-        local delay = 0
-        local time_diff = now - last_leak_time
-        if time_diff ~= 0 then
-            delay = math.max(0, default_delay - time_diff)
-        end
-
-        local leak_time = now + delay
-        local ttl = math.floor(bucket_capacity / leak_rate * 2)
-
-        red:multi()
-        red:zadd(queue_key, leak_time, leak_time)
-        red:expire(queue_key, ttl)
-        local results, err = red:exec()
-        if not results then
-            return nil, "Failed to execute Redis transaction: " .. err
-        end
-
-        -- Convert delay to seconds
-        delay = math.floor(delay) / 1000
-
-        return true, "allowed", delay
+    if rate_limit_result == 1 then
+        return true, "allowed"
     else
         return true, "rejected"
     end
 end
 
--- Main function to initialize Redis and handle rate limiting
+-- Main function to handle rate limiting
 local function main()
     local token, err = get_request_token()
     if not token then
@@ -159,33 +96,17 @@ local function main()
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
-    local red, err = init_redis()
-    if not red then
-        ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
+    local db, err = init_mysql()
+    if not db then
+        ngx.log(ngx.ERR, "Failed to initialize MySQL: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local ok, lock_value = acquire_lock(red, token)
+    local pcall_status, rate_limit_result, message = pcall(rate_limit, db, token)
+
+    local ok, err = close_mysql(db)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to acquire lock")
-        close_redis(red)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
-
-    local now = ngx.now()
-
-    local pcall_status, rate_limit_result, message, delay = pcall(rate_limit, red, token)
-
-    local last = ngx.now()
-    ngx.log(ngx.ERR, "Time_taken: ", last - now)
-
-    if not release_lock(red, token, lock_value) then
-        ngx.log(ngx.ERR, "Failed to release lock")
-    end
-
-    local ok, err = close_redis(red)
-    if not ok then
-        ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
+        ngx.log(ngx.ERR, "Failed to close MySQL connection: ", err)
     end
 
     if not pcall_status then
@@ -202,7 +123,6 @@ local function main()
         ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     else
-        ngx.sleep(delay)
         ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
 end
