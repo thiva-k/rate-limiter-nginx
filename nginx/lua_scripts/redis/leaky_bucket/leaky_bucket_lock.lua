@@ -18,7 +18,11 @@ local retry_delay = 10 -- Delay between retries in milliseconds
 
 -- Helper function to initialize Re dis connection
 local function init_redis()
-    local red = redis:new()
+    local red, err = redis:new()
+    if not red then
+        return nil, err
+    end
+
     red:set_timeout(redis_timeout) -- 1 second timeout
 
     local ok, err = red:connect(redis_host, redis_port)

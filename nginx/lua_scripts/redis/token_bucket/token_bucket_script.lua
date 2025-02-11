@@ -14,7 +14,11 @@ local requested_tokens = 1 -- Number of tokens required per request
 
 -- Helper function to initialize Redis connection
 local function init_redis()
-    local red = redis:new()
+    local red, err = redis:new()
+    if not red then
+        return nil, err
+    end
+
     red:set_timeout(redis_timeout)
 
     local ok, err = red:connect(redis_host, redis_port)

@@ -1,69 +1,94 @@
+-- Create the rate limit table
 CREATE DATABASE IF NOT EXISTS rate_limit_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
--- Switch to the database
 USE rate_limit_db;
 
-CREATE TABLE rate_limit (
-    token VARCHAR(255) PRIMARY KEY,
-    tokens FLOAT NOT NULL,
-    last_access BIGINT NOT NULL
+CREATE TABLE user (
+    user_token VARCHAR(255) PRIMARY KEY
 );
 
+CREATE TABLE rate_limit (
+    user_token VARCHAR(255) PRIMARY KEY,
+    last_access_time BIGINT NOT NULL, -- Microsecond timestamp
+    tokens_available BIGINT NOT NULL,
+    FOREIGN KEY (user_token) REFERENCES user(user_token)
+);
 
 DELIMITER //
 
 CREATE PROCEDURE rate_limit(
-    IN token VARCHAR(255),
-    IN bucket_capacity INT,
-    IN refill_rate FLOAT,
-    IN requested_tokens INT,
-    OUT allowed INT
+    IN p_user_token VARCHAR(255), 
+    IN p_bucket_capacity INT, 
+    IN p_refill_rate DECIMAL(10,6), 
+    IN p_tokens_requested INT,
+    OUT p_result INT
 )
 BEGIN
-    DECLARE now BIGINT;
-    DECLARE elapsed BIGINT;
-    DECLARE add_tokens FLOAT;
-    DECLARE new_tokens FLOAT;
-    DECLARE last_tokens FLOAT DEFAULT bucket_capacity;
-    DECLARE last_access BIGINT;
+    DECLARE v_last_access_time BIGINT;
+    DECLARE v_tokens_available BIGINT;
+    DECLARE v_current_time BIGINT;
+    DECLARE v_elapsed_time BIGINT;
+    DECLARE v_tokens_to_add BIGINT;
+    DECLARE v_new_token_count BIGINT;
+    DECLARE v_final_token_count BIGINT;
 
-    -- Get current timestamp in milliseconds
-    SET now = UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) * 1000;
+    INSERT ignore INTO user (user_token) VALUES (p_user_token);
 
-    -- Fetch current token state
-    SELECT tokens, last_access INTO last_tokens, last_access
-    FROM rate_limit
-    WHERE token = token
-    FOR UPDATE;
+    -- Start transaction to handle concurrency
+    START TRANSACTION;
 
-    -- If no record exists, initialize it
-    IF last_access IS NULL THEN
-        SET last_tokens = bucket_capacity;
-        SET last_access = now;
+    procedure_block: BEGIN
+        -- Lock the user record
+        SELECT 1 INTO @lock_dummy FROM user WHERE user_token = p_user_token FOR UPDATE;
+        
+        SELECT last_access_time, tokens_available
+        INTO v_last_access_time, v_tokens_available
+        FROM rate_limit
+        WHERE user_token = p_user_token;
 
-        INSERT INTO rate_limit (token, tokens, last_access)
-        VALUES (token, bucket_capacity, now)
-        ON DUPLICATE KEY UPDATE tokens = VALUES(tokens), last_access = VALUES(last_access);
-    END IF;
+        -- Get the current timestamp in microseconds
+        SET v_current_time = UNIX_TIMESTAMP(NOW(6)) * 1000000;
 
-    -- Calculate elapsed time and refill tokens
-    SET elapsed = now - last_access;
-    SET add_tokens = elapsed * refill_rate / 1000;
-    SET new_tokens = LEAST(bucket_capacity, last_tokens + add_tokens);
+        -- If user record does not exist, initialize it
+        IF v_tokens_available IS NULL THEN
+            SET v_tokens_available = (p_bucket_capacity - p_tokens_requested) * 1000000;
+            SET v_last_access_time = v_current_time;
 
-    -- Check if request can be allowed
-    IF new_tokens >= requested_tokens THEN
-        SET new_tokens = new_tokens - requested_tokens;
-        SET allowed = 1;
+            INSERT INTO rate_limit (user_token, last_access_time, tokens_available)
+            VALUES (p_user_token, v_last_access_time, v_tokens_available)
+            ON DUPLICATE KEY UPDATE last_access_time = v_last_access_time, tokens_available = v_tokens_available;
 
-        -- Update token count and last access time
-        UPDATE rate_limit
-        SET tokens = new_tokens, last_access = now
-        WHERE token = token;
-    ELSE
-        SET allowed = 0;
-    END IF;
-END;
-//
+            SET p_result = 1;
+            LEAVE procedure_block;
+        END IF;
+
+        -- Compute elapsed time in microseconds
+        SET v_elapsed_time = GREATEST(0, v_current_time - v_last_access_time);
+
+        -- Compute how many tokens to add based on elapsed time
+        SET v_tokens_to_add = FLOOR(v_elapsed_time * p_refill_rate);
+
+        -- Update token count but do not exceed capacity
+        SET v_new_token_count = LEAST(p_bucket_capacity * 1000000, v_tokens_available + v_tokens_to_add);
+
+        -- Check if enough tokens are available for the request
+        IF v_new_token_count >= p_tokens_requested * 1000000 THEN
+            SET v_final_token_count = v_new_token_count - (p_tokens_requested * 1000000);
+
+            -- Update token count and last access time
+            UPDATE rate_limit 
+            SET tokens_available = v_final_token_count,
+                last_access_time = v_current_time
+            WHERE user_token = p_user_token;
+
+            SET p_result = 1;
+        ELSE
+            -- Not enough tokens
+            SET p_result = 0;
+        END IF;
+    END procedure_block;
+
+    COMMIT;
+END; //
 
 DELIMITER ;
