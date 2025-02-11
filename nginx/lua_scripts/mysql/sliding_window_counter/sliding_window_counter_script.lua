@@ -1,124 +1,123 @@
 local mysql = require "resty.mysql"
 
 -- MySQL connection settings
-local db_config = {
-    host = "mysql",
-    port = 3306,
-    database = "rate_limit_db",
-    user = "root",
-    password = "root",
-    charset = "utf8",
-    max_packet_size = 1024 * 1024
-}
+local mysql_host = "mysql"
+local mysql_port = 3306
+local mysql_user = "root"
+local mysql_password = "root"
+local mysql_database = "rate_limit_db"
+local mysql_timeout = 1000 -- 1 second timeout
+local max_idle_timeout = 10000 -- 10 seconds
+local pool_size = 50 -- Maximum number of idle connections in the pool
 
-local window_size = 60 -- Total window size in seconds
-local request_limit = 10 -- Max allowed requests
-local sub_window_count = 12 -- Number of subwindows
+-- Rate limiting parameters
+local rate_limit = 5
+local window_size = 60 -- 60-second window
+local sub_window_size = 3 -- 10-second sub-window
 
--- Connect to MySQL
-local function connect_to_mysql()
+-- Helper function to initialize MySQL connection
+local function init_mysql()
     local db, err = mysql:new()
     if not db then
-        ngx.log(ngx.ERR, "Failed to create MySQL object: ", err)
-        return nil, err
+        return nil, "Failed to instantiate MySQL: " .. (err or "unknown error")
     end
 
-    db:set_timeout(1000) -- 1 second timeout
+    db:set_timeout(mysql_timeout)
 
-    local ok, err, errno, sqlstate = db:connect(db_config)
+    local ok, err, errno, sqlstate = db:connect{
+        host = mysql_host,
+        port = mysql_port,
+        user = mysql_user,
+        password = mysql_password,
+        database = mysql_database
+    }
+
     if not ok then
-        ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err, " errno: ", errno, " sqlstate: ", sqlstate)
-        return nil, err
+        return nil, "Failed to connect to MySQL: " .. (err or "unknown error")
     end
 
     return db
 end
 
--- Close MySQL connection
-local function close_mysql_connection(db)
-    if not db then
-        return
-    end
-    local ok, err = db:set_keepalive(10000, 100)
+-- Helper function to close MySQL connection
+local function close_mysql(db)
+    local ok, err = db:set_keepalive(max_idle_timeout, pool_size)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to set MySQL connection keepalive: ", err)
-        db:close() -- Close the connection if keepalive fails
+        return nil, "Failed to set keepalive for MySQL connection: " .. (err or "unknown error")
+    end
+    return true
+end
+
+-- Helper function to get URL token
+local function get_token()
+    local token = ngx.var.arg_token
+    if not token then
+        return nil, "Token not provided"
+    end
+    return token
+end
+
+-- Main rate limiting logic
+local function check_rate_limit(db, token)
+    -- Call the procedure and capture the OUT parameter
+    local query = string.format(
+        "CALL check_sliding_window_counter_limit('%s', %d, %d, %d, @is_limited);",
+        token, window_size, rate_limit, sub_window_size
+    )
+    
+    local res, err = db:query(query)
+    if not res then
+        return ngx.HTTP_INTERNAL_SERVER_ERROR, "Failed to execute procedure: " .. (err or "unknown error")
+    end
+
+    -- Query the OUT parameter
+    res, err = db:query("SELECT @is_limited AS is_limited;")
+    if not res then
+        return ngx.HTTP_INTERNAL_SERVER_ERROR, "Failed to fetch OUT parameter: " .. (err or "unknown error")
+    end
+
+    local is_limited = tonumber(res[1].is_limited)
+    if is_limited == 1 then
+        return ngx.HTTP_TOO_MANY_REQUESTS
+    else
+        return ngx.HTTP_OK
     end
 end
 
--- Main rate-limiting logic
-local function rate_limit()
-    -- Get the token from the request
-    local token = ngx.var.arg_token
+-- Main function to initialize MySQL and handle rate limiting
+local function main()
+    local token, err = get_token()
     if not token then
-        ngx.log(ngx.ERR, "Token not provided")
+        ngx.log(ngx.ERR, "Failed to get token: ", err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
-    ngx.log(ngx.DEBUG, "Token received: ", token)
-
-    -- Calculate the current subwindow
-    local now = ngx.time()
-    local sub_window_size = window_size / sub_window_count
-    local current_subwindow = math.floor(now / sub_window_size) * sub_window_size
-
-    ngx.log(ngx.DEBUG, "Current subwindow calculated: ", current_subwindow)
-
-    -- Connect to MySQL
-    local db, err = connect_to_mysql()
+    local db, err = init_mysql()
     if not db then
-        ngx.log(ngx.ERR, "Failed to connect to MySQL: ", err)
+        ngx.log(ngx.ERR, "Failed to initialize MySQL: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Call the stored procedure
-    local query = string.format(
-        "CALL rate_limit_check(%s, %d, %d, %d, %d, @result); SELECT @result AS result;",
-        ngx.quote_sql_str(token), current_subwindow, window_size, sub_window_count, request_limit
-    )
+    local status, err
+    local success = pcall(function()
+        status, err = check_rate_limit(db, token)
+    end)
 
-    ngx.log(ngx.DEBUG, "Executing query: ", query)
-
-    -- Execute the query
-    local res, err, errno, sqlstate = db:query(query)
-    if not res then
-        ngx.log(ngx.ERR, "Failed to execute rate limit check: ", err, " errno: ", errno, " sqlstate: ", sqlstate)
-        close_mysql_connection(db)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    local ok, close_err = close_mysql(db)
+    if not ok then
+        ngx.log(ngx.ERR, "Failed to close MySQL connection: ", close_err)
     end
 
-    ngx.log(ngx.DEBUG, "Query executed successfully")
-
-    -- Advance the cursor to the second result set (for SELECT @result AS result)
-    local result_res, err = db:read_result()
-    if not result_res then
-        ngx.log(ngx.ERR, "Failed to fetch @result: ", err)
-        close_mysql_connection(db)
+    if not success then
+        ngx.log(ngx.ERR, status)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
-
-    -- Extract the result from the fetched data
-    local result = result_res[1] and result_res[1].result
-    if not result then
-        ngx.log(ngx.ERR, "No result found for @result; possible stored procedure issue")
-        close_mysql_connection(db)
-        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    end
-
-    ngx.log(ngx.DEBUG, "Rate limit check result: ", result)
-
-    -- Check the result and act accordingly
-    if tonumber(result) == 1 then
-        ngx.log(ngx.DEBUG, "Request allowed for token: ", token)
-        ngx.say("Request allowed")
-        close_mysql_connection(db)
-        ngx.exit(ngx.HTTP_OK)
-    else
-        ngx.log(ngx.ERR, "Rate limit exceeded for token: ", token)
-        close_mysql_connection(db)
-        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+    elseif err then
+        ngx.log(ngx.ERR, err)
+        ngx.exit(status)
+    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
+        ngx.exit(status)
     end
 end
 
--- Execute the rate limiter
-rate_limit()
+-- Run the main function
+main()

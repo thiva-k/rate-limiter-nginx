@@ -46,7 +46,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: rate_limit_db
     volumes:
-      - ./init/init_fixed_window_counter.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init/init_sliding_window_counter.sql:/docker-entrypoint-initdb.d/init.sql
 
   registry:
     image: descartesresearch/teastore-registry
