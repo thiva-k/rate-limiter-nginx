@@ -11,7 +11,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 50 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
-local rate_limit = 5
+local rate_limit = 20
 local window_size = 60 -- 60-second window
 
 -- Helper function to initialize MySQL connection
@@ -40,11 +40,7 @@ end
 
 -- Helper function to close MySQL connection
 local function close_mysql(db)
-    -- Consume any remaining result sets
-    local res, err = db:read_result()
-    while err == "again" do
-        res, err = db:read_result()
-    end
+    
     -- Set the connection to keepalive or close it
     local ok, err = db:set_keepalive(max_idle_timeout, pool_size)
     if not ok then
@@ -65,12 +61,18 @@ end
 -- Main rate limiting logic
 local function check_rate_limit(db, token)
     local query = string.format(
-        "CALL check_rate_limit('%s', %d, %d);",
+        "CALL check_rate_limit('%s', %d, %d, @is_limited);",
         token, window_size, rate_limit
     )
     local res, err = db:query(query)
     if not res then
         return ngx.HTTP_INTERNAL_SERVER_ERROR, "Failed to execute procedure or fetch result: " .. (err or "unknown error")
+    end
+
+    -- Query the OUT parameter
+    res, err = db:query("SELECT @is_limited AS is_limited;")
+    if not res then
+        return ngx.HTTP_INTERNAL_SERVER_ERROR, "Failed to fetch OUT parameter: " .. (err or "unknown error")
     end
 
     local is_limited = tonumber(res[1].is_limited)
