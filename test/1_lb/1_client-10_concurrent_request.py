@@ -40,5 +40,5 @@ def test_rate_limiter_concurrent_same_user(num_requests):
             future.result()
 
 if __name__ == "__main__":
-    num_requests = 10  # Number of concurrent requests
+    num_requests = 5  # Number of concurrent requests
     test_rate_limiter_concurrent_same_user(num_requests)
