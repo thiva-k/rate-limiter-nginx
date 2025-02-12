@@ -162,6 +162,7 @@ local function rate_limit(red, token)
         return true, "rejected"
     else
         -- Nginx sleep supports second with milliseconds precision
+        -- TODO: simplify using math.ceil
         local delay = math.floor(result / 1000 + 0.5) / 1000 -- Round to 3 decimal places
         return true, "allowed", delay
     end
@@ -181,7 +182,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message, delay, queue_length_key = pcall(rate_limit, red, token)
+    local pcall_status, rate_limit_result, message, delay = pcall(rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then

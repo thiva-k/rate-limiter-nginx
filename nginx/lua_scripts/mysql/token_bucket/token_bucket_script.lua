@@ -73,9 +73,9 @@ local function rate_limit(db, token)
         return nil, "Failed to get stored procedure result: " .. err
     end
 
-    local rate_limit_result = tonumber(res[1]["@result"])
+    local result = tonumber(res[1]["@result"])
 
-    if rate_limit_result == 1 then
+    if result == 1 then
         return true, "allowed"
     else
         return true, "rejected"

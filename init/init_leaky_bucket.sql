@@ -1,101 +1,84 @@
--- Create the database
 CREATE DATABASE IF NOT EXISTS rate_limit_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
--- Switch to the database
 USE rate_limit_db;
 
--- Create the leaky bucket table
-CREATE TABLE IF NOT EXISTS rate_limit (
-    token VARCHAR(255) PRIMARY KEY,   -- The token used for rate limiting
-    tokens INT DEFAULT 0,            -- Current number of tokens in the bucket
-    last_access DOUBLE DEFAULT 0    -- The last time the bucket was updated (UNIX timestamp in seconds)
+CREATE TABLE user (
+    user_token VARCHAR(255) PRIMARY KEY
 );
 
--- Optional: Debug log table for tracking actions
-CREATE TABLE IF NOT EXISTS debug_log (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    message TEXT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE leaky_bucket (
+    user_token VARCHAR(255),
+    leak_time BIGINT NOT NULL,  -- Timestamp in microseconds
+    PRIMARY KEY (user_token, leak_time),
+    FOREIGN KEY (user_token) REFERENCES user(user_token)
 );
 
-
--- Drop the procedure if it exists
-DROP PROCEDURE IF EXISTS LeakyBucketRateLimit;
-
--- Create the procedure
 DELIMITER //
 
-CREATE PROCEDURE LeakyBucketRateLimit(
-    IN p_token VARCHAR(255),         -- Input: The token
-    IN p_bucket_capacity INT,        -- Input: Maximum tokens in the bucket
-    IN p_leak_rate INT,              -- Input: Tokens leaked per second
-    IN p_requested_tokens INT,       -- Input: Tokens required per request
-    OUT p_status VARCHAR(20)         -- Output: Result status (ALLOWED/TOO_MANY_REQUESTS)
+CREATE PROCEDURE rate_limit(
+    IN p_user_token VARCHAR(255), 
+    IN p_bucket_capacity INT, 
+    IN p_leak_rate DECIMAL(10,6),
+    OUT p_delay BIGINT
 )
 BEGIN
-    DECLARE v_current_time BIGINT;     -- Current time in milliseconds
-    DECLARE v_elapsed_time BIGINT;     -- Elapsed time since last access
-    DECLARE v_leaked_tokens INT;       -- Tokens leaked since last access
-    DECLARE v_new_token_level INT;     -- Updated token level
-    DECLARE v_last_access BIGINT;      -- Last access timestamp
-    DECLARE v_tokens INT;              -- Current tokens in the bucket
-    DECLARE v_internal_status VARCHAR(20); -- Internal status variable
+    DECLARE v_current_time BIGINT;
+    DECLARE v_last_leak_time BIGINT;
+    DECLARE v_queue_length INT;
+    DECLARE v_default_delay BIGINT;
+    DECLARE v_time_diff BIGINT;
+    DECLARE v_delay BIGINT DEFAULT 0;
 
-    -- Get the current timestamp in milliseconds
-    SET v_current_time = UNIX_TIMESTAMP() * 1000;
+    -- Ensure user exists
+    INSERT IGNORE INTO user (user_token) VALUES (p_user_token);
 
-    -- Fetch the current state of the token
-    SELECT tokens, last_access
-    INTO v_tokens, v_last_access
-    FROM rate_limit
-    WHERE token = p_token
-    FOR UPDATE;
+    -- Start transaction to handle concurrency
+    START TRANSACTION;
 
-    -- If no record exists for the token, initialize it
-    IF v_tokens IS NULL THEN
-        SET v_tokens = 0;
-        SET v_last_access = v_current_time;
+    -- Lock the user record for concurrency control
+    SELECT 1 INTO @lock_dummy FROM user WHERE user_token = p_user_token FOR UPDATE;
 
-        INSERT INTO rate_limit (token, tokens, last_access)
-        VALUES (p_token, v_tokens, v_last_access);
-    END IF;
+    -- Get the current timestamp in microseconds
+    SET v_current_time = UNIX_TIMESTAMP(NOW(6)) * 1000000;
 
-    -- Calculate the elapsed time since the last access
-    SET v_elapsed_time = v_current_time - v_last_access;
+    -- Get the most recent request timestamp
+    SELECT COALESCE(MAX(leak_time), v_current_time) 
+    INTO v_last_leak_time
+    FROM leaky_bucket
+    WHERE user_token = p_user_token;
 
-    -- Calculate the number of leaked tokens
-    SET v_leaked_tokens = FLOOR(v_elapsed_time * p_leak_rate / 1000);
+    -- Remove leaked requests from the queue
+    DELETE FROM leaky_bucket 
+    WHERE user_token = p_user_token 
+    AND leak_time < v_current_time;
 
-    -- Update the token level by applying the leaked tokens
-    SET v_new_token_level = GREATEST(0, v_tokens - v_leaked_tokens);
+    -- Get the updated queue length
+    SELECT COUNT(*) INTO v_queue_length 
+    FROM leaky_bucket 
+    WHERE user_token = p_user_token;
 
-    -- Determine if the request can be allowed
-    IF v_new_token_level + p_requested_tokens <= p_bucket_capacity THEN
-        -- Allow the request and increment the token level
-        SET v_new_token_level = v_new_token_level + p_requested_tokens;
-        SET v_internal_status = 'ALLOWED';
+    -- Check if the queue is within bucket capacity
+    IF v_queue_length < p_bucket_capacity THEN
+        -- Calculate the default leak delay in microseconds
+        SET v_default_delay = FLOOR(1 / p_leak_rate * 1000000);
+        
+        -- Compute actual delay based on last request
+        SET v_time_diff = v_current_time - v_last_leak_time;
+        IF v_time_diff <> 0 THEN
+            SET v_delay = GREATEST(0, v_default_delay - v_time_diff);
+        END IF;
+
+        -- Insert new request into the queue
+        INSERT INTO leaky_bucket (user_token, leak_time)
+        VALUES (p_user_token, v_current_time + v_delay);
+
+        SET p_delay = v_delay;
     ELSE
-        -- Deny the request
-        SET v_internal_status = 'TOO_MANY_REQUESTS';
+        -- Request rejected due to queue capacity limit
+        SET p_delay = -1;
     END IF;
 
-    -- Update the rate limit record
-    UPDATE rate_limit
-    SET tokens = v_new_token_level, last_access = v_current_time
-    WHERE token = p_token;
-
-    -- Assign the internal status to the OUT parameter
-    SET p_status = v_internal_status;
-
-    -- Log the operation for debugging (optional)
-    INSERT INTO debug_log (message)
-    VALUES (CONCAT(
-        'Token=', p_token,
-        ', Status=', p_status,
-        ', Tokens=', v_new_token_level,
-        ', LastAccess=', v_current_time
-    ));
-END;
-//
+    COMMIT;
+END; //
 
 DELIMITER ;
