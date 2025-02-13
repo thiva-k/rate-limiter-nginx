@@ -21,7 +21,7 @@ def test_rate_limiter_concurrent_same_user(num_requests):
         futures = [executor.submit(send_request, request_id, token) for request_id in range(num_requests)]
         for future in futures:
             future.result()
-        time.sleep(0.1)  # Short delay between requests
+        time.sleep(1)  # Short delay between requests
 
         # Send a request that should be rate-limited
         print("Sending requests that should be rate-limited:")
@@ -40,5 +40,5 @@ def test_rate_limiter_concurrent_same_user(num_requests):
             future.result()
 
 if __name__ == "__main__":
-    num_requests = 5  # Number of concurrent requests
+    num_requests = 10  # Number of concurrent requests
     test_rate_limiter_concurrent_same_user(num_requests)

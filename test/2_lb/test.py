@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 # Define the NGINX endpoint URLs
 urls = ["http://localhost:8090/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1", 
-        "http://localhost:8090/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1"]
+        "http://localhost:8091/tools.descartes.teastore.persistence/rest/categories?start=-1&max=-1"]
 
 # Function to send a request and print the response
 def send_request(client_id, token, url, latencies):
@@ -18,66 +18,43 @@ def send_request(client_id, token, url, latencies):
     return response.status_code
 
 # Test the rate-limiting algorithm with multiple requests from multiple users
-def test_rate_limiter_concurrent(num_requests, num_users):
+def test_rate_limiter_concurrent(num_requests_per_user, num_users):
     tokens = [f"token_{i}" for i in range(num_users)]  # Generate unique tokens for each user
     latencies = []
+    staus_codes = []
+    with ThreadPoolExecutor(max_workers=num_requests_per_user * num_users) as executor:
+        # Send requests concurrently for each user
+        print("Sending requests concurrently for each user:")
+        futures = []
+        for user_id in range(num_users):
+            for request_id in range(num_requests_per_user):
+                futures.append(executor.submit(send_request, user_id, tokens[user_id], urls[user_id % 2], latencies))
+        
+        for future in futures:
+            staus_codes.append(future.result())
+            future.result()
 
-    with ThreadPoolExecutor(max_workers=num_requests) as executor:
-        # Send initial requests to deplete the tokens
-        print("Sending initial requests to deplete tokens:")
-        for _ in range(num_users):
-            futures = [
-                executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) 
-                    for request_id in range(num_requests)
-                ]
-            for future in futures:
-                future.result()
 
-        # # Send a request that should be rate-limited
-        # print("Sending requests that should be rate-limited:")
-        # for _ in range(num_users):
-        #     futures = [
-        #         executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) 
-        #         for request_id in range(num_requests)]
-        #     for future in futures:
-        #         future.result()
-
-        # # Wait for tokens to refill
-        # print("Waiting for tokens to refill...")
-        # time.sleep(10)  # Wait for 10 seconds to allow tokens to refill
-
-        # # Send a request that should be allowed
-        # print("Sending requests that should be allowed:")
-        # for _ in range(num_users):
-        #     futures = [
-        #         executor.submit(send_request, request_id, tokens[request_id % num_users], urls[request_id % 2], latencies) 
-        #         for request_id in range(num_requests)]
-        #     for future in futures:
-        #         future.result()
-
-    return latencies
+    return latencies, staus_codes
 
 if __name__ == "__main__":
-    num_requests = 5 # Number of concurrent requests
-    num_runs = 1  # Number of times to run the test
-    num_users = 1  # Number of users
+    num_requests_per_user = 3  # Number of requests per user
+    num_users = 350 # Number of users
 
-    all_latencies = []
-
-    for run in range(num_runs):
-        print(f"Running test iteration {run + 1}/{num_runs}")
-        latencies = test_rate_limiter_concurrent(num_requests, num_users)
-        all_latencies.extend(latencies)
-        
-        # Wait for tokens to replenish before the next iteration
-        print("Waiting for tokens to replenish before the next iteration...")
-        time.sleep(10)
-
+    print(f"Running test with {num_users} users, each sending {num_requests_per_user} requests concurrently.")
+    latencies, staus_codes = test_rate_limiter_concurrent(num_requests_per_user, num_users)
+    
     # Calculate and print latency and throughput
-    total_requests = len(all_latencies)
-    total_time = sum(all_latencies)
+    total_requests = len(latencies)
+    total_time = sum(latencies)
     average_latency = total_time / total_requests if total_requests > 0 else 0
-    throughput = total_requests / (num_runs * 10 + total_time) if total_time > 0 else 0
+    throughput = total_requests / total_time if total_time > 0 else 0
+    error_500 = staus_codes.count(500)
+    error_429 = staus_codes.count(429)
+    success = staus_codes.count(200)
+    print(f"\nNumber of 500 errors: {error_500}")
+    print(f"Number of 429 errors: {error_429}")
+    print(f"Number of successful requests: {success}")
 
     print(f"\nTotal requests: {total_requests}")
     print(f"Total time: {total_time:.4f} seconds")
