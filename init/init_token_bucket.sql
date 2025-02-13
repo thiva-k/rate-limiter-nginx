@@ -9,8 +9,7 @@ CREATE TABLE user (
 CREATE TABLE token_bucket (
     user_token VARCHAR(255) PRIMARY KEY,
     last_access_time BIGINT NOT NULL, -- Microsecond timestamp
-    tokens_available BIGINT NOT NULL,
-    FOREIGN KEY (user_token) REFERENCES user(user_token)
+    tokens_available BIGINT NOT NULL
 );
 
 DELIMITER //

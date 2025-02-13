@@ -8,9 +8,8 @@ CREATE TABLE user (
 
 CREATE TABLE leaky_bucket (
     user_token VARCHAR(255),
-    leak_time BIGINT NOT NULL,  -- Timestamp in microseconds
-    PRIMARY KEY (user_token, leak_time),
-    FOREIGN KEY (user_token) REFERENCES user(user_token)
+    leak_time BIGINT NOT NULL,
+    PRIMARY KEY (user_token, leak_time)
 );
 
 DELIMITER //
@@ -55,7 +54,8 @@ BEGIN
     -- Get the updated queue length
     SELECT COUNT(*) INTO v_queue_length 
     FROM leaky_bucket 
-    WHERE user_token = p_user_token;
+    WHERE user_token = p_user_token
+    AND leak_time >= v_current_time;
 
     -- Check if the queue is within bucket capacity
     IF v_queue_length < p_bucket_capacity THEN
