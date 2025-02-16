@@ -1,7 +1,7 @@
 @echo off
 REM Set JMeter parameters
-set LB_1_HOSTNAME=35.197.193.204
-set LB_2_HOSTNAME=35.184.106.1
+set LB_1_HOSTNAME=34.89.38.111
+set LB_2_HOSTNAME=35.223.187.66
 set LB_1_PORT=8090
 set LB_2_PORT=8091
 
@@ -16,6 +16,7 @@ set GROUP_3=5
 set GROUP_1_REQUEST_RATE=30
 set GROUP_2_REQUEST_RATE=90
 set GROUP_3_REQUEST_RATE=120
+set GROUP_3_REQUEST_RATE_PER_SEC=2
 
 set TEST_PLAN=teastore_performance.jmx
 set TEST_FOLDER=performance
@@ -40,6 +41,7 @@ if "%ALGO_OPTION%"=="1" (
     set ALGO_NAME=token_bucket
 ) else if "%ALGO_OPTION%"=="5" (
     set ALGO_NAME=leaky_bucket
+    set TEST_PLAN=teastore_performance_leaky_bucket.jmx
 ) else (
     echo Invalid algorithm option. Please enter a number between 1 and 5.
     pause
@@ -107,5 +109,6 @@ REM Run JMeter test
 -Jgroup_1_request_rate=%GROUP_1_REQUEST_RATE% ^
 -Jgroup_2_request_rate=%GROUP_2_REQUEST_RATE% ^
 -Jgroup_3_request_rate=%GROUP_3_REQUEST_RATE% ^
+-Jgroup_3_request_rate_per_sec=%GROUP_3_REQUEST_RATE_PER_SEC% ^
 -Jramp_up=%RAMP_UP% ^
 -Jlog_file=%LOG_FILE%
