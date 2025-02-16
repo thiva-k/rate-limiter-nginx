@@ -41,7 +41,7 @@ services:
     image: mysql:8.4
     ports:
       - "3307:3306"
-    command: --mysql-native-password=ON
+    command: --mysql-native-password=ON --transaction-isolation=READ-COMMITTED
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: rate_limit_db

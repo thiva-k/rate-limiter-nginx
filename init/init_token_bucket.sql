@@ -1,4 +1,3 @@
--- Create the rate limit table
 CREATE DATABASE IF NOT EXISTS rate_limit_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
 USE rate_limit_db;
@@ -7,11 +6,10 @@ CREATE TABLE user (
     user_token VARCHAR(255) PRIMARY KEY
 );
 
-CREATE TABLE rate_limit (
+CREATE TABLE token_bucket (
     user_token VARCHAR(255) PRIMARY KEY,
     last_access_time BIGINT NOT NULL, -- Microsecond timestamp
-    tokens_available BIGINT NOT NULL,
-    FOREIGN KEY (user_token) REFERENCES user(user_token)
+    tokens_available BIGINT NOT NULL
 );
 
 DELIMITER //
@@ -43,7 +41,7 @@ BEGIN
         
         SELECT last_access_time, tokens_available
         INTO v_last_access_time, v_tokens_available
-        FROM rate_limit
+        FROM token_bucket
         WHERE user_token = p_user_token;
 
         -- Get the current timestamp in microseconds
@@ -54,7 +52,7 @@ BEGIN
             SET v_tokens_available = (p_bucket_capacity - p_tokens_requested) * 1000000;
             SET v_last_access_time = v_current_time;
 
-            INSERT INTO rate_limit (user_token, last_access_time, tokens_available)
+            INSERT INTO token_bucket (user_token, last_access_time, tokens_available)
             VALUES (p_user_token, v_last_access_time, v_tokens_available)
             ON DUPLICATE KEY UPDATE last_access_time = v_last_access_time, tokens_available = v_tokens_available;
 
@@ -76,7 +74,7 @@ BEGIN
             SET v_final_token_count = v_new_token_count - (p_tokens_requested * 1000000);
 
             -- Update token count and last access time
-            UPDATE rate_limit 
+            UPDATE token_bucket 
             SET tokens_available = v_final_token_count,
                 last_access_time = v_current_time
             WHERE user_token = p_user_token;
