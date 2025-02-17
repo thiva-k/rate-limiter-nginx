@@ -47,7 +47,7 @@ BEGIN
     SELECT 1 INTO @lock_dummy FROM user WHERE user_token = p_input_token FOR UPDATE;
 
     -- Count the requests in the current sub-window
-    SELECT IFNULL(count, 0) INTO v_count 
+    SELECT COALESCE(sum(count), 0) INTO v_count 
     FROM sliding_window_log 
     WHERE token = p_input_token 
     AND window_start = v_current_window_key;
@@ -59,7 +59,7 @@ BEGIN
         SET v_previous_window_key = v_current_window_key - (v_iterator * v_sub_window_size);
 
         -- Get the request count for the previous sub-window
-        SELECT IFNULL(count, 0) INTO v_count 
+        SELECT COALESCE(sum(count), 0) INTO v_count 
         FROM sliding_window_log 
         WHERE token = p_input_token 
         AND window_start = v_previous_window_key;
