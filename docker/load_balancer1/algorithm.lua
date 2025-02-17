@@ -9,7 +9,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Leaky bucket parameters
 local max_delay = 3000 -- 3 second,
-local leak_rate = 1 -- Requests leaked per second
+local leak_rate = 5 / 3 -- Requests leaked per second
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -156,7 +156,7 @@ local function rate_limit(red, token)
     if not result then
         return nil, "Failed to run rate limiting script" .. err
     end
-
+    ngx.log(ngx.ERR, "Result: ", math.floor(result / 1000 + 0.5) / 1000)
     -- Handle the result
     if result == -1 then
         return true, "rejected"
