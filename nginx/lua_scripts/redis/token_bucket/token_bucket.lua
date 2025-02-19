@@ -75,9 +75,6 @@ local function rate_limit(red, token)
     -- Calculate TTL for the Redis keys in seconds
     local ttl = math.floor(bucket_capacity / refill_rate * 2)
 
-    -- Calculate next rest time in unix timestamp with milliseconds
-    local next_reset_time = math.ceil(last_access_time + (1 / refill_rate) * 1000)
-
     -- Check if there are enough tokens for the request
     if new_token_count >= (requested_tokens * 1000) then
         -- Deduct tokens and update Redis state
@@ -91,10 +88,10 @@ local function rate_limit(red, token)
             return nil, "Failed to execute Redis pipeline: " .. err
         end
 
-        return true, "allowed", new_token_count / 1000, next_reset_time
+        return true, "allowed"
     else
         -- Not enough tokens, rate limit the request
-        return true, "rejected", new_token_count / 1000, next_reset_time
+        return true, "rejected"
     end
 end
 
@@ -129,16 +126,12 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    ngx.header["X-RateLimit-Remaining"] = remaining_tokens
-    ngx.header["X-RateLimit-Limit"] = bucket_capacity
-    ngx.header["X-RateLimit-Reset"] = next_reset_time
-
     if message == "rejected" then
         ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
-    else
-        ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
+
+    ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
 end
 
 -- Run the main function
