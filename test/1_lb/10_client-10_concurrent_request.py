@@ -25,13 +25,13 @@ def test_rate_limiter_concurrent(num_clients):
     tokens = [f"token_{i}" for i in range(num_clients)]  # Generate unique tokens for each client
 
     with ThreadPoolExecutor(max_workers=num_clients) as executor:
-        # Send initial requests to deplete the tokens
+        # Send initial requests to dep`lete the tokens
         print("Sending initial requests to deplete tokens:")
-        for _ in range(245):  # Send 10 requests per client
+        for _ in range(192):  # Send 10 requests per client
             futures = [executor.submit(send_request, client_id, tokens[client_id]) for client_id in range(num_clients)]
             for future in futures:
                 future.result()
-            time.sleep(0.5)  # Short delay between requests
+            time.sleep(0.3)  # Short delay between requests
         
         print(f"200: {count_200}")
         print(f"429: {count_429}")

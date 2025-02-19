@@ -38,8 +38,8 @@ def test_rate_limiter_concurrent(num_requests_per_user, num_users):
     return latencies, staus_codes
 
 if __name__ == "__main__":
-    num_requests_per_user = 2  # Number of requests per user
-    num_users = 500 # Number of users
+    num_requests_per_user = 10  # Number of requests per user
+    num_users = 1 # Number of users
 
     print(f"Running test with {num_users} users, each sending {num_requests_per_user} requests concurrently.")
     latencies, staus_codes = test_rate_limiter_concurrent(num_requests_per_user, num_users)

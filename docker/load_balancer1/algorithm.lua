@@ -7,9 +7,10 @@ local redis_timeout = 1000 -- 1 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
--- Leaky bucket parameters
-local max_delay = 3000 -- 3 second,
-local leak_rate = 5 / 3 -- Requests leaked per second
+-- GCRA parameters
+local period = 60 -- Time window of 1 minute
+local rate = 100 -- 100 requests per minute
+local burst = 0 -- Allow burst of up to 2 requests
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -48,46 +49,41 @@ local function get_request_token()
     return token
 end
 
--- Function to load the script into Redis if not already cached
+-- Load the Lua script into Redis if not already cached
 local function load_script_to_redis(red, reload)
-    -- Lua script to implement leaky bucket algorithm
+    -- Function to get the rate limit Lua script
     local rate_limit_script = [[
-        local queue_key = KEYS[1]
-        local bucket_capacity = tonumber(ARGV[1])
-        local leak_rate = tonumber(ARGV[2])
-        local ttl = tonumber(ARGV[3])
+        local tat_key = KEYS[1]
+        local emission_interval = tonumber(ARGV[1])
+        local delay_tolerance = tonumber(ARGV[2])
 
+        -- Get the current time from Redis
         local redis_time = redis.call("TIME")
-        local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
+        local current_time = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2])
 
-        -- Get the head of the queue to check the last leak time
-        local results = redis.call("zrevrange", queue_key, 0, 0, "WITHSCORES")
-        local last_leak_time = now
-        if #results > 0 then
-            last_leak_time = tonumber(results[2])
-        end
+        -- Retrieve the last TAT
+        local last_tat = redis.call("GET", tat_key)
+        last_tat = tonumber(last_tat) or current_time
 
-        -- remove old entries and get the current queue length
-        redis.call("zremrangebyscore", queue_key, 0, now)
-        local queue_length = tonumber(redis.call("zcard", queue_key)) or 0
+        -- Calculate the allowed arrival time
+        local allow_at = last_tat - delay_tolerance
 
-        if queue_length + 1 <= bucket_capacity then
-            local default_delay = math.floor(1 / leak_rate * 1000000)
+        -- Check if the request is allowed
+        if current_time >= allow_at then
+            -- Request allowed; calculate the new TAT
+            local new_tat = math.max(current_time, last_tat) + emission_interval
+            
+            -- Calculate TTL based on the new TAT and the current time in seconds
+            local ttl = math.ceil((new_tat - current_time + delay_tolerance) / 1000000)
 
-            local delay = 0
-            local time_diff = now - last_leak_time
-            if time_diff ~= 0 then
-                delay = math.max(0, default_delay - time_diff)
-            end
+            -- Store the updated TAT with calculated TTL
+            redis.call("SET", tat_key, new_tat, "EX", ttl)
 
-            local leak_time = now + delay
-
-            redis.call("zadd", queue_key, leak_time, leak_time)
-            redis.call("expire", queue_key, ttl)
-
-            return delay
+            -- Request allowed
+            return 1
         else
-            return -1
+            -- Request denied
+            return -1  
         end
     ]]
 
@@ -113,58 +109,51 @@ local function load_script_to_redis(red, reload)
     return sha
 end
 
--- Execute the leaky bucket logic atomically
-local function execute_rate_limit_script(red, queue_key, bucket_capacity, ttl)
+-- Execute the GCRA logic atomically
+local function execute_rate_limit_script(red, tat_key, emission_interval, delay_tolerance)
     local sha, err = load_script_to_redis(red, false)
     if not sha then
         return nil, "Failed to load script: " .. err
     end
 
-    local result, err = red:evalsha(sha, 1, queue_key, bucket_capacity, leak_rate, ttl)
+    local results, err = red:evalsha(sha, 1, tat_key, emission_interval, delay_tolerance)
 
-    if err then
-        if err:find("NOSCRIPT", 1, true) then
-            -- Script not found in Redis, reload it
-            sha, err = load_script_to_redis(red, true)
-            if not sha then
-                return nil, err
-            end
-            result, err = red:evalsha(sha, 1, queue_key, bucket_capacity, leak_rate, ttl)
-        end
-
-        if err then
+    if err and err:find("NOSCRIPT", 1, true) then
+        -- Script not found in Redis, reload it
+        sha, err = load_script_to_redis(red, true)
+        if not sha then
             return nil, err
         end
+        results, err = red:evalsha(sha, 1, tat_key, emission_interval, delay_tolerance)
     end
 
-    return result
+    if err then
+        return nil, err
+    end
+
+    return results
 end
 
--- Main function for rate limiting
+-- Main GCRA rate limiting logic
 local function rate_limit(red, token)
-    -- Redis keys for token count and last access time
-    local queue_key = "rate_limit:" .. token .. ":queue"
+    -- Redis key for storing the user's TAT (Theoretical Arrival Time)
+    local tat_key = "rate_limit:" .. token .. ":tat"
 
-    -- Calculate bucket capacity based on max delay and leak rate
-    local bucket_capacity = math.floor(max_delay / 1000 * leak_rate)
+    -- Calculate the emission interval and delay tolerance in microseconds
+    local emission_interval = (period / rate) * 1000000
+    local delay_tolerance = emission_interval * burst
 
-    -- Calculate TTL for the Redis keys
-    local ttl = math.floor(bucket_capacity / leak_rate * 2)
-
-    -- Execute leaky bucket logic
-    local result, err = execute_rate_limit_script(red, queue_key, bucket_capacity, ttl)
-    if not result then
-        return nil, "Failed to run rate limiting script" .. err
+    -- Execute GCRA logic
+    local result, err = execute_rate_limit_script(red, tat_key, emission_interval, delay_tolerance)
+    if err then
+        return nil, err
     end
-    ngx.log(ngx.ERR, "Result: ", math.floor(result / 1000 + 0.5) / 1000)
+
     -- Handle the result
-    if result == -1 then
-        return true, "rejected"
+    if result == 1 then
+        return true, "allowed"
     else
-        -- Nginx sleep supports second with milliseconds precision
-        -- TODO: simplify using math.ceil
-        local delay = math.floor(result / 1000 + 0.5) / 1000 -- Round to 3 decimal places
-        return true, "allowed", delay
+        return true, "rejected"
     end
 end
 
@@ -182,13 +171,12 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message, delay = pcall(rate_limit, red, token)
+    local pcall_status, rate_limit_result, message = pcall(rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then
         ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
     end
-
     if not pcall_status then
         ngx.log(ngx.ERR, rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
@@ -203,7 +191,6 @@ local function main()
         ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     else
-        ngx.sleep(delay)
         ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
 end

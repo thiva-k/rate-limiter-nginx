@@ -162,8 +162,7 @@ local function rate_limit(red, token)
         return true, "rejected"
     else
         -- Nginx sleep supports second with milliseconds precision
-        -- TODO: simplify using math.ceil
-        local delay = math.floor(result / 1000 + 0.5) / 1000 -- Round to 3 decimal places
+        local delay = math.ceil(result / 1000) / 1000
         return true, "allowed", delay
     end
 end
@@ -202,10 +201,10 @@ local function main()
     if message == "rejected" then
         ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
-    else
-        ngx.sleep(delay)
-        ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
+
+    ngx.sleep(delay)
+    ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
 end
 
 -- Run the main function
