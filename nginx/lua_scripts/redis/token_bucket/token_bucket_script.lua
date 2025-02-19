@@ -49,10 +49,8 @@ local function get_request_token()
     return token
 end
 
--- TODO: have to ask about shared memory
 -- Load the Lua script into Redis if not already cached
 local function load_script_to_redis(red, reload)
-    -- TODO: have to handle redis call errors
     -- Function to get the rate limit Lua script
     local rate_limit_script = [[
         local tokens_key = KEYS[1]
@@ -85,10 +83,10 @@ local function load_script_to_redis(red, reload)
             redis.call("set", tokens_key, new_token_count, "EX", ttl)
             redis.call("set", last_access_key, now, "EX", ttl)
 
-            return {1, new_token_count, now}
+            return 1
         else
             -- Not enough tokens, rate limit the request
-            return {-1, new_token_count, now}
+            return -1
         end
     ]]
 
@@ -120,7 +118,7 @@ local function execute_rate_limit_script(red, tokens_key, last_access_key, reque
         return nil, "Failed to load script: " .. err
     end
 
-    local results, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+    local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
@@ -128,14 +126,14 @@ local function execute_rate_limit_script(red, tokens_key, last_access_key, reque
         if not sha then
             return nil, err
         end
-        results, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
+        result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)
     end
 
     if err then
         return nil, err
     end
 
-    return results
+    return result
 end
 
 -- Main rate limiting logic
@@ -147,20 +145,15 @@ local function rate_limit(red, token)
     -- Calculate TTL for the Redis keys
     local ttl = math.floor(bucket_capacity / refill_rate * 2)
 
-    local results, err = execute_rate_limit_script(red, tokens_key, last_access_key, requested_tokens, ttl)
-    if err then
-        return nil, err
+    local result, err = execute_rate_limit_script(red, tokens_key, last_access_key, requested_tokens, ttl)
+    if not result then
+        return nil, "Failed to run rate limiting script" .. err
     end
 
-    local rate_limit_result, remaining_tokens, last_access_time = unpack(results)
-
-    -- Calculate next rest time in unix timestamp with milliseconds
-    local next_reset_time = math.ceil((last_access_time / 1000) + (1 / refill_rate) * 1000)
-
-    if rate_limit_result == 1 then
-        return true, "allowed", remaining_tokens / 1000000, next_reset_time
+    if result == 1 then
+        return true, "allowed"
     else
-        return true, "rejected", remaining_tokens / 1000000, next_reset_time
+        return true, "rejected"
     end
 
 end
@@ -179,7 +172,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message, remaining_tokens, next_reset_time = pcall(rate_limit, red, token)
+    local pcall_status, rate_limit_result, message = pcall(rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then
@@ -196,16 +189,12 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    ngx.header["X-RateLimit-Remaining"] = remaining_tokens
-    ngx.header["X-RateLimit-Limit"] = bucket_capacity
-    ngx.header["X-RateLimit-Reset"] = next_reset_time
-
     if message == "rejected" then
         ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
-    else
-        ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
+
+    ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
 end
 
 -- Run the main function

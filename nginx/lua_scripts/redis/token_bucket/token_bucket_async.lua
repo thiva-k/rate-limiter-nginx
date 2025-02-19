@@ -286,9 +286,9 @@ local function main()
     if message == "rejected" then
         ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
-    else
-        ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
+
+    ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
 end
 
 -- Run the rate limiter
