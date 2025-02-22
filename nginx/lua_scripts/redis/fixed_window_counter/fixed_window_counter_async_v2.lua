@@ -7,7 +7,7 @@ local redis_port = 6379            -- Redis server port
 local redis_timeout = 1000         -- 1 second timeout
 local max_idle_timeout = 10000     -- 10 seconds
 local pool_size = 100             -- Maximum number of idle connections in the pool
-local rate_limit = 10             -- Max requests allowed in the window
+local rate_limit = 100            -- Max requests allowed in the window
 local batch_percent = 0.5          -- Percentage of remaining requests to allow in a batch
 local window_size = 60             -- Time window size in seconds
 
