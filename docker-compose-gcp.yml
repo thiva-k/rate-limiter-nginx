@@ -11,7 +11,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == loadbalancer1
+          - node.labels.type == loadbalancer3
 
   load_balancer2:
     image: us-central1-docker.pkg.dev/triple-throttlers-446213/nginx/nginx:latest
