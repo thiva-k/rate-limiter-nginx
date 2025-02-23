@@ -62,7 +62,7 @@ end
 
 -- Function to fetch batch quota from Redis
 local function fetch_batch_quota(red, redis_key)
-    local current_time = ngx.now()
+    local current_time = ngx.now() * 1000
     local window_start = current_time - window_size
 
     -- Cache the script SHA if not already cached
@@ -79,12 +79,12 @@ local function fetch_batch_quota(red, redis_key)
     if not res then
         return nil, "Failed to execute Redis Lua script: " .. err
     end
-
-    count = tonumber(res) 
+    -- TODO: use local
+    count = tonumber(res)
 
     local remaining = math.max(0, rate_limit - count)
     if remaining == 0 then
-        return 0, window_size  -- No more requests allowed in this window
+        return 0, window_size -- No more requests allowed in this window     -- TODO: window_size is global
     end
 
     local batch_size = math.ceil(remaining * batch_percent)
@@ -124,14 +124,14 @@ end
 -- Function to handle batch quota and timestamps
 local function process_batch_quota(shared_dict, redis_key, red)
     local batch_quota = shared_dict:get(redis_key .. ":batch")
-    local timestamps_len = shared_dict:llen(redis_key .. ":timestamps")
+    local timestamps_len = shared_dict:llen(redis_key .. ":timestamps") -- TODO: If key does not exist, it is interpreted as an empty list and 0 is returned. When the key already takes a value that is not a list, it will return nil and "value not a list"
 
     if not batch_quota or batch_quota == 0 or not timestamps_len then
 
         -- Fetch new batch quota
         local new_quota, ttl = fetch_batch_quota(red, redis_key)
         if new_quota == nil then
-            return nil, ttl  -- ttl contains error message in this case
+            return nil, ttl -- ttl contains error message in this case
         end
 
         if new_quota > 0 then
@@ -150,7 +150,7 @@ local function process_batch_quota(shared_dict, redis_key, red)
 end
 
 -- Function to process the request
-local function increment_and_check(shared_dict, redis_key, red, batch_quota, timestamps_len)
+local function increment_and_check(shared_dict, redis_key, red, batch_quota, timestamps_len) -- TODO: timestamps_len unused
     if batch_quota <= 0 then
         return false
     end
@@ -161,7 +161,7 @@ local function increment_and_check(shared_dict, redis_key, red, batch_quota, tim
     if not length then
         return nil, "Failed to update timestamps in shared memory: " .. err
     end
-    
+
     -- Decrement the batch quota
     local new_quota, err = shared_dict:incr(redis_key .. ":batch", -1, 0)
     if err then
@@ -169,7 +169,7 @@ local function increment_and_check(shared_dict, redis_key, red, batch_quota, tim
     end
 
     if new_quota == 0 then
-        -- Update Redis with the exhausted batch
+        -- Update Redis with the exhausted batch --TODO: no need to check length is true also better to move this logic to ratelimit
         if length and length > 0 then
             local success, err = update_redis_with_exhausted_batch(red, shared_dict, redis_key)
             if not success then
@@ -177,7 +177,7 @@ local function increment_and_check(shared_dict, redis_key, red, batch_quota, tim
             end
         end
     end
-    
+
     return true
 
 end
@@ -186,6 +186,7 @@ end
 local function check_rate_limit(red, token, shared_dict)
     local redis_key = "rate_limit:" .. token
 
+    -- TODO: put it oustide
     local lock = resty_lock:new("my_locks")
     local elapsed, err = lock:lock(redis_key)
     if not elapsed then
@@ -204,6 +205,7 @@ local function check_rate_limit(red, token, shared_dict)
         return true
     end
 
+    -- TODO: timestamps_len is unecessary
     local batch_quota, timestamps_len = process_batch_quota(shared_dict, redis_key, red)
     if not batch_quota then
         return cleanup("Failed to handle batch quota: " .. timestamps_len)
@@ -239,6 +241,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
+    -- TODO: let's create common helper fuction for this
     -- Get shared dictionary
     local shared_dict = ngx.shared.rate_limit_dict
     if not shared_dict then
@@ -248,7 +251,7 @@ local function main()
 
     -- Run rate limiting check with error handling
     local res, status = pcall(check_rate_limit, red, token, shared_dict)
-    
+
     -- Properly close Redis connection
     local ok, close_err = close_redis(red)
     if not ok then
