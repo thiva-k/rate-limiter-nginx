@@ -115,7 +115,7 @@ end
 local function execute_rate_limit_script(red, tokens_key, last_access_key, requested_tokens, ttl)
     local sha, err = load_script_to_redis(red, false)
     if not sha then
-        return nil, "Failed to load script: " .. err
+        return nil, err
     end
 
     local result, err = red:evalsha(sha, 2, tokens_key, last_access_key, bucket_capacity, refill_rate, requested_tokens, ttl)

@@ -84,48 +84,22 @@ local function get_request_token()
 end
 
 -- Function to load the script into Redis if not already cached
-local function load_script_to_redis(red, reload)
-    -- Redis script to reduce the batch quota and update the token bucket
-    local rate_limit_script = [[
-        local tokens_key = KEYS[1]
-        local last_access_key = KEYS[2]
-        local bucket_capacity = tonumber(ARGV[1])
-        local refill_rate = tonumber(ARGV[2])
-        local requested_tokens = tonumber(ARGV[3])
-        local ttl = tonumber(ARGV[4])
-
-        local redis_time = redis.call("TIME")
-        local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
-
-        local values = redis.call("mget", tokens_key, last_access_key)
-        local last_token_count = tonumber(values[1]) or bucket_capacity * 1000000
-        local last_access_time = tonumber(values[2]) or now
-
-        local elapsed_time_us = math.max(0, now - last_access_time)
-        local tokens_to_add = elapsed_time_us * refill_rate
-        local new_token_count = math.max(math.floor(math.min(bucket_capacity * 1000000, last_token_count + tokens_to_add - requested_tokens * 1000000)), 0)
-
-        redis.call("set", tokens_key, new_token_count, "EX", ttl)
-        redis.call("set", last_access_key, now, "EX", ttl)
-
-        return new_token_count
-    ]]
-
+local function load_script_to_redis(red, key, script, reload)
     local function load_new_script()
         local new_sha, err = red:script("LOAD", rate_limit_script)
         if not new_sha then
             return nil, err
         end
-        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
+        ngx.shared.my_cache:set(key, new_sha)
         return new_sha
     end
 
     if reload then
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        ngx.shared.my_cache:delete(key)
         return load_new_script()
     end
 
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+    local sha = ngx.shared.my_cache:get(key)
     if not sha then
         sha = load_new_script()
     end
@@ -133,9 +107,35 @@ local function load_script_to_redis(red, reload)
     return sha
 end
 
+-- Redis script to reduce the batch quota and update the token bucket
+local rate_limit_script = [[
+    local tokens_key = KEYS[1]
+    local last_access_key = KEYS[2]
+    local bucket_capacity = tonumber(ARGV[1])
+    local refill_rate = tonumber(ARGV[2])
+    local requested_tokens = tonumber(ARGV[3])
+    local ttl = tonumber(ARGV[4])
+
+    local redis_time = redis.call("TIME")
+    local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
+
+    local values = redis.call("mget", tokens_key, last_access_key)
+    local last_token_count = tonumber(values[1]) or bucket_capacity * 1000000
+    local last_access_time = tonumber(values[2]) or now
+
+    local elapsed_time_us = math.max(0, now - last_access_time)
+    local tokens_to_add = elapsed_time_us * refill_rate
+    local new_token_count = math.max(math.floor(math.min(bucket_capacity * 1000000, last_token_count + tokens_to_add - requested_tokens * 1000000)), 0)
+
+    redis.call("set", tokens_key, new_token_count, "EX", ttl)
+    redis.call("set", last_access_key, now, "EX", ttl)
+
+    return new_token_count
+]]
+
 -- Execute the token bucket logic atomically
 local function execute_rate_limit_script(red, tokens_key, last_access_key, batch_used, ttl)
-    local sha, err = load_script_to_redis(red, false)
+    local sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, false)
     if not sha then
         return nil, "Failed to load script: " .. err
     end
@@ -144,7 +144,7 @@ local function execute_rate_limit_script(red, tokens_key, last_access_key, batch
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
-        sha, err = load_script_to_redis(red, true)
+        sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, true)
         if not sha then
             return nil, err
         end
@@ -173,7 +173,7 @@ local function set_batch_quota_and_used(shared_dict, token, batch_quota, batch_u
     return true
 end
 
--- Main rate limiting logic
+-- Main rate limiting logic --TODO: update to check rate limit
 local function rate_limit(red, shared_dict, token)
     -- Redis keys for token count and last access time
     local tokens_key = "rate_limit:" .. token .. ":tokens"

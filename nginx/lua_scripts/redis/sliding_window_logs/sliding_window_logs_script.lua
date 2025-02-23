@@ -49,6 +49,7 @@ local function get_script_sha(red)
             local window = tonumber(ARGV[1])
             local limit = tonumber(ARGV[2])
 
+            -- TODO: use microsecond precision 
             -- Get current Redis time
             local time = redis.call('TIME')
             local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
