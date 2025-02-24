@@ -113,7 +113,7 @@ local function execute_rate_limit_script(red, token)
 end
 
 -- Main rate limiting logic
-local function rate_limit(red, token)
+local function check_rate_limit(red, token)
     local result, err = execute_rate_limit_script(red, token)
     if not result then
         return nil, "Failed to run rate limiting script: " .. err
@@ -140,7 +140,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message = pcall(rate_limit, red, token)
+    local pcall_status, rate_limit_result, message = pcall(check_rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then
