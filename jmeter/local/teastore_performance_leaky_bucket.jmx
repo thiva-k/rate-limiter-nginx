@@ -2080,7 +2080,7 @@ file &lt;&lt; csvEntry</stringProp>
         </JSR223PostProcessor>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${group_1}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -5909,7 +5909,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer">
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
           <stringProp name="throughput">${group_2_request_rate}</stringProp>
           <intProp name="calcMode">0</intProp>
         </ConstantThroughputTimer>
@@ -5954,7 +5954,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1 - Home"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1 - Home" enabled="true"/>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.1 - Get Categories" enabled="true"/>
           <hashTree>
@@ -5993,7 +5993,7 @@ vars.put(&quot;responseCode1.2&quot;, &quot;0&quot;)</stringProp>
               </hashTree>
             </hashTree>
           </hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.2 - Is Logged In"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.2 - Is Logged In" enabled="true"/>
           <hashTree>
             <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__groovy(vars.get(&quot;responseCode1.2&quot;) != &quot;200&quot;)} </stringProp>
@@ -6088,13 +6088,13 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
         </hashTree>
         <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2 - Login" enabled="true"/>
         <hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login" enabled="true"/>
           <hashTree>
             <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__groovy(vars.get(&quot;responseCode2.1&quot;) != &quot;200&quot;)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/login?name=user95&amp;password=password </stringProp>
@@ -7772,7 +7772,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -7807,7 +7807,7 @@ if (sampler instanceof HTTPSamplerProxy) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -7835,7 +7835,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         </ConstantThroughputTimer>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${group_3}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -7997,13 +7997,13 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
         </hashTree>
         <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2 - Login" enabled="true"/>
         <hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__groovy(vars.get(&quot;responseCode2.1&quot;) != &quot;200&quot;)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/login?name=user96&amp;password=password </stringProp>
@@ -9642,7 +9642,7 @@ vars.put(&quot;responseCode8.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="8 - Logout"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="8 - Logout" enabled="true"/>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="8.1 - Logout" enabled="true"/>
           <hashTree>
@@ -9681,7 +9681,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -9744,7 +9744,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         </ConstantThroughputTimer>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${group_3}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -9904,15 +9904,15 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2 - Login"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2 - Login" enabled="true"/>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login" enabled="true"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
               <stringProp name="WhileController.condition">${__groovy(vars.get(&quot;responseCode2.1&quot;) != &quot;200&quot;)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/login?name=user97&amp;password=password </stringProp>
@@ -11590,7 +11590,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -11653,7 +11653,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         </ConstantThroughputTimer>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${group_3}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -11813,7 +11813,7 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2 - Login"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2 - Login" enabled="true"/>
         <hashTree>
           <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="2.1 - Login" enabled="true"/>
           <hashTree>
@@ -11821,7 +11821,7 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
               <stringProp name="WhileController.condition">${__groovy(vars.get(&quot;responseCode2.1&quot;) != &quot;200&quot;)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/login?name=user98&amp;password=password </stringProp>
@@ -13499,7 +13499,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -13534,7 +13534,7 @@ if (sampler instanceof HTTPSamplerProxy) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -13556,7 +13556,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer">
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
           <stringProp name="throughput">${group_3_request_rate}</stringProp>
           <intProp name="calcMode">2</intProp>
         </ConstantThroughputTimer>
@@ -13730,7 +13730,7 @@ vars.put(&quot;responseCode2.1&quot;, &quot;0&quot;)</stringProp>
               <stringProp name="WhileController.condition">${__groovy(vars.get(&quot;responseCode2.1&quot;) != &quot;200&quot;)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="2.1 - Login" enabled="true">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/login?name=user99&amp;password=password </stringProp>
@@ -15408,7 +15408,7 @@ vars.put(&quot;responseCode1.1&quot;, &quot;0&quot;)</stringProp>
             </hashTree>
           </hashTree>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Add token query param" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -15443,7 +15443,7 @@ if (sampler instanceof HTTPSamplerProxy) {
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Round-Robin Port Assigner" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
@@ -15465,13 +15465,13 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
 </stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer">
+        <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
           <stringProp name="throughput">${group_3_request_rate}</stringProp>
           <intProp name="calcMode">2</intProp>
         </ConstantThroughputTimer>
         <hashTree/>
       </hashTree>
-      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -15508,7 +15508,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table">
+      <ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -15545,7 +15545,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="false">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
