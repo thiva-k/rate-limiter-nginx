@@ -96,7 +96,7 @@ local function get_request_token()
 end
 
 -- Main rate limiting logic
-local function rate_limit(red, token)
+local function check_rate_limit(red, token)
     -- Redis key for the sorted set queue
     local queue_key = "rate_limit:" .. token .. ":queue"
 
@@ -173,7 +173,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message, delay = pcall(rate_limit, red, token)
+    local pcall_status, check_rate_limit_result, message, delay = pcall(check_rate_limit, red, token)
 
     if not release_lock(red, token, lock_value) then
         ngx.log(ngx.ERR, "Failed to release lock")
@@ -185,11 +185,11 @@ local function main()
     end
 
     if not pcall_status then
-        ngx.log(ngx.ERR, rate_limit_result)
+        ngx.log(ngx.ERR, check_rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not rate_limit_result then
+    if not check_rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end

@@ -49,63 +49,22 @@ local function get_request_token()
 end
 
 -- Function to load the script into Redis if not already cached
-local function load_script_to_redis(red, reload)
-    -- Lua script to implement leaky bucket algorithm
-    local rate_limit_script = [[
-        local queue_key = KEYS[1]
-        local bucket_capacity = tonumber(ARGV[1])
-        local leak_rate = tonumber(ARGV[2])
-        local ttl = tonumber(ARGV[3])
-
-        local redis_time = redis.call("TIME")
-        local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
-
-        -- Get the head of the queue to check the last leak time
-        local results = redis.call("zrevrange", queue_key, 0, 0, "WITHSCORES")
-        local last_leak_time = now
-        if #results > 0 then
-            last_leak_time = tonumber(results[2])
-        end
-
-        -- remove old entries and get the current queue length
-        redis.call("zremrangebyscore", queue_key, 0, now)
-        local queue_length = tonumber(redis.call("zcard", queue_key)) or 0
-
-        if queue_length + 1 <= bucket_capacity then
-            local default_delay = math.floor(1 / leak_rate * 1000000)
-
-            local delay = 0
-            local time_diff = now - last_leak_time
-            if time_diff ~= 0 then
-                delay = math.max(0, default_delay - time_diff)
-            end
-
-            local leak_time = now + delay
-
-            redis.call("zadd", queue_key, leak_time, leak_time)
-            redis.call("expire", queue_key, ttl)
-
-            return delay
-        else
-            return -1
-        end
-    ]]
-
+local function load_script_to_redis(red, key, script, reload)
     local function load_new_script()
-        local new_sha, err = red:script("LOAD", rate_limit_script)
+        local new_sha, err = red:script("LOAD", script)
         if not new_sha then
             return nil, err
         end
-        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
+        ngx.shared.my_cache:set(key, new_sha)
         return new_sha
     end
 
     if reload then
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        ngx.shared.my_cache:delete(key)
         return load_new_script()
     end
 
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+    local sha = ngx.shared.my_cache:get(key)
     if not sha then
         sha = load_new_script()
     end
@@ -113,9 +72,50 @@ local function load_script_to_redis(red, reload)
     return sha
 end
 
+-- Lua script to implement leaky bucket algorithm
+local rate_limit_script = [[
+    local queue_key = KEYS[1]
+    local bucket_capacity = tonumber(ARGV[1])
+    local leak_rate = tonumber(ARGV[2])
+    local ttl = tonumber(ARGV[3])
+
+    local redis_time = redis.call("TIME")
+    local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Convert to microseconds
+
+    -- Get the head of the queue to check the last leak time
+    local results = redis.call("zrevrange", queue_key, 0, 0, "WITHSCORES")
+    local last_leak_time = now
+    if #results > 0 then
+        last_leak_time = tonumber(results[2])
+    end
+
+    -- remove old entries and get the current queue length
+    redis.call("zremrangebyscore", queue_key, 0, now)
+    local queue_length = tonumber(redis.call("zcard", queue_key)) or 0
+
+    if queue_length + 1 <= bucket_capacity then
+        local default_delay = math.floor(1 / leak_rate * 1000000)
+
+        local delay = 0
+        local time_diff = now - last_leak_time
+        if time_diff ~= 0 then
+            delay = math.max(0, default_delay - time_diff)
+        end
+
+        local leak_time = now + delay
+
+        redis.call("zadd", queue_key, leak_time, leak_time)
+        redis.call("expire", queue_key, ttl)
+
+        return delay
+    else
+        return -1
+    end
+]]
+
 -- Execute the leaky bucket logic atomically
 local function execute_rate_limit_script(red, queue_key, bucket_capacity, ttl)
-    local sha, err = load_script_to_redis(red, false)
+    local sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, false)
     if not sha then
         return nil, "Failed to load script: " .. err
     end
@@ -125,7 +125,7 @@ local function execute_rate_limit_script(red, queue_key, bucket_capacity, ttl)
     if err then
         if err:find("NOSCRIPT", 1, true) then
             -- Script not found in Redis, reload it
-            sha, err = load_script_to_redis(red, true)
+            sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, true)
             if not sha then
                 return nil, err
             end
@@ -141,7 +141,7 @@ local function execute_rate_limit_script(red, queue_key, bucket_capacity, ttl)
 end
 
 -- Main function for rate limiting
-local function rate_limit(red, token)
+local function check_rate_limit(red, token)
     -- Redis keys for token count and last access time
     local queue_key = "rate_limit:" .. token .. ":queue"
 
@@ -181,7 +181,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message, delay = pcall(rate_limit, red, token)
+    local pcall_status, check_rate_limit_result, message, delay = pcall(check_rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then
@@ -189,11 +189,11 @@ local function main()
     end
 
     if not pcall_status then
-        ngx.log(ngx.ERR, rate_limit_result)
+        ngx.log(ngx.ERR, check_rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not rate_limit_result then
+    if not check_rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end

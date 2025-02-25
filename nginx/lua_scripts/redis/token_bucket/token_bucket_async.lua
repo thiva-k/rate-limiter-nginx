@@ -86,7 +86,7 @@ end
 -- Function to load the script into Redis if not already cached
 local function load_script_to_redis(red, key, script, reload)
     local function load_new_script()
-        local new_sha, err = red:script("LOAD", rate_limit_script)
+        local new_sha, err = red:script("LOAD", script)
         if not new_sha then
             return nil, err
         end
@@ -173,8 +173,8 @@ local function set_batch_quota_and_used(shared_dict, token, batch_quota, batch_u
     return true
 end
 
--- Main rate limiting logic --TODO: update to check rate limit
-local function rate_limit(red, shared_dict, token)
+-- Main rate limiting logic
+local function check_rate_limit(red, shared_dict, token)
     -- Redis keys for token count and last access time
     local tokens_key = "rate_limit:" .. token .. ":tokens"
     local last_access_key = "rate_limit:" .. token .. ":last_access"
@@ -260,8 +260,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    -- Rate limit the request
-    local pcall_status, rate_limit_result, message = pcall(rate_limit, red, shared_dict, token)
+    local pcall_status, check_rate_limit_result, message = pcall(check_rate_limit, red, shared_dict, token)
 
     local ok, err = release_lock(lock)
     if not ok then
@@ -274,11 +273,11 @@ local function main()
     end
 
     if not pcall_status then
-        ngx.log(ngx.ERR, rate_limit_result)
+        ngx.log(ngx.ERR, check_rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not rate_limit_result then
+    if not check_rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
@@ -291,5 +290,4 @@ local function main()
     ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
 end
 
--- Run the rate limiter
 main()

@@ -12,6 +12,8 @@ local bucket_capacity = 5 -- Maximum tokens in the bucket
 local refill_rate = 5 / 3 -- Tokens generated per second
 local requested_tokens = 1 -- Number of tokens required per request
 
+-- TODO: Handle race condition among nginx worker processes
+
 -- Helper function to initialize Redis connection
 local function init_redis()
     local red, err = redis:new()
@@ -50,7 +52,7 @@ local function get_request_token()
 end
 
 -- Main rate limiting logic
-local function rate_limit(red, token)
+local function check_rate_limit(red, token)
     -- Redis keys for token count and last access time
     local tokens_key = "rate_limit:" .. token .. ":tokens"
     local last_access_key = "rate_limit:" .. token .. ":last_access"
@@ -109,7 +111,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message, remaining_tokens, next_reset_time = pcall(rate_limit, red, token)
+    local pcall_status, check_rate_limit_result, message, remaining_tokens, next_reset_time = pcall(check_rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then
@@ -117,11 +119,11 @@ local function main()
     end
 
     if not pcall_status then
-        ngx.log(ngx.ERR, rate_limit_result)
+        ngx.log(ngx.ERR, check_rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not rate_limit_result then
+    if not check_rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
