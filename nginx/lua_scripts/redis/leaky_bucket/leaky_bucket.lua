@@ -17,6 +17,8 @@ local lock_timeout = 1000 -- Lock timeout in milliseconds
 local max_retries = 100 -- Maximum number of retries to acquire the lock
 local retry_delay = 100 -- Delay between retries in milliseconds
 
+-- TODO: have to refactor
+
 -- Helper function to initialize Redis connection
 local function init_redis()
     local red, err = redis:new()

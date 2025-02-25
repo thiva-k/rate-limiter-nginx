@@ -50,61 +50,22 @@ local function get_request_token()
 end
 
 -- Load the Lua script into Redis if not already cached
-local function load_script_to_redis(red, reload)
-    -- Function to get the rate limit Lua script
-    local rate_limit_script = [[
-        local tokens_key = KEYS[1]
-        local last_access_key = KEYS[2]
-        local bucket_capacity = tonumber(ARGV[1])
-        local refill_rate = tonumber(ARGV[2])
-        local requested_tokens = tonumber(ARGV[3])
-        local ttl = tonumber(ARGV[4])
-
-        local redis_time = redis.call("TIME")
-        local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Current timestamp in microseconds
-        
-        -- This code internally scales the request rate, bucket capacity, and requested tokens by a factor of 1000000.
-        -- This scaling is done to facilitate operations in microseconds, providing finer granularity and precision
-        -- in rate limiting calculations.
-        local values = redis.call("mget", tokens_key, last_access_key)
-        local last_token_count = tonumber(values[1]) or bucket_capacity * 1000000
-        local last_access_time = tonumber(values[2]) or now
-        
-        -- Calculate the number of tokens to be added due to the elapsed time since the last access
-        local elapsed_time_us = math.max(0, now - last_access_time)
-        local tokens_to_add = elapsed_time_us * refill_rate
-        local new_token_count = math.floor(math.min(bucket_capacity * 1000000, last_token_count + tokens_to_add))
-
-        -- Check if there are enough tokens for the request
-        if new_token_count >= requested_tokens * 1000000 then
-            -- Deduct tokens and update Redis state
-            new_token_count = new_token_count - requested_tokens * 1000000
-
-            redis.call("set", tokens_key, new_token_count, "EX", ttl)
-            redis.call("set", last_access_key, now, "EX", ttl)
-
-            return 1
-        else
-            -- Not enough tokens, rate limit the request
-            return -1
-        end
-    ]]
-
+local function load_script_to_redis(red, key, script, reload)
     local function load_new_script()
-        local new_sha, err = red:script("LOAD", rate_limit_script)
+        local new_sha, err = red:script("LOAD", script)
         if not new_sha then
             return nil, err
         end
-        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
+        ngx.shared.my_cache:set(key, new_sha)
         return new_sha
     end
 
     if reload then
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        ngx.shared.my_cache:delete(key)
         return load_new_script()
     end
 
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+    local sha = ngx.shared.my_cache:get(key)
     if not sha then
         sha = load_new_script()
     end
@@ -112,8 +73,47 @@ local function load_script_to_redis(red, reload)
     return sha
 end
 
+-- Lua script for rate limiting
+local rate_limit_script = [[
+    local tokens_key = KEYS[1]
+    local last_access_key = KEYS[2]
+    local bucket_capacity = tonumber(ARGV[1])
+    local refill_rate = tonumber(ARGV[2])
+    local requested_tokens = tonumber(ARGV[3])
+    local ttl = tonumber(ARGV[4])
+
+    local redis_time = redis.call("TIME")
+    local now = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2]) -- Current timestamp in microseconds
+    
+    -- This code internally scales the request rate, bucket capacity, and requested tokens by a factor of 1000000.
+    -- This scaling is done to facilitate operations in microseconds, providing finer granularity and precision
+    -- in rate limiting calculations.
+    local values = redis.call("mget", tokens_key, last_access_key)
+    local last_token_count = tonumber(values[1]) or bucket_capacity * 1000000
+    local last_access_time = tonumber(values[2]) or now
+    
+    -- Calculate the number of tokens to be added due to the elapsed time since the last access
+    local elapsed_time_us = math.max(0, now - last_access_time)
+    local tokens_to_add = elapsed_time_us * refill_rate
+    local new_token_count = math.floor(math.min(bucket_capacity * 1000000, last_token_count + tokens_to_add))
+
+    -- Check if there are enough tokens for the request
+    if new_token_count >= requested_tokens * 1000000 then
+        -- Deduct tokens and update Redis state
+        new_token_count = new_token_count - requested_tokens * 1000000
+
+        redis.call("set", tokens_key, new_token_count, "EX", ttl)
+        redis.call("set", last_access_key, now, "EX", ttl)
+
+        return 1
+    else
+        -- Not enough tokens, rate limit the request
+        return -1
+    end
+]]
+
 local function execute_rate_limit_script(red, tokens_key, last_access_key, requested_tokens, ttl)
-    local sha, err = load_script_to_redis(red, false)
+    local sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, false)
     if not sha then
         return nil, err
     end
@@ -122,7 +122,7 @@ local function execute_rate_limit_script(red, tokens_key, last_access_key, reque
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
-        sha, err = load_script_to_redis(red, true)
+        sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, true)
         if not sha then
             return nil, err
         end
@@ -137,7 +137,7 @@ local function execute_rate_limit_script(red, tokens_key, last_access_key, reque
 end
 
 -- Main rate limiting logic
-local function rate_limit(red, token)
+local function check_rate_limit(red, token)
     -- Redis keys for token count and last access time
     local tokens_key = "rate_limit:" .. token .. ":tokens"
     local last_access_key = "rate_limit:" .. token .. ":last_access"
@@ -172,7 +172,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message = pcall(rate_limit, red, token)
+    local pcall_status, check_rate_limit_result, message = pcall(check_rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then
@@ -180,11 +180,11 @@ local function main()
     end
 
     if not pcall_status then
-        ngx.log(ngx.ERR, rate_limit_result)
+        ngx.log(ngx.ERR, check_rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not rate_limit_result then
+    if not check_rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
@@ -197,5 +197,4 @@ local function main()
     ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
 end
 
--- Run the main function
 main()

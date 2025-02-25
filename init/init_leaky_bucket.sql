@@ -1,6 +1,6 @@
-CREATE DATABASE IF NOT EXISTS rate_limit_db;
+CREATE DATABASE IF NOT EXISTS leaky_bucket_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
-USE rate_limit_db;
+USE leaky_bucket_db;
 
 CREATE TABLE user (
     user_token VARCHAR(255) PRIMARY KEY
@@ -14,7 +14,7 @@ CREATE TABLE leaky_bucket (
 
 DELIMITER //
 
-CREATE PROCEDURE rate_limit(
+CREATE PROCEDURE check_rate_limit(
     IN p_user_token VARCHAR(255), 
     IN p_bucket_capacity INT, 
     IN p_leak_rate DECIMAL(10,6),
@@ -54,8 +54,7 @@ BEGIN
     -- Get the updated queue length
     SELECT COUNT(*) INTO v_queue_length 
     FROM leaky_bucket 
-    WHERE user_token = p_user_token
-    AND leak_time >= v_current_time;
+    WHERE user_token = p_user_token;
 
     -- Check if the queue is within bucket capacity
     IF v_queue_length < p_bucket_capacity THEN
