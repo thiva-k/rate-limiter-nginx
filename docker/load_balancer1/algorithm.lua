@@ -5,15 +5,15 @@ local mysql_host = "mysql"
 local mysql_port = 3306
 local mysql_user = "root"
 local mysql_password = "root"
-local mysql_database = "token_bucket_db"
+local mysql_database = "sliding_window_counter_db"
 local mysql_timeout = 3000 -- 3 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
--- Token bucket parameters
-local bucket_capacity = 10 -- Maximum tokens in the bucket
-local refill_rate = 1 -- Tokens generated per second
-local requested_tokens = 1 -- Number of tokens required per request
+-- Rate limiting parameters
+local rate_limit = 100
+local window_size = 60 -- 60-second window
+local sub_window_count = 5
 
 -- Helper function to initialize MySQL connection
 local function init_mysql()
@@ -57,20 +57,21 @@ local function get_request_token()
     return token
 end
 
--- Main rate limiting logic using stored procedure
+-- Main rate limiting logic
 local function check_rate_limit(db, token)
+    -- Call the procedure and capture the OUT parameter
     local query = string.format([[
-        CALL token_bucket_db.check_rate_limit(%s, %d, %f, %d, @result)
-    ]], ngx.quote_sql_str(token), bucket_capacity, refill_rate, requested_tokens)
+        CALL sliding_window_counter_db.check_rate_limit(%s, %d, %d, %d, @result);
+        ]], ngx.quote_sql_str(token), window_size, rate_limit, sub_window_count)
 
-    local res, err, errcode, sqlstate = db:query(query)
+    local res, err = db:query(query)
     if not res then
-        return nil, "Failed to execute stored procedure: " .. err
+        return nil, err
     end
 
-    local res, err, errcode, sqlstate = db:query("SELECT @result")
+    local res, err = db:query("SELECT @result;")
     if not res then
-        return nil, "Failed to get stored procedure result: " .. err
+        return nil, err
     end
 
     local result = tonumber(res[1]["@result"])
@@ -82,7 +83,7 @@ local function check_rate_limit(db, token)
     end
 end
 
--- Main function to handle rate limiting
+-- Main function to initialize MySQL and handle rate limiting
 local function main()
     local token, err = get_request_token()
     if not token then

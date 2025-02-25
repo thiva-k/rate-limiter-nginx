@@ -4,10 +4,10 @@ USE sliding_window_counter_db;
 
 -- Table to store request counts for each sub-window
 CREATE TABLE IF NOT EXISTS sliding_window_counter (
-    token VARCHAR(255) NOT NULL,
+    user_token VARCHAR(255) NOT NULL,
     window_start INT NOT NULL, -- Timestamp rounded down to the start of the sub-window
     count INT DEFAULT 0, -- Request count for that sub-window
-    PRIMARY KEY (token, window_start)
+    PRIMARY KEY (user_token, window_start)
 );
 
 CREATE TABLE IF NOT EXISTS user (
@@ -17,11 +17,11 @@ CREATE TABLE IF NOT EXISTS user (
 DELIMITER //
 
 CREATE PROCEDURE check_rate_limit(
-    IN p_input_token VARCHAR(255),
+    IN p_user_token VARCHAR(255),
     IN p_window_size INT,
     IN p_request_limit INT,
     IN p_sub_window_count INT,
-    OUT o_is_limited INT
+    OUT p_result INT
 )
 BEGIN
     DECLARE v_current_time INT;
@@ -40,16 +40,16 @@ BEGIN
     SET v_elapsed_time = v_current_time % v_sub_window_size;
     SET v_total_requests = 0;
 
-    INSERT IGNORE INTO user (user_token) VALUES (p_input_token);
+    INSERT IGNORE INTO user (user_token) VALUES (p_user_token);
 
     START TRANSACTION;
 
-    SELECT 1 INTO @lock_dummy FROM user WHERE user_token = p_input_token FOR UPDATE;
+    SELECT 1 INTO @lock_dummy FROM user WHERE user_token = p_user_token FOR UPDATE;
 
     -- Count the requests in the current sub-window
     SELECT COALESCE(sum(count), 0) INTO v_count 
     FROM sliding_window_counter 
-    WHERE token = p_input_token 
+    WHERE user_token = p_user_token 
     AND window_start = v_current_window_key;
 
     SET v_total_requests = v_total_requests + v_count;
@@ -61,7 +61,7 @@ BEGIN
         -- Get the request count for the previous sub-window
         SELECT COALESCE(sum(count), 0) INTO v_count 
         FROM sliding_window_counter 
-        WHERE token = p_input_token 
+        WHERE user_token = p_user_token 
         AND window_start = v_previous_window_key;
 
         -- Apply weight for the oldest window
@@ -76,14 +76,14 @@ BEGIN
 
     -- Check if the total requests exceed the limit
     IF v_total_requests + 1 > p_request_limit THEN
-        SET o_is_limited = 1;
+        SET p_result = -1;
     ELSE
         -- Increment the count for the current sub-window
-        INSERT INTO sliding_window_counter (token, window_start, count)
-        VALUES (p_input_token, v_current_window_key, 1)
+        INSERT INTO sliding_window_counter (user_token, window_start, count)
+        VALUES (p_user_token, v_current_window_key, 1)
         ON DUPLICATE KEY UPDATE count = count + 1;
 
-        SET o_is_limited = 0;
+        SET p_result = 1;
     END IF;
 
     COMMIT;

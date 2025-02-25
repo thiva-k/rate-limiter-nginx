@@ -49,6 +49,7 @@ services:
     command: --mysql-native-password=ON --transaction-isolation=READ-COMMITTED
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: fixed_window_counter_db
     volumes:
       - ./init/init_fixed_window_counter.sql:/docker-entrypoint-initdb.d/init_fixed_window_counter.sql
       - ./init/init_sliding_window_counter.sql:/docker-entrypoint-initdb.d/init_sliding_window_counter.sql
