@@ -2,17 +2,17 @@ Database,Algorithm,Version ,Config,Throughput (req / s),Latency (ms),Throttling 
 none,none,none,none,76.13115913,279.7817597,0,0,0
 redis,fixed_window_counter,script,"rate_limit = 100, window_size = 60s",75.20932217,327.8769278,2.010303287,48.09516818,17.19024437
 redis,fixed_window_counter,async,"rate_limit = 100, batch_percent = 0.2, window_size = 60s",76.17947603,283.2126808,2.224174417,3.4309211,1.226284767
-redis,fixed_window_counter,async,"rate_limit = 100, batch_percent = 0.5, window_size = 60s",76.24755622,278.8226808,1.87736775,-0.9590788978,-0.3427953627
-redis,fixed_window_counter,async,"rate_limit = 100, batch_percent = 0.8, window_size = 60s",76.18922221,278.460613,4.560703841,-1.321146716,-0.4722061644
-redis,sliding_window_log,script,"rate_limit = 100, window_size = 60s",75.81469925,327.9435003,0.02340247254,48.16174067,17.2140388
-redis,sliding_window_log,async,"rate_limit = 100, batch_percent = 0.2, window_size = 60s",75.1422062,316.1691434,0.08039042366,36.38738374,13.00563117
-redis,sliding_window_log,async,"rate_limit = 100, batch_percent = 0.5, window_size = 60s",75.57978672,297.0629397,0.06752488572,17.28118001,6.176664281
+redis,fixed_window_counter,async,"rate_limit = 100, batch_percent = 0.5, window_size = 60s",76.24755622,278.8226808,1.87736775,-0.959078898,-0.342795363
+redis,fixed_window_counter,async,"rate_limit = 100, batch_percent = 0.8, window_size = 60s",76.18922221,278.460613,4.560703841,-1.321146716,-0.472206164
+redis,sliding_window_log,script,"rate_limit = 100, window_size = 60s",75.81469925,327.9435003,0.023402473,48.16174067,17.2140388
+redis,sliding_window_log,async,"rate_limit = 100, batch_percent = 0.2, window_size = 60s",75.1422062,316.1691434,0.080390424,36.38738374,13.00563117
+redis,sliding_window_log,async,"rate_limit = 100, batch_percent = 0.5, window_size = 60s",75.57978672,297.0629397,0.067524886,17.28118001,6.176664281
 redis,sliding_window_log,async,"rate_limit = 100, batch_percent = 0.8, window_size = 60s",76.06293438,285.7513202,4.556486097,5.96956053,2.133648933
-redis,sliding_window_counter,script,"rate_limit = 100, sub_windows = 2, window_size = 60s",75.20150403,327.2921543,0.7230916862,47.51039458,16.98123374
-redis,sliding_window_counter,script,"rate_limit = 100, sub_windows = 5, window_size = 60s",75.11862238,331.7149574,0.4528185403,51.93319775,18.56203843
+redis,sliding_window_counter,script,"rate_limit = 100, sub_windows = 2, window_size = 60s",75.20150403,327.2921543,0.723091686,47.51039458,16.98123374
+redis,sliding_window_counter,script,"rate_limit = 100, sub_windows = 5, window_size = 60s",75.11862238,331.7149574,0.45281854,51.93319775,18.56203843
 redis,sliding_window_counter,async,"rate_limit = 100, sub_windows = 5, window_size = 60s, batch_percent = 0.5",75.7197476,297.1580384,1.382231908,17.37627872,6.210654596
 redis,sliding_window_counter,async,"rate_limit = 100, sub_windows = 2, window_size = 60s, batch_percent = 0.5",75.64124571,296.8776329,1.627924055,17.09587318,6.110431646
-redis,token_bucket,script,"refill_rate = 5/3 token/s , bucket_capacity =5",75.22846497,327.1804448,2.06966661,47.39868513,16.94130639
+redis,token_bucket,script,"refill_rate = 5/3 token/s , bucket_capacity = 5",75.22846497,327.1804448,2.06966661,47.39868513,16.94130639
 redis,token_bucket,script,"refill_rate = 5/3 token/s , bucket_capacity = 100",75.73628799,329.1514018,4.279543218,49.36964212,17.64576868
 redis,token_bucket,async,"refill_rate = 5/3 token/s, bucket_capacity = 5, batch_percent = 0.2",75.36345894,376.9447344,2.143904959,97.16297473,34.72813054
 redis,token_bucket,async,"refill_rate = 5/3 token/s, bucket_capacity = 5, batch_percent = 0.5",75.4813205,338.1510488,2.059060925,58.36928913,20.86243549
@@ -20,12 +20,12 @@ redis,token_bucket,async,"refill_rate = 5/3 token/s, bucket_capacity = 5, batch_
 redis,token_bucket,async,"refill_rate = 5/3 token/s, bucket_capacity = 100, batch_percent = 0.2",75.98316597,291.0913618,3.848007764,11.30960209,4.042294288
 redis,token_bucket,async,"refill_rate = 5/3 token/s, bucket_capacity = 100, batch_percent = 0.5",76.00539991,287.5318174,3.77012253,7.750057714,2.770036804
 redis,token_bucket,async,"refill_rate = 5/3 token/s, bucket_capacity = 100, batch_percent = 0.8",75.93985213,289.8272063,2.892400348,10.04544662,3.590458015
-redis,leaky_bucket,script,"rate_limit = 100, leak_rate = 5/3 req/s, max_delay = 3000s",76.04555135,605.5912876,1.986043426,325.8095279,116.4513113
+redis,leaky_bucket,script,"rate_limit = 100, leak_rate = 5/3 req/s, max_delay = 3s",76.04555135,605.5912876,1.986043426,325.8095279,116.4513113
 mysql,fixed_window_counter,script,"rate_limit = 100, window_size = 60s",74.67532468,386.6790465,2.450261247,106.8972868,38.20738241
-mysql,sliding_window_log,script,"rate_limit = 100, window_size = 60s",74.65,387.0742576,0.04774528745,107.292498,38.34863935
-mysql,sliding_window_counter,script,"rate_limit = 100, sub_windows = 5, window_size = 60s",74.66134236,386.4639493,0.4633571427,106.6821896,38.13050205
-mysql,sliding_window_counter,script,"rate_limit = 100, sub_windows = 2, window_size = 60s",74.68228283,385.4292855,0.5385255734,105.6475258,37.76069103
-mysql,token_bucket,script,"refill_rate = 5/3 token/s , bucket_capacity =5",74.60497855,387.5402725,2.00490582,107.7585128,38.51520305
-crdt,fixed_window_counter,script,"rate_limit = 100, window_size = 60s",75.52968785,281.6696531,2.011912224,1.887893432,0.6747735929
-crdt,sliding_window_log,script,"rate_limit = 100, window_size = 60s",76.11914678,280.1257389,0.02650260214,0.3439792617,0.1229455637
-crdt,sliding_window_counter,script,"rate_limit = 100, sub_windows = 5, window_size = 60s",75.47314459,283.919092,0.5351447772,4.137332322,1.478771285
+mysql,sliding_window_log,script,"rate_limit = 100, window_size = 60s",74.65,387.0742576,0.047745287,107.292498,38.34863935
+mysql,sliding_window_counter,script,"rate_limit = 100, sub_windows = 5, window_size = 60s",74.66134236,386.4639493,0.463357143,106.6821896,38.13050205
+mysql,sliding_window_counter,script,"rate_limit = 100, sub_windows = 2, window_size = 60s",74.68228283,385.4292855,0.538525573,105.6475258,37.76069103
+mysql,token_bucket,script,"refill_rate = 5/3 token/s , bucket_capacity = 5",74.60497855,387.5402725,2.00490582,107.7585128,38.51520305
+crdt,fixed_window_counter,script,"rate_limit = 100, window_size = 60s",75.52968785,281.6696531,2.011912224,1.887893432,0.674773593
+crdt,sliding_window_log,script,"rate_limit = 100, window_size = 60s",76.11914678,280.1257389,0.026502602,0.343979262,0.122945564
+crdt,sliding_window_counter,script,"rate_limit = 100, sub_windows = 5, window_size = 60s",75.47314459,283.919092,0.535144777,4.137332322,1.478771285
