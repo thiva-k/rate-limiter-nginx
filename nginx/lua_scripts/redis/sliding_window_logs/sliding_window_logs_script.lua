@@ -7,13 +7,35 @@ local redis_timeout = 1000 -- 1 second timeout
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
--- Rate limiting parameters
-local rate_limit = 100 -- 500 requests per minute
-local window_size = 60 -- 60 second window
+-- Sliding Window Logs parameters
+local rate_limit = 10 -- Maximum requests per window
+local window_size = 60 -- Window size in seconds
+local rate_limit_script = [[
+    local key = KEYS[1]
+    local window = tonumber(ARGV[1])
+    local limit = tonumber(ARGV[2])
+
+    local time = redis.call("TIME")
+    local now = tonumber(time[1]) * 1000000 + tonumber(time[2]) -- Current timestamp in microseconds
+
+    redis.call("ZREMRANGEBYSCORE", key, 0, now - window * 1000000)
+    local count = redis.call("ZCARD", key)
+    
+    if count < limit then
+        redis.call("ZADD", key, now, now)
+        redis.call("EXPIRE", key, window)
+        return 1
+    else
+        return -1
+    end
+]]
 
 -- Helper function to initialize Redis connection
 local function init_redis()
-    local red = redis:new()
+    local red, err = redis:new()
+    if not red then
+        return nil, err
+    end
     red:set_timeout(redis_timeout)
     local ok, err = red:connect(redis_host, redis_port)
     if not ok then
@@ -32,7 +54,7 @@ local function close_redis(red)
 end
 
 -- Helper function to get URL token
-local function get_token()
+local function get_request_token()
     local token = ngx.var.arg_token
     if not token then
         return nil, "Token not provided"
@@ -40,85 +62,71 @@ local function get_token()
     return token
 end
 
--- Helper function to get script SHA
-local function get_script_sha(red)
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
-    if not sha then
-        local redis_script = [[
-            local key = KEYS[1]
-            local window = tonumber(ARGV[1])
-            local limit = tonumber(ARGV[2])
+-- Load the Lua script into Redis if not already cached
+local function load_script_to_redis(red, reload)
 
-            -- TODO: use microsecond precision 
-            -- Get current Redis time
-            local time = redis.call('TIME')
-            local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
-
-            -- Remove elements outside the current window
-            redis.call('ZREMRANGEBYSCORE', key, 0, now - window * 1000)
-
-            -- Count the number of elements in the current window
-            local count = redis.call('ZCARD', key)
-
-            -- If under the limit, add the new element
-            if count < limit then
-                redis.call('ZADD', key, now, now)
-                redis.call('EXPIRE', key, window)
-                return 0
-            else
-                return 1
-            end
-        ]]
-        local new_sha, err = red:script("LOAD", redis_script)
+    local function load_new_script()
+        local new_sha, err = red:script("LOAD", rate_limit_script)
         if not new_sha then
-            return nil, "Failed to load script: " .. err
+            return nil, err
         end
         ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
-        sha = new_sha
+        return new_sha
+    end
+
+    if reload then
+        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        return load_new_script()
+    end
+
+    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+    if not sha then
+        sha = load_new_script()
     end
     return sha
 end
 
--- Main rate limiting logic
-local function check_rate_limit(red, token)
-    -- Construct the Redis key using the token
-    local key = "rate_limit:" .. token
-
-    -- Get the script SHA
-    local sha, err = get_script_sha(red)
+local function execute_rate_limit_script(red, key)
+    local sha, err = load_script_to_redis(red, false)
     if not sha then
-        return ngx.HTTP_INTERNAL_SERVER_ERROR, err
+        return nil, err
     end
 
-    -- Run the Lua script
     local result, err = red:evalsha(sha, 1, key, window_size, rate_limit)
 
-    if err then
-        if err:find("NOSCRIPT", 1, true) then
-            -- Script not found in Redis, reload it
-            ngx.shared.my_cache:delete("rate_limit_script_sha")
-            sha, err = get_script_sha(red)
-            if not sha then
-                return ngx.HTTP_INTERNAL_SERVER_ERROR, err
-            end
-            result, err = red:evalsha(sha, 1, key, window_size, rate_limit)
+    if err and err:find("NOSCRIPT", 1, true) then
+        sha, err = load_script_to_redis(red, true)
+        if not sha then
+            return nil, err
         end
+        result, err = red:evalsha(sha, 1, key, window_size, rate_limit)
+    end
 
-        if err then
-            return ngx.HTTP_INTERNAL_SERVER_ERROR, "Failed to run rate limiting script: " .. err
-        end
+    if err then
+        return nil, err
+    end
+
+    return result
+end
+
+-- Main rate limiting logic
+local function check_rate_limit(red, token)
+    local key = "rate_limit:" .. token
+    local result, err = execute_rate_limit_script(red, key)
+    if not result then
+        return nil, "Failed to run rate limiting script" .. err
     end
 
     if result == 1 then
-        return ngx.HTTP_TOO_MANY_REQUESTS
+        return true, "allowed"
+    else
+        return true, "rejected"
     end
-
-    return ngx.HTTP_OK
 end
 
 -- Main function to initialize Redis and handle rate limiting
 local function main()
-    local token, err = get_token()
+    local token, err = get_request_token()
     if not token then
         ngx.log(ngx.ERR, "Failed to get token: ", err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
@@ -130,21 +138,29 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local success, status, err = pcall(check_rate_limit, red, token)
-    local ok, close_err = close_redis(red)
+    local pcall_status, rate_limit_result, message = pcall(check_rate_limit, red, token)
+
+    local ok, err = close_redis(red)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to close Redis connection: ", close_err)
+        ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
     end
 
-    if not success then
-        ngx.log(ngx.ERR, status)
+    if not pcall_status then
+        ngx.log(ngx.ERR, rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    elseif err then
-        ngx.log(ngx.ERR, err)
-        ngx.exit(status)
-    elseif status == ngx.HTTP_TOO_MANY_REQUESTS then
-        ngx.exit(status)
     end
+
+    if not rate_limit_result then
+        ngx.log(ngx.ERR, "Failed to rate limit: ", message)
+        ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+
+    if message == "rejected" then
+        ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
+        ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
+    end
+
+    ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
 end
 
 -- Run the main function
