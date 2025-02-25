@@ -1,10 +1,10 @@
 -- Create the rate limit table
-CREATE DATABASE IF NOT EXISTS rate_limit_db;
+CREATE DATABASE IF NOT EXISTS fixed_window_counter_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
-USE rate_limit_db;
+USE fixed_window_counter_db;
 
 -- Table to track rate limits per token
-CREATE TABLE IF NOT EXISTS rate_limit_log (
+CREATE TABLE IF NOT EXISTS fixed_window_counter (
     token VARCHAR(255) NOT NULL,
     window_start BIGINT UNSIGNED NOT NULL,
     request_count INT UNSIGNED NOT NULL,
@@ -42,19 +42,19 @@ BEGIN
     -- Check if an entry exists for the current window
     SELECT IFNULL(request_count, 0) 
     INTO v_current_count
-    FROM rate_limit_log
+    FROM fixed_window_counter
     WHERE token = p_input_token AND window_start = v_window_start
     FOR UPDATE;
 
     IF v_current_count = 0 THEN
-        INSERT INTO rate_limit_log (token, window_start, request_count)
+        INSERT INTO fixed_window_counter (token, window_start, request_count)
         VALUES (p_input_token, v_window_start, 1);
         SET o_is_limited = 0;
     ELSE
         IF v_current_count + 1 > p_rate_limit THEN
             SET o_is_limited = 1;
         ELSE
-            UPDATE rate_limit_log
+            UPDATE fixed_window_counter
             SET request_count = request_count + 1
             WHERE token = p_input_token AND window_start = v_window_start;
             SET o_is_limited = 0;

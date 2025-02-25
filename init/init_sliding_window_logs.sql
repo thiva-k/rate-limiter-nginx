@@ -1,6 +1,6 @@
-CREATE DATABASE IF NOT EXISTS rate_limit_db;
+CREATE DATABASE IF NOT EXISTS sliding_window_log_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
-USE rate_limit_db;
+USE sliding_window_log_db;
 
 -- Table to store request timestamps per token
 CREATE TABLE IF NOT EXISTS sliding_window_log (
@@ -15,7 +15,7 @@ CREATE TABLE user (
 
 DELIMITER //
 
-CREATE PROCEDURE check_sliding_window_limit(
+CREATE PROCEDURE check_rate_limit(
     IN p_input_token VARCHAR(255),
     IN p_window_size INT,
     IN p_rate_limit INT,

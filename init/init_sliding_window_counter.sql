@@ -1,9 +1,9 @@
-CREATE DATABASE IF NOT EXISTS rate_limit_db;
+CREATE DATABASE IF NOT EXISTS sliding_window_counter_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
-USE rate_limit_db;
+USE sliding_window_counter_db;
 
 -- Table to store request counts for each sub-window
-CREATE TABLE IF NOT EXISTS sliding_window_log (
+CREATE TABLE IF NOT EXISTS sliding_window_counter (
     token VARCHAR(255) NOT NULL,
     window_start INT NOT NULL, -- Timestamp rounded down to the start of the sub-window
     count INT DEFAULT 0, -- Request count for that sub-window
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS user (
 
 DELIMITER //
 
-CREATE PROCEDURE check_sliding_window_counter_limit(
+CREATE PROCEDURE check_rate_limit(
     IN p_input_token VARCHAR(255),
     IN p_window_size INT,
     IN p_request_limit INT,
@@ -48,7 +48,7 @@ BEGIN
 
     -- Count the requests in the current sub-window
     SELECT COALESCE(sum(count), 0) INTO v_count 
-    FROM sliding_window_log 
+    FROM sliding_window_counter 
     WHERE token = p_input_token 
     AND window_start = v_current_window_key;
 
@@ -60,7 +60,7 @@ BEGIN
 
         -- Get the request count for the previous sub-window
         SELECT COALESCE(sum(count), 0) INTO v_count 
-        FROM sliding_window_log 
+        FROM sliding_window_counter 
         WHERE token = p_input_token 
         AND window_start = v_previous_window_key;
 
@@ -79,7 +79,7 @@ BEGIN
         SET o_is_limited = 1;
     ELSE
         -- Increment the count for the current sub-window
-        INSERT INTO sliding_window_log (token, window_start, count)
+        INSERT INTO sliding_window_counter (token, window_start, count)
         VALUES (p_input_token, v_current_window_key, 1)
         ON DUPLICATE KEY UPDATE count = count + 1;
 
