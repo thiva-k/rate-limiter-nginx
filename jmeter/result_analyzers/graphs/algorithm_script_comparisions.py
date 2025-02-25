@@ -24,8 +24,8 @@ config_mapping = {
     'fixed_window_counter': 'rate_limit = 100, window_size = 60s',
     'sliding_window_log': 'rate_limit = 100, window_size = 60s',
     'sliding_window_counter': 'rate_limit = 100, sub_windows = 5, window_size = 60s',
-    'token_bucket': 'refill_rate = 5/3 token/s , bucket_capacity =5',
-    'leaky_bucket': 'rate_limit = 100, leak_rate = 5/3 req/s, max_delay = 3000s'
+    'token_bucket': 'refill_rate = 5/3 token/s , bucket_capacity = 5',
+    'leaky_bucket': 'rate_limit = 100, leak_rate = 5/3 req/s, max_delay = 3s'
 }
 
 # Filter the DataFrame based on the mapping

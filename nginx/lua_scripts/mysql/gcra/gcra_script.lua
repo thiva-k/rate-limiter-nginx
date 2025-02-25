@@ -5,14 +5,15 @@ local mysql_host = "mysql"
 local mysql_port = 3306
 local mysql_user = "root"
 local mysql_password = "root"
-local mysql_database = "leaky_bucket_db"
+local mysql_database = "gcra_db"
 local mysql_timeout = 3000 -- 3 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
--- Leaky bucket parameters
-local max_delay = 3000 -- 3 second,
-local leak_rate = 5 / 3 -- Requests leaked per second
+-- GCRA parameters
+local period = 60 -- Time window of 1 minute
+local rate = 100 -- 100 requests per minute
+local burst = 5 -- Allow burst of up to 2 requests
 
 -- Helper function to initialize MySQL connection
 local function init_mysql()
@@ -56,37 +57,36 @@ local function get_request_token()
     return token
 end
 
--- Main rate-limiting logic using the leaky bucket stored procedure
-local function check_rate_limit(db, token)
-    -- Calculate bucket capacity based on max delay and leak rate
-    local bucket_capacity = math.floor(max_delay / 1000 * leak_rate)
+-- Main rate limiting logic using stored procedure
+local function rate_limit(db, token)
+    -- Calculate the emission interval and delay tolerance in microseconds
+    local emission_interval = math.ceil(period / rate * 1000000)
+    local delay_tolerance = emission_interval * burst
 
     local query = string.format([[
-        CALL leaky_bucket_db.check_rate_limit(%s, %d, %d, @delay)
-    ]], ngx.quote_sql_str(token), bucket_capacity, leak_rate)
+        CALL gcra_db.check_rate_limit(%s, %d, %d, @result)
+    ]], ngx.quote_sql_str(token), emission_interval, delay_tolerance)
 
     local res, err, errcode, sqlstate = db:query(query)
     if not res then
         return nil, "Failed to execute stored procedure: " .. err
     end
 
-    local res, err, errcode, sqlstate = db:query("SELECT @delay")
+    local res, err, errcode, sqlstate = db:query("SELECT @result")
     if not res then
         return nil, "Failed to get stored procedure result: " .. err
     end
 
-    local result = tonumber(res[1]["@delay"])
+    local result = tonumber(res[1]["@result"])
 
-    if result == -1 then
-        return true, "rejected"
+    if result == 1 then
+        return true, "allowed"
     else
-        -- Nginx sleep supports second with milliseconds precision
-        local delay = math.ceil(result / 1000) / 1000
-        return true, "allowed", delay
+        return true, "rejected"
     end
 end
 
--- Main function to initialize MySQL and handle rate limiting
+-- Main function to handle rate limiting
 local function main()
     local token, err = get_request_token()
     if not token then
@@ -100,7 +100,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, check_rate_limit_result, message, delay = pcall(check_rate_limit, db, token)
+    local pcall_status, rate_limit_result, message = pcall(rate_limit, db, token)
 
     local ok, err = close_mysql(db)
     if not ok then
@@ -108,11 +108,11 @@ local function main()
     end
 
     if not pcall_status then
-        ngx.log(ngx.ERR, check_rate_limit_result)
+        ngx.log(ngx.ERR, rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not check_rate_limit_result then
+    if not rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
@@ -121,7 +121,6 @@ local function main()
         ngx.log(ngx.INFO, "Rate limit exceeded for token: ", token)
         ngx.exit(ngx.HTTP_TOO_MANY_REQUESTS)
     else
-        ngx.sleep(delay)
         ngx.log(ngx.INFO, "Rate limit allowed for token: ", token)
     end
 end

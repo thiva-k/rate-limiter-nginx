@@ -1,4 +1,3 @@
-
 version: '3'
 services:
   load_balancer1:
@@ -44,9 +43,13 @@ services:
     command: --mysql-native-password=ON --transaction-isolation=READ-COMMITTED
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: rate_limit_db
     volumes:
-      - ./init/init_sliding_window_counter.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init/init_fixed_window_counter.sql:/docker-entrypoint-initdb.d/init_fixed_window_counter.sql
+      - ./init/init_sliding_window_counter.sql:/docker-entrypoint-initdb.d/init_sliding_window_counter.sql
+      - ./init/init_sliding_window_logs.sql:/docker-entrypoint-initdb.d/init_sliding_window_logs.sql
+      - ./init/init_token_bucket.sql:/docker-entrypoint-initdb.d/init_token_bucket.sql
+      - ./init/init_leaky_bucket.sql:/docker-entrypoint-initdb.d/init_leaky_bucket.sql
+      - ./init/init_gcra.sql:/docker-entrypoint-initdb.d/init_gcra.sql
 
   registry:
     image: descartesresearch/teastore-registry

@@ -10,7 +10,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 -- GCRA parameters
 local period = 60 -- Time window of 1 minute
 local rate = 100 -- 100 requests per minute
-local burst = 10 -- Allow burst of up to 2 requests
+local burst = 5 -- Allow burst of up to 2 requests
 
 -- Helper function to initialize Redis connection
 local function init_redis()
@@ -50,58 +50,22 @@ local function get_request_token()
 end
 
 -- Load the Lua script into Redis if not already cached
-local function load_script_to_redis(red, reload)
-    -- Function to get the rate limit Lua script
-    local rate_limit_script = [[
-        local tat_key = KEYS[1]
-        local emission_interval = tonumber(ARGV[1])
-        local delay_tolerance = tonumber(ARGV[2])
-
-        -- Get the current time from Redis
-        local redis_time = redis.call("TIME")
-        local current_time = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2])
-
-        -- Retrieve the last TAT
-        local last_tat = redis.call("GET", tat_key)
-        last_tat = tonumber(last_tat) or current_time
-
-        -- Calculate the allowed arrival time
-        local allow_at = last_tat - delay_tolerance
-
-        -- Check if the request is allowed
-        if current_time >= allow_at then
-            -- Request allowed; calculate the new TAT
-            local new_tat = math.max(current_time, last_tat) + emission_interval
-            
-            -- Calculate TTL based on the new TAT and the current time in seconds
-            local ttl = math.ceil((new_tat - current_time + delay_tolerance) / 1000000)
-
-            -- Store the updated TAT with calculated TTL
-            redis.call("SET", tat_key, new_tat, "EX", ttl)
-
-            -- Request allowed
-            return 1
-        else
-            -- Request denied
-            return -1  
-        end
-    ]]
-
+local function load_script_to_redis(red, key, script, reload)
     local function load_new_script()
-        local new_sha, err = red:script("LOAD", rate_limit_script)
+        local new_sha, err = red:script("LOAD", script)
         if not new_sha then
             return nil, err
         end
-        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
+        ngx.shared.my_cache:set(key, new_sha)
         return new_sha
     end
 
     if reload then
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        ngx.shared.my_cache:delete(key)
         return load_new_script()
     end
 
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+    local sha = ngx.shared.my_cache:get(key)
     if not sha then
         sha = load_new_script()
     end
@@ -109,9 +73,45 @@ local function load_script_to_redis(red, reload)
     return sha
 end
 
+-- Function to get the rate limit Lua script
+local rate_limit_script = [[
+    local tat_key = KEYS[1]
+    local emission_interval = tonumber(ARGV[1])
+    local delay_tolerance = tonumber(ARGV[2])
+
+    -- Get the current time from Redis
+    local redis_time = redis.call("TIME")
+    local current_time = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2])
+
+    -- Retrieve the last TAT
+    local last_tat = redis.call("GET", tat_key)
+    last_tat = tonumber(last_tat) or current_time
+
+    -- Calculate the allowed arrival time
+    local allow_at = last_tat - delay_tolerance
+
+    -- Check if the request is allowed
+    if current_time >= allow_at then
+        -- Request allowed; calculate the new TAT
+        local new_tat = math.max(current_time, last_tat) + emission_interval
+        
+        -- Calculate TTL based on the new TAT and the current time in seconds
+        local ttl = math.ceil((new_tat - current_time + delay_tolerance) / 1000000)
+
+        -- Store the updated TAT with calculated TTL
+        redis.call("SET", tat_key, new_tat, "EX", ttl)
+
+        -- Request allowed
+        return 1
+    else
+        -- Request denied
+        return -1  
+    end
+]]
+
 -- Execute the GCRA logic atomically
 local function execute_rate_limit_script(red, tat_key, emission_interval, delay_tolerance)
-    local sha, err = load_script_to_redis(red, false)
+    local sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, false)
     if not sha then
         return nil, "Failed to load script: " .. err
     end
@@ -120,7 +120,7 @@ local function execute_rate_limit_script(red, tat_key, emission_interval, delay_
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
-        sha, err = load_script_to_redis(red, true)
+        sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, true)
         if not sha then
             return nil, err
         end
@@ -135,12 +135,12 @@ local function execute_rate_limit_script(red, tat_key, emission_interval, delay_
 end
 
 -- Main GCRA rate limiting logic
-local function rate_limit(red, token)
+local function check_rate_limit(red, token)
     -- Redis key for storing the user's TAT (Theoretical Arrival Time)
     local tat_key = "rate_limit:" .. token .. ":tat"
 
     -- Calculate the emission interval and delay tolerance in microseconds
-    local emission_interval = (period / rate) * 1000000
+    local emission_interval = math.ceil(period / rate * 1000000)
     local delay_tolerance = emission_interval * burst
 
     -- Execute GCRA logic
@@ -171,18 +171,18 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message = pcall(rate_limit, red, token)
+    local pcall_status, check_rate_limit_result, message = pcall(check_rate_limit, red, token)
 
     local ok, err = close_redis(red)
     if not ok then
         ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
     end
     if not pcall_status then
-        ngx.log(ngx.ERR, rate_limit_result)
+        ngx.log(ngx.ERR, check_rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not rate_limit_result then
+    if not check_rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
