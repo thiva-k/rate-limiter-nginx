@@ -70,11 +70,6 @@
             <stringProp name="Argument.value">${__P(group_3_request_rate,120)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="group_3_request_rate_per_sec" elementType="Argument">
-            <stringProp name="Argument.name">group_3_request_rate_per_sec</stringProp>
-            <stringProp name="Argument.value">${__P(group_3_request_rate_per_sec,2)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
           <elementProp name="ramp_up" elementType="Argument">
             <stringProp name="Argument.name">ramp_up</stringProp>
             <stringProp name="Argument.value">${__P(ramp_up,10)}</stringProp>

@@ -62,22 +62,22 @@
           </elementProp>
           <elementProp name="auth" elementType="Argument">
             <stringProp name="Argument.name">auth</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.auth/rest</stringProp>
+            <stringProp name="Argument.value">/fixed_window_counter/redis_script_rate_limit_100_window_size_60/tools.descartes.teastore.auth/rest</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="persistence" elementType="Argument">
             <stringProp name="Argument.name">persistence</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.persistence/rest</stringProp>
+            <stringProp name="Argument.value">/fixed_window_counter/redis_script_rate_limit_100_window_size_60/tools.descartes.teastore.persistence/rest</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="recommender" elementType="Argument">
             <stringProp name="Argument.name">recommender</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.recommender/rest</stringProp>
+            <stringProp name="Argument.value">/fixed_window_counter/redis_script_rate_limit_100_window_size_60/tools.descartes.teastore.recommender/rest</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="image" elementType="Argument">
             <stringProp name="Argument.name">image</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.image/rest</stringProp>
+            <stringProp name="Argument.value">/fixed_window_counter/redis_script_rate_limit_100_window_size_60/tools.descartes.teastore.image/rest</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="ports" elementType="Argument">
@@ -102,11 +102,9 @@
           </elementProp>
         </collectionProp>
       </elementProp>
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
-      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group">
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group" enabled="false">
         <stringProp name="ThreadGroup.num_threads">${warm_up_users}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${warm_up_time}</stringProp>
@@ -2064,7 +2062,7 @@ logFile &lt;&lt; logEntry
         </JSR223PostProcessor>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
         <stringProp name="ThreadGroup.num_threads">${group_1}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -2092,16 +2090,16 @@ logFile &lt;&lt; logEntry
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1 - Home" enabled="true"/>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1 - Home"/>
         <hashTree>
-          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.1 - Get Categories" enabled="true"/>
+          <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="1.1 - Get Categories"/>
           <hashTree>
-            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller" enabled="true">
+            <WhileController guiclass="WhileControllerGui" testclass="WhileController" testname="While Controller">
               <stringProp name="WhileController.condition">${__groovy(vars.get(&quot;responseCode1.1&quot;) != &quot;200&quot;)}
 </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="1.1 - Get Categories" enabled="true">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="1.1 - Get Categories">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${persistence}/categories?start=-1&amp;max=-1</stringProp>
@@ -2137,7 +2135,7 @@ vars.put(&quot;responseCode1.2&quot;, &quot;0&quot;)</stringProp>
               <stringProp name="WhileController.condition">${__groovy(vars.get(&quot;responseCode1.2&quot;) != &quot;200&quot;)} </stringProp>
             </WhileController>
             <hashTree>
-              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="1.2 - Is Logged In" enabled="true">
+              <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="1.2 - Is Logged In">
                 <stringProp name="HTTPSampler.domain">${hostname}</stringProp>
                 <stringProp name="HTTPSampler.port">${port}</stringProp>
                 <stringProp name="HTTPSampler.path">${auth}/useractions/isloggedin</stringProp>
@@ -3987,7 +3985,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         </ResponseAssertion>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${group_2}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -5910,7 +5908,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         </ResponseAssertion>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
         <stringProp name="ThreadGroup.num_threads">${group_3}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -7833,7 +7831,7 @@ vars.putObject(&quot;current_port_index&quot;, (currentIndex + 1) % portArray.si
         </ResponseAssertion>
         <hashTree/>
       </hashTree>
-      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>

@@ -17,7 +17,6 @@ set GROUP_3_FOR_LEAKY_BUCKET=6
 set GROUP_1_REQUEST_RATE=30
 set GROUP_2_REQUEST_RATE=90
 set GROUP_3_REQUEST_RATE=120
-set GROUP_3_REQUEST_RATE_PER_SEC=2
 
 set TEST_PLAN=teastore_performance.jmx
 set TEST_FOLDER=performance
@@ -111,6 +110,5 @@ REM Run JMeter test
 -Jgroup_1_request_rate=%GROUP_1_REQUEST_RATE% ^
 -Jgroup_2_request_rate=%GROUP_2_REQUEST_RATE% ^
 -Jgroup_3_request_rate=%GROUP_3_REQUEST_RATE% ^
--Jgroup_3_request_rate_per_sec=%GROUP_3_REQUEST_RATE_PER_SEC% ^
 -Jramp_up=%RAMP_UP% ^
 -Jlog_file=%LOG_FILE%
