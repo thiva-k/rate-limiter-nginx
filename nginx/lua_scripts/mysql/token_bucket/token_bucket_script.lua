@@ -60,17 +60,17 @@ end
 -- Main rate limiting logic using stored procedure
 local function check_rate_limit(db, token)
     local query = string.format([[
-        CALL token_bucket_db.check_rate_limit(%s, %d, %f, %d, @result)
+        CALL token_bucket_db.check_rate_limit(%s, %d, %f, %d, @result);
     ]], ngx.quote_sql_str(token), bucket_capacity, refill_rate, requested_tokens)
 
-    local res, err, errcode, sqlstate = db:query(query)
+    local res, err = db:query(query)
     if not res then
-        return nil, "Failed to execute stored procedure: " .. err
+        return nil, err
     end
 
-    local res, err, errcode, sqlstate = db:query("SELECT @result")
+    local res, err = db:query("SELECT @result;")
     if not res then
-        return nil, "Failed to get stored procedure result: " .. err
+        return nil, err
     end
 
     local result = tonumber(res[1]["@result"])

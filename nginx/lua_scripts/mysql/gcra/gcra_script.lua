@@ -67,14 +67,14 @@ local function rate_limit(db, token)
         CALL gcra_db.check_rate_limit(%s, %d, %d, @result)
     ]], ngx.quote_sql_str(token), emission_interval, delay_tolerance)
 
-    local res, err, errcode, sqlstate = db:query(query)
+    local res, err = db:query(query)
     if not res then
-        return nil, "Failed to execute stored procedure: " .. err
+        return nil, err
     end
 
-    local res, err, errcode, sqlstate = db:query("SELECT @result")
+    local res, err = db:query("SELECT @result")
     if not res then
-        return nil, "Failed to get stored procedure result: " .. err
+        return nil, err
     end
 
     local result = tonumber(res[1]["@result"])

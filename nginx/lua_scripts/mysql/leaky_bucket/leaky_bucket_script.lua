@@ -65,14 +65,14 @@ local function check_rate_limit(db, token)
         CALL leaky_bucket_db.check_rate_limit(%s, %d, %d, @delay)
     ]], ngx.quote_sql_str(token), bucket_capacity, leak_rate)
 
-    local res, err, errcode, sqlstate = db:query(query)
+    local res, err = db:query(query)
     if not res then
-        return nil, "Failed to execute stored procedure: " .. err
+        return nil, err
     end
 
-    local res, err, errcode, sqlstate = db:query("SELECT @delay")
+    local res, err = db:query("SELECT @delay")
     if not res then
-        return nil, "Failed to get stored procedure result: " .. err
+        return nil, err
     end
 
     local result = tonumber(res[1]["@delay"])
