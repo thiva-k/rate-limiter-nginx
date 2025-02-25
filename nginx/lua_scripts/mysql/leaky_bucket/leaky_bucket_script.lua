@@ -5,14 +5,14 @@ local mysql_host = "mysql"
 local mysql_port = 3306
 local mysql_user = "root"
 local mysql_password = "root"
-local mysql_database = "rate_limit_db"
+local mysql_database = "leaky_bucket_db"
 local mysql_timeout = 3000 -- 3 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Leaky bucket parameters
 local max_delay = 3000 -- 3 second,
-local leak_rate = 1 -- Requests leaked per second
+local leak_rate = 5 / 3 -- Requests leaked per second
 
 -- Helper function to initialize MySQL connection
 local function init_mysql()
@@ -57,12 +57,12 @@ local function get_request_token()
 end
 
 -- Main rate-limiting logic using the leaky bucket stored procedure
-local function rate_limit(db, token)
+local function check_rate_limit(db, token)
     -- Calculate bucket capacity based on max delay and leak rate
     local bucket_capacity = math.floor(max_delay / 1000 * leak_rate)
 
     local query = string.format([[
-        CALL rate_limit(%s, %d, %d, @delay)
+        CALL leaky_bucket_db.check_rate_limit(%s, %d, %d, @delay)
     ]], ngx.quote_sql_str(token), bucket_capacity, leak_rate)
 
     local res, err, errcode, sqlstate = db:query(query)
@@ -80,8 +80,8 @@ local function rate_limit(db, token)
     if result == -1 then
         return true, "rejected"
     else
-        -- TODO: simplify using math.ceil
-        local delay = math.floor(result / 1000 + 0.5) / 1000 -- Round to 3 decimal places
+        -- Nginx sleep supports second with milliseconds precision
+        local delay = math.ceil(result / 1000) / 1000
         return true, "allowed", delay
     end
 end
@@ -100,7 +100,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message, delay = pcall(rate_limit, db, token)
+    local pcall_status, check_rate_limit_result, message, delay = pcall(check_rate_limit, db, token)
 
     local ok, err = close_mysql(db)
     if not ok then
@@ -108,11 +108,11 @@ local function main()
     end
 
     if not pcall_status then
-        ngx.log(ngx.ERR, rate_limit_result)
+        ngx.log(ngx.ERR, check_rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not rate_limit_result then
+    if not check_rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end

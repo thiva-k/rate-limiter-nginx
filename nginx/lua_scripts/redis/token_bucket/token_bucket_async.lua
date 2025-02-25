@@ -12,7 +12,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 local bucket_capacity = 5
 local refill_rate = 5 / 3 -- tokens per second
 local requested_tokens = 1 -- tokens required per request
-local batch_percent = 0.2 -- 20% of remaining tokens for batch quota
+local batch_percent = 0.5 -- 20% of remaining tokens for batch quota
 local min_batch_quota = 1
 
 -- Helper function to initialize shared dictionary

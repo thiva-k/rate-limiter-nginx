@@ -5,15 +5,15 @@ local mysql_host = "mysql"
 local mysql_port = 3306
 local mysql_user = "root"
 local mysql_password = "root"
-local mysql_database = "token_bucket_db"
+local mysql_database = "gcra_db"
 local mysql_timeout = 3000 -- 3 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
--- Token bucket parameters
-local bucket_capacity = 10 -- Maximum tokens in the bucket
-local refill_rate = 1 -- Tokens generated per second
-local requested_tokens = 1 -- Number of tokens required per request
+-- GCRA parameters
+local period = 60 -- Time window of 1 minute
+local rate = 100 -- 100 requests per minute
+local burst = 5 -- Allow burst of up to 2 requests
 
 -- Helper function to initialize MySQL connection
 local function init_mysql()
@@ -58,10 +58,14 @@ local function get_request_token()
 end
 
 -- Main rate limiting logic using stored procedure
-local function check_rate_limit(db, token)
+local function rate_limit(db, token)
+    -- Calculate the emission interval and delay tolerance in microseconds
+    local emission_interval = math.ceil(period / rate * 1000000)
+    local delay_tolerance = emission_interval * burst
+
     local query = string.format([[
-        CALL token_bucket_db.check_rate_limit(%s, %d, %f, %d, @result)
-    ]], ngx.quote_sql_str(token), bucket_capacity, refill_rate, requested_tokens)
+        CALL gcra_db.check_rate_limit(%s, %d, %d, @result)
+    ]], ngx.quote_sql_str(token), emission_interval, delay_tolerance)
 
     local res, err, errcode, sqlstate = db:query(query)
     if not res then
@@ -96,7 +100,7 @@ local function main()
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, check_rate_limit_result, message = pcall(check_rate_limit, db, token)
+    local pcall_status, rate_limit_result, message = pcall(rate_limit, db, token)
 
     local ok, err = close_mysql(db)
     if not ok then
@@ -104,11 +108,11 @@ local function main()
     end
 
     if not pcall_status then
-        ngx.log(ngx.ERR, check_rate_limit_result)
+        ngx.log(ngx.ERR, rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not check_rate_limit_result then
+    if not rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end

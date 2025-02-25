@@ -1,37 +1,46 @@
-local redis = require "resty.redis"
+local mysql = require "resty.mysql"
 
--- Redis connection settings
-local redis_host = "redis"
-local redis_port = 6379
-local redis_timeout = 1000 -- 1 second
+-- MySQL connection settings
+local mysql_host = "mysql"
+local mysql_port = 3306
+local mysql_user = "root"
+local mysql_password = "root"
+local mysql_database = "token_bucket_db"
+local mysql_timeout = 3000 -- 3 second
 local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
--- GCRA parameters
-local period = 60 -- Time window of 1 minute
-local rate = 100 -- 100 requests per minute
-local burst = 0 -- Allow burst of up to 2 requests
+-- Token bucket parameters
+local bucket_capacity = 10 -- Maximum tokens in the bucket
+local refill_rate = 1 -- Tokens generated per second
+local requested_tokens = 1 -- Number of tokens required per request
 
--- Helper function to initialize Redis connection
-local function init_redis()
-    local red, err = redis:new()
-    if not red then
+-- Helper function to initialize MySQL connection
+local function init_mysql()
+    local db, err = mysql:new()
+    if not db then
         return nil, err
     end
 
-    red:set_timeout(redis_timeout)
+    db:set_timeout(mysql_timeout)
 
-    local ok, err = red:connect(redis_host, redis_port)
+    local ok, err, errcode, sqlstate = db:connect{
+        host = mysql_host,
+        port = mysql_port,
+        user = mysql_user,
+        password = mysql_password,
+        database = mysql_database
+    }
     if not ok then
         return nil, err
     end
 
-    return red
+    return db
 end
 
--- Helper function to close Redis connection
-local function close_redis(red)
-    local ok, err = red:set_keepalive(max_idle_timeout, pool_size)
+-- Helper function to close MySQL connection
+local function close_mysql(db)
+    local ok, err = db:set_keepalive(max_idle_timeout, pool_size)
     if not ok then
         return nil, err
     end
@@ -45,111 +54,27 @@ local function get_request_token()
     if not token then
         return nil, "Token not provided"
     end
-
     return token
 end
 
--- Load the Lua script into Redis if not already cached
-local function load_script_to_redis(red, reload)
-    -- Function to get the rate limit Lua script
-    local rate_limit_script = [[
-        local tat_key = KEYS[1]
-        local emission_interval = tonumber(ARGV[1])
-        local delay_tolerance = tonumber(ARGV[2])
+-- Main rate limiting logic using stored procedure
+local function check_rate_limit(db, token)
+    local query = string.format([[
+        CALL token_bucket_db.check_rate_limit(%s, %d, %f, %d, @result)
+    ]], ngx.quote_sql_str(token), bucket_capacity, refill_rate, requested_tokens)
 
-        -- Get the current time from Redis
-        local redis_time = redis.call("TIME")
-        local current_time = tonumber(redis_time[1]) * 1000000 + tonumber(redis_time[2])
-
-        -- Retrieve the last TAT
-        local last_tat = redis.call("GET", tat_key)
-        last_tat = tonumber(last_tat) or current_time
-
-        -- Calculate the allowed arrival time
-        local allow_at = last_tat - delay_tolerance
-
-        -- Check if the request is allowed
-        if current_time >= allow_at then
-            -- Request allowed; calculate the new TAT
-            local new_tat = math.max(current_time, last_tat) + emission_interval
-            
-            -- Calculate TTL based on the new TAT and the current time in seconds
-            local ttl = math.ceil((new_tat - current_time + delay_tolerance) / 1000000)
-
-            -- Store the updated TAT with calculated TTL
-            redis.call("SET", tat_key, new_tat, "EX", ttl)
-
-            -- Request allowed
-            return 1
-        else
-            -- Request denied
-            return -1  
-        end
-    ]]
-
-    local function load_new_script()
-        local new_sha, err = red:script("LOAD", rate_limit_script)
-        if not new_sha then
-            return nil, err
-        end
-        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
-        return new_sha
+    local res, err, errcode, sqlstate = db:query(query)
+    if not res then
+        return nil, "Failed to execute stored procedure: " .. err
     end
 
-    if reload then
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
-        return load_new_script()
+    local res, err, errcode, sqlstate = db:query("SELECT @result")
+    if not res then
+        return nil, "Failed to get stored procedure result: " .. err
     end
 
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
-    if not sha then
-        sha = load_new_script()
-    end
+    local result = tonumber(res[1]["@result"])
 
-    return sha
-end
-
--- Execute the GCRA logic atomically
-local function execute_rate_limit_script(red, tat_key, emission_interval, delay_tolerance)
-    local sha, err = load_script_to_redis(red, false)
-    if not sha then
-        return nil, "Failed to load script: " .. err
-    end
-
-    local results, err = red:evalsha(sha, 1, tat_key, emission_interval, delay_tolerance)
-
-    if err and err:find("NOSCRIPT", 1, true) then
-        -- Script not found in Redis, reload it
-        sha, err = load_script_to_redis(red, true)
-        if not sha then
-            return nil, err
-        end
-        results, err = red:evalsha(sha, 1, tat_key, emission_interval, delay_tolerance)
-    end
-
-    if err then
-        return nil, err
-    end
-
-    return results
-end
-
--- Main GCRA rate limiting logic
-local function rate_limit(red, token)
-    -- Redis key for storing the user's TAT (Theoretical Arrival Time)
-    local tat_key = "rate_limit:" .. token .. ":tat"
-
-    -- Calculate the emission interval and delay tolerance in microseconds
-    local emission_interval = (period / rate) * 1000000
-    local delay_tolerance = emission_interval * burst
-
-    -- Execute GCRA logic
-    local result, err = execute_rate_limit_script(red, tat_key, emission_interval, delay_tolerance)
-    if err then
-        return nil, err
-    end
-
-    -- Handle the result
     if result == 1 then
         return true, "allowed"
     else
@@ -157,7 +82,7 @@ local function rate_limit(red, token)
     end
 end
 
--- Main function to initialize Redis and handle rate limiting
+-- Main function to handle rate limiting
 local function main()
     local token, err = get_request_token()
     if not token then
@@ -165,24 +90,25 @@ local function main()
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
 
-    local red, err = init_redis()
-    if not red then
-        ngx.log(ngx.ERR, "Failed to initialize Redis: ", err)
+    local db, err = init_mysql()
+    if not db then
+        ngx.log(ngx.ERR, "Failed to initialize MySQL: ", err)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    local pcall_status, rate_limit_result, message = pcall(rate_limit, red, token)
+    local pcall_status, check_rate_limit_result, message = pcall(check_rate_limit, db, token)
 
-    local ok, err = close_redis(red)
+    local ok, err = close_mysql(db)
     if not ok then
-        ngx.log(ngx.ERR, "Failed to close Redis connection: ", err)
+        ngx.log(ngx.ERR, "Failed to close MySQL connection: ", err)
     end
+
     if not pcall_status then
-        ngx.log(ngx.ERR, rate_limit_result)
+        ngx.log(ngx.ERR, check_rate_limit_result)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
 
-    if not rate_limit_result then
+    if not check_rate_limit_result then
         ngx.log(ngx.ERR, "Failed to rate limit: ", message)
         ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end

@@ -10,7 +10,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 -- GCRA parameters
 local period = 60 -- Time window of 1 minute
 local rate = 100 -- 100 requests per minute
-local burst = 10 -- Allow burst of up to 2 requests
+local burst = 5 -- Allow burst of up to 2 requests
 
 -- Helper function to initialize Redis connection
 local function init_redis()

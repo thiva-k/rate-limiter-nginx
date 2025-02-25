@@ -9,7 +9,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Leaky bucket parameters
 local max_delay = 3000 -- 3 second,
-local leak_rate = 1 -- Requests leaked per second
+local leak_rate = 5 / 3 -- Requests leaked per second
 
 -- Lock settings
 local lock_timeout = 1000 -- Lock timeout in milliseconds

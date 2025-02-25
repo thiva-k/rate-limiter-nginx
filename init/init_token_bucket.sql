@@ -1,6 +1,6 @@
-CREATE DATABASE IF NOT EXISTS rate_limit_db;
+CREATE DATABASE IF NOT EXISTS token_bucket_db;
 ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';
-USE rate_limit_db;
+USE token_bucket_db;
 
 CREATE TABLE user (
     user_token VARCHAR(255) PRIMARY KEY
@@ -14,7 +14,7 @@ CREATE TABLE token_bucket (
 
 DELIMITER //
 
-CREATE PROCEDURE rate_limit(
+CREATE PROCEDURE check_rate_limit(
     IN p_user_token VARCHAR(255), 
     IN p_bucket_capacity INT, 
     IN p_refill_rate DECIMAL(10,6), 
@@ -82,7 +82,7 @@ BEGIN
             SET p_result = 1;
         ELSE
             -- Not enough tokens
-            SET p_result = 0;
+            SET p_result = -1;
         END IF;
     END procedure_block;
 
