@@ -61,7 +61,7 @@ end
 local function check_rate_limit(db, token)
     -- Call the procedure and capture the OUT parameter
     local query = string.format(
-        "CALL check_sliding_window_counter_limit('%s', %d, %d, %d, @is_limited);",
+        "CALL sliding_window_counter_db.check_rate_limit('%s', %d, %d, %d, @is_limited);",
         token, window_size, rate_limit, sub_window_count
     )
     
