@@ -70,16 +70,16 @@ local function load_script_to_redis(red, reload)
         if not new_sha then
             return nil, err
         end
-        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
+        ngx.shared.my_cache:set("sliding_window_logs_script_sha", new_sha)
         return new_sha
     end
 
     if reload then
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        ngx.shared.my_cache:delete("sliding_window_logs_script_sha")
         return load_new_script()
     end
 
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+    local sha = ngx.shared.my_cache:get("sliding_window_logs_script_sha")
     if not sha then
         sha = load_new_script()
     end

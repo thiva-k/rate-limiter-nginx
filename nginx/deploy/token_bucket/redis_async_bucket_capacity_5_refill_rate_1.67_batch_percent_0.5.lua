@@ -135,7 +135,7 @@ local rate_limit_script = [[
 
 -- Execute the token bucket logic atomically
 local function execute_rate_limit_script(red, tokens_key, last_access_key, batch_used, ttl)
-    local sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, false)
+    local sha, err = load_script_to_redis(red, "token_bucket_async_sha", rate_limit_script, false)
     if not sha then
         return nil, "Failed to load script: " .. err
     end
@@ -144,7 +144,7 @@ local function execute_rate_limit_script(red, tokens_key, last_access_key, batch
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
-        sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, true)
+        sha, err = load_script_to_redis(red, "token_bucket_async_sha", rate_limit_script, true)
         if not sha then
             return nil, err
         end

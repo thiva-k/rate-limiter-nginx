@@ -6,8 +6,8 @@ from datetime import datetime
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Set JMeter parameters
-LB_1_HOSTNAME = "34.72.14.4"
-LB_2_HOSTNAME = "35.232.210.73"
+LB_1_HOSTNAME = "34.66.199.144"
+LB_2_HOSTNAME = "34.121.56.155"
 LB_1_PORT = 8090
 LB_2_PORT = 8091
 
@@ -26,23 +26,23 @@ GROUP_3_REQUEST_RATE = 12
 
 # Define array of algorithms
 algorithms = [
-    # # fixed_window_counter
-    # "fixed_window_counter/redis_script_rate_limit_100_window_size_60",
-    # "fixed_window_counter/mysql_script_rate_limit_100_window_size_60",
-    # "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
+    # fixed_window_counter
+    "fixed_window_counter/redis_script_rate_limit_100_window_size_60",
+    "fixed_window_counter/mysql_script_rate_limit_100_window_size_60",
+    "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
 
-    # # GCRA
-    # "gcra/mysql_script_period_60_rate_100_burst_5",
-    # "gcra/redis_script_period_60_rate_100_burst_5",
+    # GCRA
+    "gcra/mysql_script_period_60_rate_100_burst_5",
+    "gcra/redis_script_period_60_rate_100_burst_5",
 
-    # # Leaky Bucket
-    # "leaky_bucket/mysql_script_delay_3000_leak_rate_1.67",
-    # "leaky_bucket/redis_script_delay_3000_leak_rate_1.67",
+    # Leaky Bucket
+    "leaky_bucket/mysql_script_delay_3000_leak_rate_1.67",
+    "leaky_bucket/redis_script_delay_3000_leak_rate_1.67",
 
-    # # sliding_window_counter
-    # "sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5",
-    # "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.5",
-    # "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_5",
+    # sliding_window_counter
+    "sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5",
+    "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.5",
+    "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_5",
 
     # sliding_window_logs
     "sliding_window_logs/mysql_script_rate_limit_100_window_size_60",

@@ -163,7 +163,7 @@ local function check_rate_limit(red, shared_dict, token)
         local window_start = current_time - window_size * 1000
 
         -- Load the script to Redis
-        local sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, false)
+        local sha, err = load_script_to_redis(red, "sliding_window_logs_async_sha", rate_limit_script, false)
         if not sha then
             return nil, "Failed to load script: " .. err
         end
@@ -173,7 +173,7 @@ local function check_rate_limit(red, shared_dict, token)
 
         if err and err:find("NOSCRIPT", 1, true) then
             -- Script not found in Redis, reload it
-            sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, true)
+            sha, err = load_script_to_redis(red, "sliding_window_logs_async_sha", rate_limit_script, true)
             if not sha then
                 return nil, err
             end
