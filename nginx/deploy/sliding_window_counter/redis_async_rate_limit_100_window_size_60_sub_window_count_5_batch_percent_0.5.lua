@@ -10,7 +10,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Sliding window parameters
 local window_size = 60 -- Total window size in seconds
-local request_limit = 10 -- Max requests allowed in the window
+local request_limit = 100 -- Max requests allowed in the window
 local sub_window_count = 5 -- Number of subwindows
 local sub_window_size = window_size / sub_window_count -- Size of each subwindow
 local batch_percent = 0.5 -- Percentage of remaining quota to allocate for batch

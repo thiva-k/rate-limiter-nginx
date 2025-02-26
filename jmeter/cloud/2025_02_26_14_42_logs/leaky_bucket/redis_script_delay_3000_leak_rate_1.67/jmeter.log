@@ -1,0 +1,150 @@
+2025-02-26 14:46:34,137 INFO o.a.j.u.JMeterUtils: Setting Locale to en_EN
+2025-02-26 14:46:34,161 INFO o.a.j.JMeter: Loading user properties from: C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\bin\user.properties
+2025-02-26 14:46:34,164 INFO o.a.j.JMeter: Loading system properties from: C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\bin\system.properties
+2025-02-26 14:46:34,165 INFO o.a.j.JMeter: Setting JMeter property: lb_1_hostname=34.72.14.4
+2025-02-26 14:46:34,165 INFO o.a.j.JMeter: Setting JMeter property: lb_2_hostname=35.232.210.73
+2025-02-26 14:46:34,165 INFO o.a.j.JMeter: Setting JMeter property: lb_1_port=8090
+2025-02-26 14:46:34,165 INFO o.a.j.JMeter: Setting JMeter property: lb_2_port=8091
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: warm_up_users=5
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: warm_up_time=10
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: test_run_time=30
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: ramp_up=5
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: group_1=1
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: group_2=1
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: group_3=1
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: group_1_request_rate=3
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: group_2_request_rate=9
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: group_3_request_rate=12
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: log_file=c:\\Users\\ASUS\\Desktop\\Repos\\rate-limiter-nginx\\jmeter\\cloud\\2025_02_26_14_42_logs\\leaky_bucket\\redis_script_delay_3000_leak_rate_1.67\\warm_up_results.csv
+2025-02-26 14:46:34,169 INFO o.a.j.JMeter: Setting JMeter property: algorithm=leaky_bucket_redis_script_delay_3000_leak_rate_1.67
+2025-02-26 14:46:34,170 INFO o.a.j.JMeter: Setting JMeter property: auth=/leaky_bucket/redis_script_delay_3000_leak_rate_1.67/tools.descartes.teastore.auth/rest
+2025-02-26 14:46:34,170 INFO o.a.j.JMeter: Setting JMeter property: persistence=/leaky_bucket/redis_script_delay_3000_leak_rate_1.67/tools.descartes.teastore.persistence/rest
+2025-02-26 14:46:34,170 INFO o.a.j.JMeter: Setting JMeter property: recommender=/leaky_bucket/redis_script_delay_3000_leak_rate_1.67/tools.descartes.teastore.recommender/rest
+2025-02-26 14:46:34,170 INFO o.a.j.JMeter: Setting JMeter property: image=/leaky_bucket/redis_script_delay_3000_leak_rate_1.67/tools.descartes.teastore.image/rest
+2025-02-26 14:46:34,180 INFO o.a.j.JMeter: Copyright (c) 1998-2024 The Apache Software Foundation
+2025-02-26 14:46:34,180 INFO o.a.j.JMeter: Version 5.6.3
+2025-02-26 14:46:34,180 INFO o.a.j.JMeter: java.version=17.0.9
+2025-02-26 14:46:34,180 INFO o.a.j.JMeter: java.vm.name=Java HotSpot(TM) 64-Bit Server VM
+2025-02-26 14:46:34,180 INFO o.a.j.JMeter: os.name=Windows 11
+2025-02-26 14:46:34,180 INFO o.a.j.JMeter: os.arch=amd64
+2025-02-26 14:46:34,180 INFO o.a.j.JMeter: os.version=10.0
+2025-02-26 14:46:34,181 INFO o.a.j.JMeter: file.encoding=Cp1252
+2025-02-26 14:46:34,181 INFO o.a.j.JMeter: java.awt.headless=true
+2025-02-26 14:46:34,181 INFO o.a.j.JMeter: Max memory     =1073741824
+2025-02-26 14:46:34,181 INFO o.a.j.JMeter: Available Processors =12
+2025-02-26 14:46:34,189 INFO o.a.j.JMeter: Default Locale=English (EN)
+2025-02-26 14:46:34,190 INFO o.a.j.JMeter: JMeter  Locale=English (EN)
+2025-02-26 14:46:34,190 INFO o.a.j.JMeter: JMeterHome=C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3
+2025-02-26 14:46:34,190 INFO o.a.j.JMeter: user.dir  =C:\Users\ASUS\Desktop\Repos\rate-limiter-nginx
+2025-02-26 14:46:34,190 INFO o.a.j.JMeter: PWD       =C:\Users\ASUS\Desktop\Repos\rate-limiter-nginx
+2025-02-26 14:46:34,191 INFO o.a.j.JMeter: IP: 192.168.1.45 Name: THIVA FullName: THIVA
+2025-02-26 14:46:34,210 INFO o.a.j.s.FileServer: Default base='C:\Users\ASUS\Desktop\Repos\rate-limiter-nginx'
+2025-02-26 14:46:34,213 INFO o.a.j.s.FileServer: Set new base='c:\Users\ASUS\Desktop\Repos\rate-limiter-nginx\jmeter\cloud'
+2025-02-26 14:46:34,460 INFO o.a.j.s.SaveService: Testplan (JMX) version: 2.2. Testlog (JTL) version: 2.2
+2025-02-26 14:46:34,494 INFO o.a.j.s.SaveService: Using SaveService properties version 5.0
+2025-02-26 14:46:34,499 INFO o.a.j.s.SaveService: Using SaveService properties file encoding UTF-8
+2025-02-26 14:46:34,502 INFO o.a.j.s.SaveService: Loading file: c:\Users\ASUS\Desktop\Repos\rate-limiter-nginx\jmeter\cloud\teastore_performance_leaky_bucket.jmx
+2025-02-26 14:46:34,565 INFO o.a.j.p.h.c.CookieManager: Settings: Delete null: true Check: true Allow variable: true Save: false Prefix: COOKIE_
+2025-02-26 14:46:34,600 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/html is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-02-26 14:46:34,600 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xhtml+xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-02-26 14:46:34,600 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-02-26 14:46:34,600 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-02-26 14:46:34,600 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/vnd.wap.wml is org.apache.jmeter.protocol.http.parser.RegexpHTMLParser
+2025-02-26 14:46:34,600 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/css is org.apache.jmeter.protocol.http.parser.CssParser
+2025-02-26 14:46:34,826 INFO o.a.j.s.SampleResult: Note: Sample TimeStamps are START times
+2025-02-26 14:46:34,827 INFO o.a.j.s.SampleResult: sampleresult.default.encoding is set to UTF-8
+2025-02-26 14:46:34,827 INFO o.a.j.s.SampleResult: sampleresult.useNanoTime=true
+2025-02-26 14:46:34,827 INFO o.a.j.s.SampleResult: sampleresult.nanoThreadSleep=5000
+2025-02-26 14:46:34,896 INFO o.a.j.JMeter: Creating summariser <summary>
+2025-02-26 14:46:34,921 INFO o.a.j.e.StandardJMeterEngine: Running the test!
+2025-02-26 14:46:34,923 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2025-02-26 14:46:34,923 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2025-02-26 14:46:34,933 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must contain the string: '.functions.'
+2025-02-26 14:46:34,933 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must not contain the string: '.gui.'
+2025-02-26 14:46:35,021 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-casutg-2.10.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-26 14:46:35,040 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-graphs-vs-2.0.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-26 14:46:35,047 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-manager-1.9.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-26 14:46:35,157 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-graphs-basic-2.0.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-26 14:46:35,164 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-manager-0.20.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-26 14:46:35,174 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-tst-2.6.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-26 14:46:35,179 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-parallel-0.12.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-26 14:46:35,535 INFO o.a.j.JMeter: Running test (1740561395535)
+2025-02-26 14:46:35,539 INFO o.a.j.e.StandardJMeterEngine: Starting setUp thread groups
+2025-02-26 14:46:35,539 INFO o.a.j.e.StandardJMeterEngine: Starting setUp ThreadGroup: 1 : setUp Thread Group 
+2025-02-26 14:46:35,539 INFO o.a.j.e.StandardJMeterEngine: Starting 5 threads for group setUp Thread Group.
+2025-02-26 14:46:35,539 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-26 14:46:35,540 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=5 ramp-up=5 delayedStart=false
+2025-02-26 14:46:35,551 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-1
+2025-02-26 14:46:35,553 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2025-02-26 14:46:35,554 INFO o.a.j.e.StandardJMeterEngine: Waiting for all setup thread groups to exit
+2025-02-26 14:46:36,470 INFO o.a.j.p.h.s.HTTPHCAbstractImpl: Local host = THIVA
+2025-02-26 14:46:36,477 INFO o.a.j.p.h.s.HTTPHC4Impl: HTTP request retry count = 0
+2025-02-26 14:46:36,548 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-2
+2025-02-26 14:46:37,547 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-3
+2025-02-26 14:46:38,547 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-4
+2025-02-26 14:46:39,544 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-5
+2025-02-26 14:46:45,620 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-5
+2025-02-26 14:46:45,621 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-5
+2025-02-26 14:46:45,626 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-4
+2025-02-26 14:46:45,627 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-4
+2025-02-26 14:46:45,630 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-2
+2025-02-26 14:46:45,639 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-1
+2025-02-26 14:46:45,639 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-1
+2025-02-26 14:46:45,639 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-2
+2025-02-26 14:46:46,135 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-3
+2025-02-26 14:46:46,135 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-3
+2025-02-26 14:46:46,136 INFO o.a.j.e.StandardJMeterEngine: All Setup Threads have ended
+2025-02-26 14:46:46,169 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 1 : Thread Group
+2025-02-26 14:46:46,170 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2025-02-26 14:46:46,170 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-26 14:46:46,170 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=1 ramp-up=5 delayedStart=false
+2025-02-26 14:46:46,170 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2025-02-26 14:46:46,171 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 2 : Thread Group
+2025-02-26 14:46:46,171 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2025-02-26 14:46:46,171 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-26 14:46:46,171 INFO o.a.j.t.ThreadGroup: Starting thread group... number=2 threads=1 ramp-up=5 delayedStart=false
+2025-02-26 14:46:46,171 INFO o.a.j.t.ThreadGroup: Started thread group number 2
+2025-02-26 14:46:46,172 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 3 : Thread Group
+2025-02-26 14:46:46,172 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2025-02-26 14:46:46,172 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-26 14:46:46,172 INFO o.a.j.t.ThreadGroup: Starting thread group... number=3 threads=1 ramp-up=5 delayedStart=false
+2025-02-26 14:46:46,172 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 1-1
+2025-02-26 14:46:46,172 INFO o.a.j.t.ThreadGroup: Started thread group number 3
+2025-02-26 14:46:46,172 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 4 : Thread Group
+2025-02-26 14:46:46,172 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2025-02-26 14:46:46,172 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-26 14:46:46,172 INFO o.a.j.t.ThreadGroup: Starting thread group... number=4 threads=1 ramp-up=5 delayedStart=false
+2025-02-26 14:46:46,173 INFO o.a.j.t.ThreadGroup: Started thread group number 4
+2025-02-26 14:46:46,173 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 5 : Thread Group
+2025-02-26 14:46:46,173 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2025-02-26 14:46:46,173 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-26 14:46:46,173 INFO o.a.j.t.ThreadGroup: Starting thread group... number=5 threads=1 ramp-up=5 delayedStart=false
+2025-02-26 14:46:46,174 INFO o.a.j.t.ThreadGroup: Started thread group number 5
+2025-02-26 14:46:46,174 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 6 : Thread Group
+2025-02-26 14:46:46,174 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2025-02-26 14:46:46,174 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-26 14:46:46,174 INFO o.a.j.t.ThreadGroup: Starting thread group... number=6 threads=1 ramp-up=5 delayedStart=false
+2025-02-26 14:46:46,175 INFO o.a.j.t.ThreadGroup: Started thread group number 6
+2025-02-26 14:46:46,175 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 7 : Thread Group
+2025-02-26 14:46:46,175 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2025-02-26 14:46:46,175 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-26 14:46:46,175 INFO o.a.j.t.ThreadGroup: Starting thread group... number=7 threads=1 ramp-up=5 delayedStart=false
+2025-02-26 14:46:46,175 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 3-1
+2025-02-26 14:46:46,175 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 2-1
+2025-02-26 14:46:46,176 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 4-1
+2025-02-26 14:46:46,176 INFO o.a.j.t.ThreadGroup: Started thread group number 7
+2025-02-26 14:46:46,176 INFO o.a.j.e.StandardJMeterEngine: All thread groups have been started
+2025-02-26 14:46:46,176 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 6-1
+2025-02-26 14:46:46,177 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 7-1
+2025-02-26 14:46:46,178 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 5-1
+2025-02-26 14:47:01,520 INFO o.a.j.r.Summariser: summary +     20 in 00:00:26 =    0.8/s Avg:   418 Min:   250 Max:   535 Err:     0 (0.00%) Active: 7 Started: 7 Finished: 0
+2025-02-26 14:47:06,700 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 1-1
+2025-02-26 14:47:11,467 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 3-1
+2025-02-26 14:47:11,475 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 5-1
+2025-02-26 14:47:11,475 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 4-1
+2025-02-26 14:47:11,484 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 6-1
+2025-02-26 14:47:11,496 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 7-1
+2025-02-26 14:47:13,155 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 2-1
+2025-02-26 14:47:13,155 INFO o.a.j.e.StandardJMeterEngine: Notifying test listeners of end of test
+2025-02-26 14:47:13,158 INFO o.a.j.r.Summariser: summary +     17 in 00:00:12 =    1.5/s Avg:   280 Min:   246 Max:   472 Err:     0 (0.00%) Active: 0 Started: 7 Finished: 7
+2025-02-26 14:47:13,160 INFO o.a.j.r.Summariser: summary =     37 in 00:00:38 =    1.0/s Avg:   355 Min:   246 Max:   535 Err:     0 (0.00%)
