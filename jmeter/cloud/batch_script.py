@@ -24,9 +24,6 @@ GROUP_1_REQUEST_RATE = 3
 GROUP_2_REQUEST_RATE = 9
 GROUP_3_REQUEST_RATE = 12
 
-# Calculate the path for the JMeter test file
-TEST_PLAN = os.path.join(current_dir, "teastore_performance.jmx")
-
 # Define array of algorithms
 algorithms = [
     # fixed_window_counter
@@ -72,6 +69,13 @@ timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
 
 for algo in algorithms:
     algo_type, algo_version = algo.split("/", 1)
+    
+    # Determine the correct JMeter test plan
+    if algo_type == "leaky_bucket":
+        TEST_PLAN = os.path.join(current_dir, "teastore_performance_leaky_bucket.jmx")
+        GROUP_3 
+    else:
+        TEST_PLAN = os.path.join(current_dir, "teastore_performance.jmx")
 
     # Create log directory with date and time
     log_dir = os.path.join(current_dir, f"{timestamp}_logs", algo_type, algo_version)
