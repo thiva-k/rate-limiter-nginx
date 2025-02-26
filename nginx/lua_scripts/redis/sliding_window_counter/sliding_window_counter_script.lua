@@ -10,7 +10,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 -- Sliding window parameters
 local window_size = 60 -- Total window size in seconds
 local request_limit = 100 -- Max requests allowed in the window
-local sub_window_count = 6 -- Number of subwindows
+local sub_window_count = 5 -- Number of subwindows
 local rate_limit_script = [[
     local key_prefix = KEYS[1]
     local window_size = tonumber(ARGV[1])
@@ -90,16 +90,16 @@ local function load_script_to_redis(red, reload)
         if not new_sha then
             return nil, err
         end
-        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
+        ngx.shared.my_cache:set("sliding_window_counter_script_sha", new_sha)
         return new_sha
     end
 
     if reload then
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        ngx.shared.my_cache:delete("sliding_window_counter_script_sha")
         return load_new_script()
     end
 
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+    local sha = ngx.shared.my_cache:get("sliding_window_counter_script_sha")
     if not sha then
         sha = load_new_script()
     end
@@ -114,7 +114,7 @@ local function execute_rate_limit_script(red, key_prefix)
     end
 
     local result, err = red:evalsha(sha, 1, key_prefix, window_size, request_limit, sub_window_count)
-    
+
     if err and err:find("NOSCRIPT", 1, true) then
         sha, err = load_script_to_redis(red, true)
         if not sha then
@@ -134,7 +134,7 @@ end
 local function check_rate_limit(red, token)
     local key_prefix = "rate_limit:" .. token
     local result, err = execute_rate_limit_script(red, key_prefix)
-    
+
     if not result then
         return nil, "Failed to run rate limiting script: " .. err
     end
