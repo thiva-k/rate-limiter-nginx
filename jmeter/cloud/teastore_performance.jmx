@@ -82,22 +82,22 @@
           </elementProp>
           <elementProp name="auth" elementType="Argument">
             <stringProp name="Argument.name">auth</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.auth/rest</stringProp>
+            <stringProp name="Argument.value">${__P(auth, /tools.descartes.teastore.auth/rest)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="persistence" elementType="Argument">
             <stringProp name="Argument.name">persistence</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.persistence/rest</stringProp>
+            <stringProp name="Argument.value">${__P(persistence, /tools.descartes.teastore.persistence/rest)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="recommender" elementType="Argument">
             <stringProp name="Argument.name">recommender</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.recommender/rest</stringProp>
+            <stringProp name="Argument.value">${__P(recommender, /tools.descartes.teastore.recommender/rest)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="image" elementType="Argument">
             <stringProp name="Argument.name">image</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.image/rest</stringProp>
+            <stringProp name="Argument.value">${__P(image, /tools.descartes.teastore.image/rest)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="bucket_name" elementType="Argument">
@@ -117,8 +117,6 @@
           </elementProp>
         </collectionProp>
       </elementProp>
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
       <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group">
@@ -2087,7 +2085,7 @@ file &lt;&lt; csvEntry</stringProp>
         </JSR223PostProcessor>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
         <stringProp name="ThreadGroup.num_threads">${group_1}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -4020,7 +4018,7 @@ vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
         </ResponseAssertion>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
         <stringProp name="ThreadGroup.num_threads">${group_2}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>
@@ -5953,7 +5951,7 @@ vars.putObject(&quot;current_index&quot;, (currentIndex + 1) % portArray.size())
         </ResponseAssertion>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread-Gruppe">
         <stringProp name="ThreadGroup.num_threads">${group_3}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <stringProp name="ThreadGroup.duration">${test_run_time}</stringProp>

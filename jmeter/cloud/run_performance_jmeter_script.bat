@@ -28,6 +28,7 @@ echo 2 - sliding_window_counter
 echo 3 - sliding_window_log
 echo 4 - token_bucket
 echo 5 - leaky_bucket
+echo 6 - gcra
 set /p ALGO_OPTION="Enter the number corresponding to the algorithm: "
 
 REM Validate algorithm input
@@ -43,6 +44,8 @@ if "%ALGO_OPTION%"=="1" (
     set ALGO_NAME=leaky_bucket
     set TEST_PLAN=teastore_performance_leaky_bucket.jmx
     set GROUP_3=%GROUP_3_FOR_LEAKY_BUCKET%
+) else if "%ALGO_OPTION%"=="6" (
+    set ALGO_NAME=gcra
 ) else (
     echo Invalid algorithm option. Please enter a number between 1 and 5.
     pause

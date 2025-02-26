@@ -82,22 +82,22 @@
           </elementProp>
           <elementProp name="auth" elementType="Argument">
             <stringProp name="Argument.name">auth</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.auth/rest</stringProp>
+            <stringProp name="Argument.value">${__P(auth, /tools.descartes.teastore.auth/rest)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="persistence" elementType="Argument">
             <stringProp name="Argument.name">persistence</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.persistence/rest</stringProp>
+            <stringProp name="Argument.value">${__P(persistence, /tools.descartes.teastore.persistence/rest)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="recommender" elementType="Argument">
             <stringProp name="Argument.name">recommender</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.recommender/rest</stringProp>
+            <stringProp name="Argument.value">${__P(recommender, /tools.descartes.teastore.recommender/rest)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="image" elementType="Argument">
             <stringProp name="Argument.name">image</stringProp>
-            <stringProp name="Argument.value">/tools.descartes.teastore.image/rest</stringProp>
+            <stringProp name="Argument.value">${__P(image, /tools.descartes.teastore.image/rest)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="bucket_name" elementType="Argument">
