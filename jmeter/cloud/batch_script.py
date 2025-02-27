@@ -26,44 +26,44 @@ GROUP_3_REQUEST_RATE = 120
 
 # Define array of algorithms
 algorithms = [
+    # no throttling
+    "/base/base",
+
 #     # fixed_window_counter
-#     "fixed_window_counter/redis_script_rate_limit_100_window_size_60",
-#     "fixed_window_counter/mysql_script_rate_limit_100_window_size_60",
-#     "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
+    "fixed_window_counter/redis_script_rate_limit_100_window_size_60",
+    "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
+    "fixed_window_counter/mysql_script_rate_limit_100_window_size_60",
 
 #     # GCRA
-#     "gcra/mysql_script_period_60_rate_100_burst_5",
-#     "gcra/redis_script_period_60_rate_100_burst_5",
+    "gcra/mysql_script_period_60_rate_100_burst_5",
+    "gcra/redis_script_period_60_rate_100_burst_5",
 
 #     # Leaky Bucket
-#     "leaky_bucket/mysql_script_delay_3000_leak_rate_1.67",
-#     "leaky_bucket/redis_script_delay_3000_leak_rate_1.67",
+    # "leaky_bucket/redis_script_delay_3000_leak_rate_1.67",
+    # "leaky_bucket/mysql_script_delay_3000_leak_rate_1.67",
 
 #     # sliding_window_counter
-#     "sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5",
-#     "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.5",
-#     "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_5",
-#     "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_2",
+    "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_5",
+    "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.5",
+    "sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5",
+    "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_2",
 
 #     # sliding_window_logs
-#     "sliding_window_logs/mysql_script_rate_limit_100_window_size_60",
-#     "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
-#     "sliding_window_logs/redis_script_rate_limit_100_window_size_60",
+    "sliding_window_logs/redis_script_rate_limit_100_window_size_60",
+    "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
+    "sliding_window_logs/mysql_script_rate_limit_100_window_size_60",
 #     "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.2",
 #     "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.8",
 
 #     # token_bucket
-#     "token_bucket/mysql_script_bucket_capacity_5_refill_rate_1.67",
-#     "token_bucket/redis_script_bucket_capacity_5_refill_rate_1.67",
-#     "token_bucket/redis_async_bucket_capacity_5_refill_rate_1.67_batch_percent_0.5",
+    "token_bucket/redis_script_bucket_capacity_5_refill_rate_1.67",
+    "token_bucket/redis_async_bucket_capacity_5_refill_rate_1.67_batch_percent_0.5",
+    "token_bucket/mysql_script_bucket_capacity_5_refill_rate_1.67",
+    "token_bucket/redis_async_bucket_capacity_100_refill_rate_1.67_batch_percent_0.5",
 #     "token_bucket/redis_async_bucket_capacity_5_refill_rate_1.67_batch_percent_0.2",
 #     "token_bucket/redis_async_bucket_capacity_5_refill_rate_1.67_batch_percent_0.8",
 #     "token_bucket/redis_async_bucket_capacity_100_refill_rate_1.67_batch_percent_0.2",
-#     "token_bucket/redis_async_bucket_capacity_100_refill_rate_1.67_batch_percent_0.5",
 #     "token_bucket/redis_async_bucket_capacity_100_refill_rate_1.67_batch_percent_0.8",
-    
-    # no throttling
-    "/base/base"
 ]
 
 # Define scripts paths relative to the current directory
@@ -84,7 +84,7 @@ for algo in algorithms:
     # Determine the correct JMeter test plan
     if algo_type == "leaky_bucket":
         TEST_PLAN = os.path.join(current_dir, "teastore_performance_leaky_bucket.jmx")
-        GROUP_3 
+        GROUP_3 = GROUP_3_FOR_LEAKY_BUCKET 
     else:
         TEST_PLAN = os.path.join(current_dir, "teastore_performance.jmx")
 
