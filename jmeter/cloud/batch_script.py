@@ -25,34 +25,52 @@ GROUP_2_REQUEST_RATE = 90
 GROUP_3_REQUEST_RATE = 120
 
 # Define array of algorithms
+# algorithms = [
+#     # fixed_window_counter
+#     "fixed_window_counter/redis_script_rate_limit_100_window_size_60",
+#     "fixed_window_counter/mysql_script_rate_limit_100_window_size_60",
+#     "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
+
+#     # GCRA
+#     "gcra/mysql_script_period_60_rate_100_burst_5",
+#     "gcra/redis_script_period_60_rate_100_burst_5",
+
+#     # Leaky Bucket
+#     "leaky_bucket/mysql_script_delay_3000_leak_rate_1.67",
+#     "leaky_bucket/redis_script_delay_3000_leak_rate_1.67",
+
+#     # sliding_window_counter
+#     "sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5",
+#     "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.5",
+#     "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_5",
+
+#     # sliding_window_logs
+#     "sliding_window_logs/mysql_script_rate_limit_100_window_size_60",
+#     "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
+#     "sliding_window_logs/redis_script_rate_limit_100_window_size_60",
+
+#     # token_bucket
+#     "token_bucket/mysql_script_bucket_capacity_5_refill_rate_1.67",
+#     "token_bucket/redis_async_bucket_capacity_5_refill_rate_1.67_batch_percent_0.5",
+#     "token_bucket/redis_script_bucket_capacity_5_refill_rate_1.67",
+# ]
+
 algorithms = [
-    # fixed_window_counter
-    "fixed_window_counter/redis_script_rate_limit_100_window_size_60",
-    "fixed_window_counter/mysql_script_rate_limit_100_window_size_60",
-    "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
+    "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.2",
+    "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.8",
 
-    # GCRA
-    "gcra/mysql_script_period_60_rate_100_burst_5",
-    "gcra/redis_script_period_60_rate_100_burst_5",
+    "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.2",
+    "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.8",
+    "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_2"
 
-    # Leaky Bucket
-    "leaky_bucket/mysql_script_delay_3000_leak_rate_1.67",
-    "leaky_bucket/redis_script_delay_3000_leak_rate_1.67",
-
-    # sliding_window_counter
-    "sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5",
-    "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.5",
-    "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_5",
-
-    # sliding_window_logs
-    "sliding_window_logs/mysql_script_rate_limit_100_window_size_60",
-    "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
-    "sliding_window_logs/redis_script_rate_limit_100_window_size_60",
-
-    # token_bucket
-    "token_bucket/mysql_script_bucket_capacity_5_refill_rate_1.67",
-    "token_bucket/redis_async_bucket_capacity_5_refill_rate_1.67_batch_percent_0.5",
-    "token_bucket/redis_script_bucket_capacity_5_refill_rate_1.67"
+    "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.2",
+    "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.8",
+    
+    "token_bucket/redis_async_bucket_capacity_5_refill_rate_1.67_batch_percent_0.2",
+    "token_bucket/redis_async_bucket_capacity_5_refill_rate_1.67_batch_percent_0.8",
+    "token_bucket/redis_async_bucket_capacity_100_refill_rate_1.67_batch_percent_0.2",
+    "token_bucket/redis_async_bucket_capacity_100_refill_rate_1.67_batch_percent_0.5",
+    "token_bucket/redis_async_bucket_capacity_100_refill_rate_1.67_batch_percent_0.8",
 ]
 
 # Define scripts paths relative to the current directory
