@@ -6,7 +6,7 @@ from datetime import datetime
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Set JMeter parameters
-LB_1_HOSTNAME = "34.67.126.244"
+LB_1_HOSTNAME = "34.70.149.254"
 LB_2_HOSTNAME = "35.232.62.106"
 LB_1_PORT = 8090
 LB_2_PORT = 8091
@@ -56,13 +56,7 @@ GROUP_3_REQUEST_RATE = 120
 # ]
 
 algorithms = [
-    "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.2",
-    "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.8",
-
-    "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.2",
-    "sliding_window_counter/redis_async_rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.8",
-    "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_2"
-
+    "sliding_window_counter/redis_script_rate_limit_100_window_size_60_sub_window_count_2",
     "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.2",
     "sliding_window_logs/redis_async_rate_limit_100_window_size_60_batch_percent_0.8",
     
