@@ -4,8 +4,8 @@ import seaborn as sns
 import os
 
 # Define file paths
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-FILE_PATH = os.path.join(CURRENT_DIR, "test_result_summary.csv")
+ROOT_DIR = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/jmeter/cloud/logs/2025_02_27_09_12"
+FILE_PATH = os.path.join(ROOT_DIR, "test_result_summary.csv")
 
 df = pd.read_csv(FILE_PATH)
 
@@ -16,16 +16,17 @@ df = df.rename(columns=lambda x: x.strip())  # Remove leading/trailing whitespac
 script_df = df[df['Version'] == 'script'].copy()  # Avoid SettingWithCopyWarning
 
 # Filter for algorithms of interest
-algorithms = ['fixed_window_counter', 'sliding_window_log', 'sliding_window_counter', 'token_bucket', 'leaky_bucket']
+algorithms = ['fixed_window_counter', 'sliding_window_logs', 'sliding_window_counter', 'token_bucket', 'gcra']
 script_df = script_df[script_df['Algorithm'].isin(algorithms)]
 
 # Mapping of algorithms to specific configurations
 config_mapping = {
-    'fixed_window_counter': 'rate_limit = 100, window_size = 60s',
-    'sliding_window_log': 'rate_limit = 100, window_size = 60s',
-    'sliding_window_counter': 'rate_limit = 100, sub_windows = 5, window_size = 60s',
-    'token_bucket': 'refill_rate = 5/3 token/s , bucket_capacity = 5',
-    'leaky_bucket': 'rate_limit = 100, leak_rate = 5/3 req/s, max_delay = 3s'
+    'fixed_window_counter': 'rate_limit_100_window_size_60',
+    'sliding_window_logs': 'rate_limit_100_window_size_60',
+    'sliding_window_counter': 'rate_limit_100_window_size_60_sub_window_count_5',
+    'token_bucket': 'bucket_capacity_5_refill_rate_1.67',
+    'gcra': 'period_60_rate_100_burst_5',
+    'leaky_bucket': 'delay_3000_leak_rate_1.67'
 }
 
 # Filter the DataFrame based on the mapping
@@ -33,7 +34,7 @@ filtered_rows = [script_df[(script_df['Algorithm'] == algo) & (script_df['Config
 script_df = pd.concat(filtered_rows)
 
 # Determine the no throttling latency value
-no_throttling_latency = df[df['Algorithm'] == 'none']['Latency (ms)'].mean()
+no_throttling_latency = df[df['Algorithm'] == 'base']['Average Latency (ms)'].mean()
 
 # Function to create and save plots
 def create_bar_plot(y_col, title, ylabel, output_filename):
@@ -54,16 +55,16 @@ def create_bar_plot(y_col, title, ylabel, output_filename):
                           textcoords='offset points')
 
     # Draw a horizontal line for no throttling latency on latency plot
-    if y_col == 'Latency (ms)':
+    if y_col == 'Average Latency (ms)':
         plt.axhline(no_throttling_latency, color='red', linestyle='--', 
                     label=f'No Throttling Latency: {no_throttling_latency:.2f} ms')
         plt.legend()
 
     # Save the plot
-    output_file_path = os.path.join(CURRENT_DIR, output_filename)
+    output_file_path = os.path.join(ROOT_DIR, output_filename)
     plt.savefig(output_file_path)
     plt.show()
 
 # Generate both plots
-create_bar_plot('Latency (ms)', 'Latency comparison by algorithm (script) and database', 'Latency (ms)', "algorithm_latency_by_database.png")
-create_bar_plot('Throttling Deviation (%)', 'Throttling Deviation (%) comparison by algorithm (script) and database', 'Throttling Deviation (%)', "algorithm_throttling_deviation_by_database.png")
+create_bar_plot('Average Latency (ms)', 'Latency comparison by algorithm (script) and database', 'Latency (ms)', "algorithm_latency_by_database.png")
+create_bar_plot('Avg Error Rate', 'Throttling Deviation (%) comparison by algorithm (script) and database', 'Throttling Deviation (%)', "algorithm_throttling_deviation_by_database.png")
