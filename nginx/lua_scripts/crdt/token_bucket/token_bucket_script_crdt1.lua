@@ -139,8 +139,8 @@ end
 -- Main rate limiting logic
 local function check_rate_limit(red, token)
     -- Redis keys for token count and last access time
-    local tokens_key = "rate_limit:" .. token .. ":tokens"
-    local last_access_key = "rate_limit:" .. token .. ":last_access"
+    local tokens_key = "rate_limit:{" .. token .. "}:tokens"
+    local last_access_key = "rate_limit:{" .. token .. "}:last_access"
 
     -- Calculate TTL for the Redis keys
     local ttl = math.floor(bucket_capacity / refill_rate * 2)

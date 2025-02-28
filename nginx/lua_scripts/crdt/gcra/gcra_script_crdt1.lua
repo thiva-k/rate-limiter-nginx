@@ -137,7 +137,7 @@ end
 -- Main GCRA rate limiting logic
 local function check_rate_limit(red, token)
     -- Redis key for storing the user's TAT (Theoretical Arrival Time)
-    local tat_key = "rate_limit:" .. token .. ":tat"
+    local tat_key = "rate_limit:{" .. token .. "}:tat"
 
     -- Calculate the emission interval and delay tolerance in microseconds
     local emission_interval = math.ceil(period / rate * 1000000)

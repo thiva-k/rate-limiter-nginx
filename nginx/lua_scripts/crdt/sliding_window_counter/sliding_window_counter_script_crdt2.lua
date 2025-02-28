@@ -132,7 +132,7 @@ end
 
 -- Main rate limiting logic
 local function check_rate_limit(red, token)
-    local key_prefix = "rate_limit:" .. token
+    local key_prefix = "rate_limit:{" .. token .. "}"
     local result, err = execute_rate_limit_script(red, key_prefix)
 
     if not result then
