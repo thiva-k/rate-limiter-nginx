@@ -1,0 +1,413 @@
+2025-02-28 10:44:27,220 INFO o.a.j.u.JMeterUtils: Setting Locale to en_EN
+2025-02-28 10:44:27,254 INFO o.a.j.JMeter: Loading user properties from: C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\bin\user.properties
+2025-02-28 10:44:27,254 INFO o.a.j.JMeter: Loading system properties from: C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\bin\system.properties
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: lb_1_hostname=34.123.91.22
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: lb_2_hostname=35.224.254.232
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: lb_1_port=8090
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: lb_2_port=8091
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: warm_up_users=20
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: warm_up_time=60
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: test_run_time=600
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: ramp_up=10
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: group_1=75
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: group_2=20
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: group_3=5
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: group_1_request_rate=30
+2025-02-28 10:44:27,256 INFO o.a.j.JMeter: Setting JMeter property: group_2_request_rate=90
+2025-02-28 10:44:27,258 INFO o.a.j.JMeter: Setting JMeter property: group_3_request_rate=120
+2025-02-28 10:44:27,258 INFO o.a.j.JMeter: Setting JMeter property: log_file=c:\\Users\\ASUS\\Desktop\\Repos\\rate-limiter-nginx\\jmeter\\cloud\\2025_02_28_10_00_logs\\sliding_window_counter\\mysql_script_rate_limit_100_window_size_60_sub_window_count_5\\warm_up_results.csv
+2025-02-28 10:44:27,258 INFO o.a.j.JMeter: Setting JMeter property: algorithm=sliding_window_counter_mysql_script_rate_limit_100_window_size_60_sub_window_count_5
+2025-02-28 10:44:27,258 INFO o.a.j.JMeter: Setting JMeter property: auth=/sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5/tools.descartes.teastore.auth/rest
+2025-02-28 10:44:27,258 INFO o.a.j.JMeter: Setting JMeter property: persistence=/sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5/tools.descartes.teastore.persistence/rest
+2025-02-28 10:44:27,258 INFO o.a.j.JMeter: Setting JMeter property: recommender=/sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5/tools.descartes.teastore.recommender/rest
+2025-02-28 10:44:27,258 INFO o.a.j.JMeter: Setting JMeter property: image=/sliding_window_counter/mysql_script_rate_limit_100_window_size_60_sub_window_count_5/tools.descartes.teastore.image/rest
+2025-02-28 10:44:27,263 INFO o.a.j.JMeter: Copyright (c) 1998-2024 The Apache Software Foundation
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: Version 5.6.3
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: java.version=17.0.9
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: java.vm.name=Java HotSpot(TM) 64-Bit Server VM
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: os.name=Windows 11
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: os.arch=amd64
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: os.version=10.0
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: file.encoding=Cp1252
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: java.awt.headless=true
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: Max memory     =1073741824
+2025-02-28 10:44:27,265 INFO o.a.j.JMeter: Available Processors =12
+2025-02-28 10:44:27,273 INFO o.a.j.JMeter: Default Locale=English (EN)
+2025-02-28 10:44:27,273 INFO o.a.j.JMeter: JMeter  Locale=English (EN)
+2025-02-28 10:44:27,273 INFO o.a.j.JMeter: JMeterHome=C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3
+2025-02-28 10:44:27,273 INFO o.a.j.JMeter: user.dir  =C:\Users\ASUS\Desktop\Repos\rate-limiter-nginx
+2025-02-28 10:44:27,273 INFO o.a.j.JMeter: PWD       =C:\Users\ASUS\Desktop\Repos\rate-limiter-nginx
+2025-02-28 10:44:27,283 INFO o.a.j.JMeter: IP: 192.168.1.45 Name: THIVA FullName: THIVA
+2025-02-28 10:44:27,303 INFO o.a.j.s.FileServer: Default base='C:\Users\ASUS\Desktop\Repos\rate-limiter-nginx'
+2025-02-28 10:44:27,303 INFO o.a.j.s.FileServer: Set new base='c:\Users\ASUS\Desktop\Repos\rate-limiter-nginx\jmeter\cloud'
+2025-02-28 10:44:27,589 INFO o.a.j.s.SaveService: Testplan (JMX) version: 2.2. Testlog (JTL) version: 2.2
+2025-02-28 10:44:27,630 INFO o.a.j.s.SaveService: Using SaveService properties version 5.0
+2025-02-28 10:44:27,634 INFO o.a.j.s.SaveService: Using SaveService properties file encoding UTF-8
+2025-02-28 10:44:27,636 INFO o.a.j.s.SaveService: Loading file: c:\Users\ASUS\Desktop\Repos\rate-limiter-nginx\jmeter\cloud\teastore_performance.jmx
+2025-02-28 10:44:27,685 INFO o.a.j.p.h.c.CookieManager: Settings: Delete null: true Check: true Allow variable: true Save: false Prefix: COOKIE_
+2025-02-28 10:44:27,716 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/html is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-02-28 10:44:27,716 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xhtml+xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-02-28 10:44:27,716 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-02-28 10:44:27,716 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-02-28 10:44:27,716 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/vnd.wap.wml is org.apache.jmeter.protocol.http.parser.RegexpHTMLParser
+2025-02-28 10:44:27,716 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/css is org.apache.jmeter.protocol.http.parser.CssParser
+2025-02-28 10:44:27,867 INFO o.a.j.s.SampleResult: Note: Sample TimeStamps are START times
+2025-02-28 10:44:27,867 INFO o.a.j.s.SampleResult: sampleresult.default.encoding is set to UTF-8
+2025-02-28 10:44:27,867 INFO o.a.j.s.SampleResult: sampleresult.useNanoTime=true
+2025-02-28 10:44:27,867 INFO o.a.j.s.SampleResult: sampleresult.nanoThreadSleep=5000
+2025-02-28 10:44:27,907 INFO o.a.j.JMeter: Creating summariser <summary>
+2025-02-28 10:44:27,924 INFO o.a.j.e.StandardJMeterEngine: Running the test!
+2025-02-28 10:44:27,925 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2025-02-28 10:44:27,925 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2025-02-28 10:44:27,932 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must contain the string: '.functions.'
+2025-02-28 10:44:27,932 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must not contain the string: '.gui.'
+2025-02-28 10:44:28,023 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-casutg-2.10.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-28 10:44:28,030 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-graphs-vs-2.0.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-28 10:44:28,040 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-manager-1.9.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-28 10:44:28,088 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-graphs-basic-2.0.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-28 10:44:28,098 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-manager-0.20.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-28 10:44:28,108 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-plugins-tst-2.6.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-28 10:44:28,112 INFO o.a.j.r.ClassFinder: Will scan jar C:\Users\ASUS\Desktop\apache-jmeter-5.6.3\apache-jmeter-5.6.3\lib\ext\jmeter-parallel-0.12.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-02-28 10:44:28,358 INFO o.a.j.JMeter: Running test (1740719668358)
+2025-02-28 10:44:28,358 INFO o.a.j.e.StandardJMeterEngine: Starting setUp thread groups
+2025-02-28 10:44:28,358 INFO o.a.j.e.StandardJMeterEngine: Starting setUp ThreadGroup: 1 : setUp Thread Group 
+2025-02-28 10:44:28,358 INFO o.a.j.e.StandardJMeterEngine: Starting 20 threads for group setUp Thread Group.
+2025-02-28 10:44:28,358 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-28 10:44:28,358 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=20 ramp-up=10 delayedStart=false
+2025-02-28 10:44:28,381 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-1
+2025-02-28 10:44:28,399 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2025-02-28 10:44:28,400 INFO o.a.j.e.StandardJMeterEngine: Waiting for all setup thread groups to exit
+2025-02-28 10:44:28,892 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-2
+2025-02-28 10:44:29,189 INFO o.a.j.p.h.s.HTTPHCAbstractImpl: Local host = THIVA
+2025-02-28 10:44:29,196 INFO o.a.j.p.h.s.HTTPHC4Impl: HTTP request retry count = 0
+2025-02-28 10:44:29,369 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-3
+2025-02-28 10:44:29,867 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-4
+2025-02-28 10:44:30,367 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-5
+2025-02-28 10:44:30,866 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-6
+2025-02-28 10:44:31,366 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-7
+2025-02-28 10:44:31,865 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-8
+2025-02-28 10:44:32,364 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-9
+2025-02-28 10:44:32,862 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-10
+2025-02-28 10:44:33,363 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-11
+2025-02-28 10:44:33,862 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-12
+2025-02-28 10:44:34,362 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-13
+2025-02-28 10:44:34,863 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-14
+2025-02-28 10:44:35,362 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-15
+2025-02-28 10:44:35,861 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-16
+2025-02-28 10:44:36,361 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-17
+2025-02-28 10:44:36,862 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-18
+2025-02-28 10:44:37,361 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-19
+2025-02-28 10:44:37,862 INFO o.a.j.t.JMeterThread: Thread started: setUp Thread Group 1-20
+2025-02-28 10:45:28,235 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-14
+2025-02-28 10:45:28,252 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-10
+2025-02-28 10:45:28,286 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-3
+2025-02-28 10:45:28,292 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-17
+2025-02-28 10:45:28,329 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-4
+2025-02-28 10:45:28,347 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-9
+2025-02-28 10:45:28,380 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-16
+2025-02-28 10:45:28,396 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-5
+2025-02-28 10:45:28,396 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-5
+2025-02-28 10:45:28,428 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-20
+2025-02-28 10:45:28,428 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-20
+2025-02-28 10:45:28,460 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-1
+2025-02-28 10:45:28,460 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-1
+2025-02-28 10:45:28,464 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-2
+2025-02-28 10:45:28,464 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-2
+2025-02-28 10:45:28,476 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-6
+2025-02-28 10:45:28,476 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-6
+2025-02-28 10:45:28,476 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-18
+2025-02-28 10:45:28,476 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-18
+2025-02-28 10:45:28,524 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-13
+2025-02-28 10:45:28,524 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-13
+2025-02-28 10:45:28,559 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-12
+2025-02-28 10:45:28,559 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-12
+2025-02-28 10:45:28,559 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-11
+2025-02-28 10:45:28,559 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-11
+2025-02-28 10:45:28,559 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-15
+2025-02-28 10:45:28,559 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-15
+2025-02-28 10:45:28,572 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-19
+2025-02-28 10:45:28,572 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-19
+2025-02-28 10:45:28,588 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-7
+2025-02-28 10:45:28,588 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-7
+2025-02-28 10:45:28,866 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: setUp Thread Group 1-8
+2025-02-28 10:45:28,866 INFO o.a.j.t.JMeterThread: Thread finished: setUp Thread Group 1-8
+2025-02-28 10:45:28,868 INFO o.a.j.e.StandardJMeterEngine: All Setup Threads have ended
+2025-02-28 10:45:28,913 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 1 : Thread-Gruppe
+2025-02-28 10:45:28,915 INFO o.a.j.e.StandardJMeterEngine: Starting 75 threads for group Thread-Gruppe.
+2025-02-28 10:45:28,915 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-28 10:45:28,915 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=75 ramp-up=10 delayedStart=false
+2025-02-28 10:45:28,919 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-1
+2025-02-28 10:45:28,980 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2025-02-28 10:45:28,980 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 2 : Thread-Gruppe
+2025-02-28 10:45:28,980 INFO o.a.j.e.StandardJMeterEngine: Starting 20 threads for group Thread-Gruppe.
+2025-02-28 10:45:28,980 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-28 10:45:28,981 INFO o.a.j.t.ThreadGroup: Starting thread group... number=2 threads=20 ramp-up=10 delayedStart=false
+2025-02-28 10:45:28,982 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-1
+2025-02-28 10:45:28,994 INFO o.a.j.t.ThreadGroup: Started thread group number 2
+2025-02-28 10:45:28,994 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 3 : Thread-Gruppe
+2025-02-28 10:45:28,994 INFO o.a.j.e.StandardJMeterEngine: Starting 5 threads for group Thread-Gruppe.
+2025-02-28 10:45:28,994 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-02-28 10:45:28,995 INFO o.a.j.t.ThreadGroup: Starting thread group... number=3 threads=5 ramp-up=10 delayedStart=false
+2025-02-28 10:45:28,996 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 3-1
+2025-02-28 10:45:28,999 INFO o.a.j.t.ThreadGroup: Started thread group number 3
+2025-02-28 10:45:28,999 INFO o.a.j.e.StandardJMeterEngine: All thread groups have been started
+2025-02-28 10:45:29,052 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-2
+2025-02-28 10:45:29,184 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-3
+2025-02-28 10:45:29,318 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-4
+2025-02-28 10:45:29,449 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-5
+2025-02-28 10:45:29,484 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-2
+2025-02-28 10:45:29,583 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-6
+2025-02-28 10:45:29,715 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-7
+2025-02-28 10:45:29,849 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-8
+2025-02-28 10:45:29,980 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-9
+2025-02-28 10:45:29,984 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-3
+2025-02-28 10:45:30,039 INFO o.a.j.r.Summariser: summary +      9 in 00:01:02 =    0.1/s Avg:   511 Min:   495 Max:   530 Err:     0 (0.00%) Active: 13 Started: 13 Finished: 0
+2025-02-28 10:45:30,116 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-10
+2025-02-28 10:45:30,248 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-11
+2025-02-28 10:45:30,383 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-12
+2025-02-28 10:45:30,484 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-4
+2025-02-28 10:45:30,515 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-13
+2025-02-28 10:45:30,648 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-14
+2025-02-28 10:45:30,779 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-15
+2025-02-28 10:45:30,913 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-16
+2025-02-28 10:45:30,984 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-5
+2025-02-28 10:45:30,998 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 3-2
+2025-02-28 10:45:31,048 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-17
+2025-02-28 10:45:31,178 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-18
+2025-02-28 10:45:31,313 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-19
+2025-02-28 10:45:31,444 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-20
+2025-02-28 10:45:31,482 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-6
+2025-02-28 10:45:31,576 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-21
+2025-02-28 10:45:31,712 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-22
+2025-02-28 10:45:31,843 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-23
+2025-02-28 10:45:31,977 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-24
+2025-02-28 10:45:31,982 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-7
+2025-02-28 10:45:32,109 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-25
+2025-02-28 10:45:32,243 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-26
+2025-02-28 10:45:32,378 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-27
+2025-02-28 10:45:32,482 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-8
+2025-02-28 10:45:32,510 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-28
+2025-02-28 10:45:32,642 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-29
+2025-02-28 10:45:32,775 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-30
+2025-02-28 10:45:32,907 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-31
+2025-02-28 10:45:32,983 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-9
+2025-02-28 10:45:32,996 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 3-3
+2025-02-28 10:45:33,042 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-32
+2025-02-28 10:45:33,172 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-33
+2025-02-28 10:45:33,307 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-34
+2025-02-28 10:45:33,438 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-35
+2025-02-28 10:45:33,483 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-10
+2025-02-28 10:45:33,573 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-36
+2025-02-28 10:45:33,705 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-37
+2025-02-28 10:45:33,838 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-38
+2025-02-28 10:45:33,970 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-39
+2025-02-28 10:45:33,983 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-11
+2025-02-28 10:45:34,105 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-40
+2025-02-28 10:45:34,239 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-41
+2025-02-28 10:45:34,371 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-42
+2025-02-28 10:45:34,483 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-12
+2025-02-28 10:45:34,503 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-43
+2025-02-28 10:45:34,635 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-44
+2025-02-28 10:45:34,769 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-45
+2025-02-28 10:45:34,902 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-46
+2025-02-28 10:45:34,983 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-13
+2025-02-28 10:45:34,997 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 3-4
+2025-02-28 10:45:35,034 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-47
+2025-02-28 10:45:35,167 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-48
+2025-02-28 10:45:35,300 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-49
+2025-02-28 10:45:35,435 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-50
+2025-02-28 10:45:35,484 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-14
+2025-02-28 10:45:35,567 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-51
+2025-02-28 10:45:35,701 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-52
+2025-02-28 10:45:35,834 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-53
+2025-02-28 10:45:35,965 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-54
+2025-02-28 10:45:35,982 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-15
+2025-02-28 10:45:36,099 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-55
+2025-02-28 10:45:36,232 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-56
+2025-02-28 10:45:36,365 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-57
+2025-02-28 10:45:36,482 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-16
+2025-02-28 10:45:36,498 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-58
+2025-02-28 10:45:36,632 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-59
+2025-02-28 10:45:36,765 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-60
+2025-02-28 10:45:36,898 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-61
+2025-02-28 10:45:36,985 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-17
+2025-02-28 10:45:36,997 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 3-5
+2025-02-28 10:45:37,031 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-62
+2025-02-28 10:45:37,163 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-63
+2025-02-28 10:45:37,296 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-64
+2025-02-28 10:45:37,428 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-65
+2025-02-28 10:45:37,482 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-18
+2025-02-28 10:45:37,561 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-66
+2025-02-28 10:45:37,694 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-67
+2025-02-28 10:45:37,829 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-68
+2025-02-28 10:45:37,961 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-69
+2025-02-28 10:45:37,982 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-19
+2025-02-28 10:45:38,093 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-70
+2025-02-28 10:45:38,226 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-71
+2025-02-28 10:45:38,359 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-72
+2025-02-28 10:45:38,483 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 2-20
+2025-02-28 10:45:38,494 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-73
+2025-02-28 10:45:38,628 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-74
+2025-02-28 10:45:38,758 INFO o.a.j.t.JMeterThread: Thread started: Thread-Gruppe 1-75
+2025-02-28 10:46:00,010 INFO o.a.j.r.Summariser: summary +   2022 in 00:00:30 =   67.5/s Avg:   346 Min:   243 Max:  1030 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:46:00,011 INFO o.a.j.r.Summariser: summary =   2031 in 00:01:32 =   22.2/s Avg:   347 Min:   243 Max:  1030 Err:     0 (0.00%)
+2025-02-28 10:46:30,069 INFO o.a.j.r.Summariser: summary +   2286 in 00:00:30 =   76.1/s Avg:   343 Min:   243 Max:  1414 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:46:30,071 INFO o.a.j.r.Summariser: summary =   4317 in 00:02:02 =   35.5/s Avg:   345 Min:   243 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:47:00,005 INFO o.a.j.r.Summariser: summary +   2290 in 00:00:30 =   76.5/s Avg:   345 Min:   239 Max:  1158 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:47:00,007 INFO o.a.j.r.Summariser: summary =   6607 in 00:02:32 =   43.6/s Avg:   345 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:47:30,004 INFO o.a.j.r.Summariser: summary +   2285 in 00:00:30 =   76.2/s Avg:   342 Min:   246 Max:   892 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:47:30,004 INFO o.a.j.r.Summariser: summary =   8892 in 00:03:02 =   49.0/s Avg:   344 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:48:00,005 INFO o.a.j.r.Summariser: summary +   2285 in 00:00:30 =   76.2/s Avg:   351 Min:   243 Max:  1124 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:48:00,006 INFO o.a.j.r.Summariser: summary =  11177 in 00:03:32 =   52.8/s Avg:   346 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:48:30,044 INFO o.a.j.r.Summariser: summary +   2287 in 00:00:30 =   76.1/s Avg:   342 Min:   243 Max:  1009 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:48:30,046 INFO o.a.j.r.Summariser: summary =  13464 in 00:04:02 =   55.7/s Avg:   345 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:49:00,005 INFO o.a.j.r.Summariser: summary +   2277 in 00:00:30 =   76.0/s Avg:   359 Min:   243 Max:  1095 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:49:00,007 INFO o.a.j.r.Summariser: summary =  15741 in 00:04:32 =   57.9/s Avg:   347 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:49:30,011 INFO o.a.j.r.Summariser: summary +   2295 in 00:00:30 =   76.5/s Avg:   339 Min:   242 Max:   936 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:49:30,012 INFO o.a.j.r.Summariser: summary =  18036 in 00:05:02 =   59.8/s Avg:   346 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:50:00,020 INFO o.a.j.r.Summariser: summary +   2286 in 00:00:30 =   76.2/s Avg:   352 Min:   239 Max:  1083 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:50:00,020 INFO o.a.j.r.Summariser: summary =  20322 in 00:05:32 =   61.3/s Avg:   347 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:50:30,006 INFO o.a.j.r.Summariser: summary +   2289 in 00:00:30 =   76.3/s Avg:   336 Min:   243 Max:  1049 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:50:30,008 INFO o.a.j.r.Summariser: summary =  22611 in 00:06:02 =   62.5/s Avg:   346 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:51:00,018 INFO o.a.j.r.Summariser: summary +   2280 in 00:00:30 =   76.0/s Avg:   343 Min:   243 Max:  1091 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:51:00,019 INFO o.a.j.r.Summariser: summary =  24891 in 00:06:32 =   63.6/s Avg:   345 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:51:30,007 INFO o.a.j.r.Summariser: summary +   2293 in 00:00:30 =   76.5/s Avg:   333 Min:   244 Max:   919 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:51:30,007 INFO o.a.j.r.Summariser: summary =  27184 in 00:07:02 =   64.5/s Avg:   344 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:52:00,010 INFO o.a.j.r.Summariser: summary +   2289 in 00:00:30 =   76.3/s Avg:   359 Min:   242 Max:  1162 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:52:00,010 INFO o.a.j.r.Summariser: summary =  29473 in 00:07:32 =   65.3/s Avg:   345 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:52:30,018 INFO o.a.j.r.Summariser: summary +   2286 in 00:00:30 =   76.2/s Avg:   329 Min:   239 Max:  1053 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:52:30,018 INFO o.a.j.r.Summariser: summary =  31759 in 00:08:02 =   65.9/s Avg:   344 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:53:00,033 INFO o.a.j.r.Summariser: summary +   2288 in 00:00:30 =   76.2/s Avg:   360 Min:   241 Max:  1092 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:53:00,034 INFO o.a.j.r.Summariser: summary =  34047 in 00:08:32 =   66.5/s Avg:   345 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:53:30,031 INFO o.a.j.r.Summariser: summary +   2289 in 00:00:30 =   76.3/s Avg:   330 Min:   239 Max:  1040 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:53:30,033 INFO o.a.j.r.Summariser: summary =  36336 in 00:09:02 =   67.1/s Avg:   344 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:54:00,076 INFO o.a.j.r.Summariser: summary +   2293 in 00:00:30 =   76.3/s Avg:   358 Min:   239 Max:  1061 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:54:00,077 INFO o.a.j.r.Summariser: summary =  38629 in 00:09:32 =   67.6/s Avg:   345 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:54:30,000 INFO o.a.j.r.Summariser: summary +   2283 in 00:00:30 =   76.3/s Avg:   335 Min:   244 Max:  1140 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:54:30,001 INFO o.a.j.r.Summariser: summary =  40912 in 00:10:02 =   68.0/s Avg:   345 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:55:00,010 INFO o.a.j.r.Summariser: summary +   2286 in 00:00:30 =   76.2/s Avg:   349 Min:   244 Max:  1094 Err:     0 (0.00%) Active: 100 Started: 100 Finished: 0
+2025-02-28 10:55:00,011 INFO o.a.j.r.Summariser: summary =  43198 in 00:10:32 =   68.4/s Avg:   345 Min:   239 Max:  1414 Err:     0 (0.00%)
+2025-02-28 10:55:27,222 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-1
+2025-02-28 10:55:27,290 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-62
+2025-02-28 10:55:27,304 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-47
+2025-02-28 10:55:27,311 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-17
+2025-02-28 10:55:27,331 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-2
+2025-02-28 10:55:27,426 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-63
+2025-02-28 10:55:27,438 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-18
+2025-02-28 10:55:27,441 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-3
+2025-02-28 10:55:27,442 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-48
+2025-02-28 10:55:27,571 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-64
+2025-02-28 10:55:27,575 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-19
+2025-02-28 10:55:27,578 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-49
+2025-02-28 10:55:27,587 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-4
+2025-02-28 10:55:27,693 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-65
+2025-02-28 10:55:27,700 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-50
+2025-02-28 10:55:27,704 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-20
+2025-02-28 10:55:27,714 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-5
+2025-02-28 10:55:27,806 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-32
+2025-02-28 10:55:27,820 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-66
+2025-02-28 10:55:27,820 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-51
+2025-02-28 10:55:27,835 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-21
+2025-02-28 10:55:27,843 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-6
+2025-02-28 10:55:27,952 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-33
+2025-02-28 10:55:27,954 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-67
+2025-02-28 10:55:27,963 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-52
+2025-02-28 10:55:27,965 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-7
+2025-02-28 10:55:27,967 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-22
+2025-02-28 10:55:28,063 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-34
+2025-02-28 10:55:28,091 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-68
+2025-02-28 10:55:28,096 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-53
+2025-02-28 10:55:28,101 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-23
+2025-02-28 10:55:28,110 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-8
+2025-02-28 10:55:28,179 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-35
+2025-02-28 10:55:28,243 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-54
+2025-02-28 10:55:28,249 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-24
+2025-02-28 10:55:28,251 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-69
+2025-02-28 10:55:28,253 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-9
+2025-02-28 10:55:28,317 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-36
+2025-02-28 10:55:28,350 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-70
+2025-02-28 10:55:28,361 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-55
+2025-02-28 10:55:28,368 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-25
+2025-02-28 10:55:28,398 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-10
+2025-02-28 10:55:28,486 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-56
+2025-02-28 10:55:28,488 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-37
+2025-02-28 10:55:28,499 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-71
+2025-02-28 10:55:28,507 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-11
+2025-02-28 10:55:28,507 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-26
+2025-02-28 10:55:28,585 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-17
+2025-02-28 10:55:28,596 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-6
+2025-02-28 10:55:28,617 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-57
+2025-02-28 10:55:28,622 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-72
+2025-02-28 10:55:28,627 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-38
+2025-02-28 10:55:28,628 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-8
+2025-02-28 10:55:28,638 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-12
+2025-02-28 10:55:28,643 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-27
+2025-02-28 10:55:28,683 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-13
+2025-02-28 10:55:28,725 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-16
+2025-02-28 10:55:28,729 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-9
+2025-02-28 10:55:28,751 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-73
+2025-02-28 10:55:28,754 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-39
+2025-02-28 10:55:28,762 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-58
+2025-02-28 10:55:28,763 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-28
+2025-02-28 10:55:28,764 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-15
+2025-02-28 10:55:28,764 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-13
+2025-02-28 10:55:28,773 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-1
+2025-02-28 10:55:28,825 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-18
+2025-02-28 10:55:28,827 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-5
+2025-02-28 10:55:28,836 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-7
+2025-02-28 10:55:28,847 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-19
+2025-02-28 10:55:28,850 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 3-5
+2025-02-28 10:55:28,873 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-14
+2025-02-28 10:55:28,884 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-3
+2025-02-28 10:55:28,887 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-59
+2025-02-28 10:55:28,890 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-11
+2025-02-28 10:55:28,894 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-74
+2025-02-28 10:55:28,910 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-29
+2025-02-28 10:55:28,910 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-14
+2025-02-28 10:55:28,931 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-20
+2025-02-28 10:55:28,937 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-40
+2025-02-28 10:55:29,004 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-41
+2025-02-28 10:55:29,004 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-41
+2025-02-28 10:55:29,004 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-75
+2025-02-28 10:55:29,004 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-75
+2025-02-28 10:55:29,020 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-30
+2025-02-28 10:55:29,020 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-30
+2025-02-28 10:55:29,020 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-60
+2025-02-28 10:55:29,020 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-60
+2025-02-28 10:55:29,063 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 3-2
+2025-02-28 10:55:29,063 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 3-2
+2025-02-28 10:55:29,063 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-15
+2025-02-28 10:55:29,063 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-15
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-42
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-42
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 2-10
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-10
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 3-4
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 3-4
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-61
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-61
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-31
+2025-02-28 10:55:29,146 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-31
+2025-02-28 10:55:29,162 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 2-12
+2025-02-28 10:55:29,162 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-12
+2025-02-28 10:55:29,178 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-16
+2025-02-28 10:55:29,178 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-16
+2025-02-28 10:55:29,188 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 3-3
+2025-02-28 10:55:29,188 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 3-3
+2025-02-28 10:55:29,205 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 2-2
+2025-02-28 10:55:29,205 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-2
+2025-02-28 10:55:29,225 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 2-4
+2025-02-28 10:55:29,225 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 2-4
+2025-02-28 10:55:29,272 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-43
+2025-02-28 10:55:29,272 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-43
+2025-02-28 10:55:29,400 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-44
+2025-02-28 10:55:29,400 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-44
+2025-02-28 10:55:29,552 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-45
+2025-02-28 10:55:29,552 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-45
+2025-02-28 10:55:29,571 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 3-1
+2025-02-28 10:55:29,571 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 3-1
+2025-02-28 10:55:29,717 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread-Gruppe 1-46
+2025-02-28 10:55:29,717 INFO o.a.j.t.JMeterThread: Thread finished: Thread-Gruppe 1-46
+2025-02-28 10:55:29,728 INFO o.a.j.e.StandardJMeterEngine: Notifying test listeners of end of test
+2025-02-28 10:55:29,732 INFO o.a.j.r.Summariser: summary +   2233 in 00:00:30 =   75.1/s Avg:   334 Min:   244 Max:   846 Err:     0 (0.00%) Active: 0 Started: 100 Finished: 100
+2025-02-28 10:55:29,732 INFO o.a.j.r.Summariser: summary =  45431 in 00:11:01 =   68.7/s Avg:   344 Min:   239 Max:  1414 Err:     0 (0.00%)
