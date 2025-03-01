@@ -1,2 +1,0 @@
-Total Requests,Test Duration (seconds),Average Throughput (req/sec),Average Latency (ms),Latency P50 (ms),Latency P90 (ms),Latency P95 (ms),Latency P99 (ms)
-45043,600.017,75.06953969637526,388.4579623914926,477.0,505.0,519.0,701.5800000000017
