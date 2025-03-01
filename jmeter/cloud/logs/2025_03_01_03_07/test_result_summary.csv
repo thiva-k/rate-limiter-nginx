@@ -1,4 +1,8 @@
 Algorithm,Database,Version,Config,Average Throughput (req/sec),Average Latency (ms),Avg Error Rate
+base,,,,75.75542937520729,266.8691233087669,4.553515666234933
+fixed_window_counter,mysql,script,rate_limit_100_window_size_60,75.78358594528648,271.13628766219483,2.173529271892127
+fixed_window_counter,redis,async,rate_limit_100_window_size_60_batch_percent_0.5,75.85351665697156,265.16058362082225,2.4056399794348997
+fixed_window_counter,redis,script,rate_limit_100_window_size_60,75.81179301965503,266.6941323894739,2.532901642157534
 gcra,mysql,script,period_60_rate_100_burst_5,75.77590890757759,273.1580301763955,2.121489889553043
 gcra,redis,script,period_60_rate_100_burst_5,75.80300785215088,267.8067679588381,2.1413946074749064
 sliding_window_counter,mysql,script,rate_limit_100_window_size_60_sub_window_count_5,75.77416575421685,273.1668682780918,0.5894060466169481
