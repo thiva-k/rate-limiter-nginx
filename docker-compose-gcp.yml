@@ -23,7 +23,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.type == loadbalancer2
+          - node.labels.type == loadbalancer3
 
   redis:
     image: redis/redis-stack:latest
