@@ -1,5 +1,4 @@
 /logs
-/misc
 /test/logs
 /jmeter/cloud/logs/**/fixed_window_counter
 /jmeter/cloud/logs/**/gcra
@@ -8,3 +7,4 @@
 /jmeter/cloud/logs/**/sliding_window_logs
 /jmeter/cloud/logs/**/token_bucket
 /jmeter/cloud/logs/**/base
+locations.conf

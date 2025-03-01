@@ -4,7 +4,8 @@ import seaborn as sns
 import os
 
 # Define file paths
-ROOT_DIR = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/jmeter/cloud/logs/2025_03_01_03_07"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../../cloud/logs/2025_02_27_09_12"))
 FILE_PATH = os.path.join(ROOT_DIR, "test_result_summary.csv")
 
 df = pd.read_csv(FILE_PATH)

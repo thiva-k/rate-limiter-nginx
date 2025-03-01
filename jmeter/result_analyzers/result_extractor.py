@@ -84,15 +84,17 @@ def process_results(root_dir):
     return df
 
 if __name__ == "__main__":
-    root_directory = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/jmeter/cloud/logs/2025_03_01_03_07"  # Change this to your actual root directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logs_directory = os.path.abspath(os.path.join(script_dir, "../cloud/logs/2025_02_27_09_12"))
+
     # step 1
     error_analyzer_script = "error_rate_analyzer.py"
     perf_analyzer_script = "performance_analyzer.py"
 
-    check_and_run_analyzers(root_directory, error_analyzer_script, perf_analyzer_script)
+    check_and_run_analyzers(logs_directory, error_analyzer_script, perf_analyzer_script)
 
     # step 2
-    final_df = process_results(root_directory)
+    final_df = process_results(logs_directory)
     print(final_df)
-    output_file = os.path.join(root_directory, "test_result_summary.csv")
+    output_file = os.path.join(logs_directory, "test_result_summary.csv")
     final_df.to_csv(output_file, index=False)
