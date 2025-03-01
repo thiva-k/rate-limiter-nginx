@@ -70,7 +70,7 @@ algorithms = [
 scripts = [
     "run_generate_report.bat",
     "../result_analyzers/error_rate_analyzer.py",
-    "../result_analyzers/perfomance_analyzer.py"
+    "../result_analyzers/performance_analyzer.py"
 ]
 
 JMETER_HOME = os.getenv("JMETER_HOME", "C:\\apache-jmeter")  # Adjust as needed

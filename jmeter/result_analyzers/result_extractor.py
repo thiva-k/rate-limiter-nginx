@@ -84,7 +84,7 @@ def process_results(root_dir):
     return df
 
 if __name__ == "__main__":
-    root_directory = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/jmeter/cloud/logs/2025_02_27_09_12"  # Change this to your actual root directory
+    root_directory = "D:/Semester 7/CS4203 - Research and Development Project/Artifacts/rate-limiter-nginx/jmeter/cloud/logs/2025_03_01_03_07"  # Change this to your actual root directory
     # step 1
     error_analyzer_script = "error_rate_analyzer.py"
     perf_analyzer_script = "performance_analyzer.py"

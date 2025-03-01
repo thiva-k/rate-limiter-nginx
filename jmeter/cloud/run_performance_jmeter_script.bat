@@ -79,8 +79,8 @@ copy run_generate_report.bat %LOG_DIR%
 REM Copy error rate analyzer script to the log directory
 copy "..\result_analyzers\error_rate_analyzer.py" %LOG_DIR%\error_rate_analyzer.py
 
-REM Copy perfomance analyzer script to the log directory
-copy "..\result_analyzers\perfomance_analyzer.py" %LOG_DIR%\perfomance_analyzer.py
+REM Copy performance analyzer script to the log directory
+copy "..\result_analyzers\performance_analyzer.py" %LOG_DIR%\performance_analyzer.py
 
 REM Save all jmeter properties to a file
 echo lb_1_hostname=%LB_1_HOSTNAME% > %LOG_DIR%\jmeter.properties
