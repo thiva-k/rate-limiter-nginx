@@ -8,7 +8,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Sliding Window Logs parameters
-local rate_limit = 10 -- Maximum requests per window
+local rate_limit = 100 -- Maximum requests per window
 local window_size = 60 -- Window size in seconds
 local rate_limit_script = [[
     local key = KEYS[1]
@@ -63,23 +63,23 @@ local function get_request_token()
 end
 
 -- Load the Lua script into Redis if not already cached
-local function load_script_to_redis(red, reload)
+local function load_script_to_redis(red, key, script, reload)
 
     local function load_new_script()
-        local new_sha, err = red:script("LOAD", rate_limit_script)
+        local new_sha, err = red:script("LOAD", script)
         if not new_sha then
             return nil, err
         end
-        ngx.shared.my_cache:set("rate_limit_script_sha", new_sha)
+        ngx.shared.my_cache:set(key, new_sha)
         return new_sha
     end
 
     if reload then
-        ngx.shared.my_cache:delete("rate_limit_script_sha")
+        ngx.shared.my_cache:delete(key)
         return load_new_script()
     end
 
-    local sha = ngx.shared.my_cache:get("rate_limit_script_sha")
+    local sha = ngx.shared.my_cache:get(key)
     if not sha then
         sha = load_new_script()
     end
@@ -87,7 +87,7 @@ local function load_script_to_redis(red, reload)
 end
 
 local function execute_rate_limit_script(red, key)
-    local sha, err = load_script_to_redis(red, false)
+    local sha, err = load_script_to_redis(red, "sliding_window_logs_script_sha", rate_limit_script, false)
     if not sha then
         return nil, err
     end

@@ -111,7 +111,7 @@ local rate_limit_script = [[
 
 -- Execute the GCRA logic atomically
 local function execute_rate_limit_script(red, tat_key, emission_interval, delay_tolerance)
-    local sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, false)
+    local sha, err = load_script_to_redis(red, "gcra_script_sha", rate_limit_script, false)
     if not sha then
         return nil, "Failed to load script: " .. err
     end
@@ -120,7 +120,7 @@ local function execute_rate_limit_script(red, tat_key, emission_interval, delay_
 
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
-        sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, true)
+        sha, err = load_script_to_redis(red, "gcra_script_sha", rate_limit_script, true)
         if not sha then
             return nil, err
         end

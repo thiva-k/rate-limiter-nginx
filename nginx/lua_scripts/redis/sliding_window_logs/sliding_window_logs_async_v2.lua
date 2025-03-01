@@ -9,7 +9,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Rate limiting parameters
-local rate_limit = 10 -- requests per time window
+local rate_limit = 100 -- requests per time window
 local window_size = 60 -- 60 second window
 local batch_percent = 0.5 -- 50% of remaining quota
 local rate_limit_script = -- Redis script to fetch current request count within window
@@ -151,47 +151,47 @@ end
 -- Main rate limiting logic
 local function check_rate_limit(red, shared_dict, token)
     local redis_key = "rate_limit:" .. token
-    
+
     -- Get current batch quota and timestamps length
     local batch_quota = shared_dict:get(redis_key .. ":batch")
     local timestamps_len = shared_dict:llen(redis_key .. ":timestamps")
-    
+
     -- If no batch quota exists or it's exhausted, fetch a new one
     if not batch_quota or batch_quota == 0 then
         -- Calculate window start time
         local current_time = ngx.now() * 1000
         local window_start = current_time - window_size * 1000
-        
+
         -- Load the script to Redis
-        local sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, false)
+        local sha, err = load_script_to_redis(red, "sliding_window_logs_async_sha", rate_limit_script, false)
         if not sha then
             return nil, "Failed to load script: " .. err
         end
-        
+
         -- Execute the script
         local result, err = red:evalsha(sha, 1, redis_key, window_start, rate_limit)
-        
+
         if err and err:find("NOSCRIPT", 1, true) then
             -- Script not found in Redis, reload it
-            sha, err = load_script_to_redis(red, "rate_limit_script_sha", rate_limit_script, true)
+            sha, err = load_script_to_redis(red, "sliding_window_logs_async_sha", rate_limit_script, true)
             if not sha then
                 return nil, err
             end
             result, err = red:evalsha(sha, 1, redis_key, window_start, rate_limit)
         end
-        
+
         if err then
             return nil, err
         end
-        
+
         -- Calculate remaining requests and batch quota
         local count = tonumber(result)
         local remaining = math.max(0, rate_limit - count)
-        
+
         if remaining == 0 then
             return true, "rejected" -- No more requests allowed in this window
         end
-        
+
         -- Set new batch quota
         batch_quota = math.ceil(remaining * batch_percent)
         local ok, err = shared_dict:set(redis_key .. ":batch", batch_quota, window_size)
@@ -199,20 +199,20 @@ local function check_rate_limit(red, shared_dict, token)
             return nil, "Failed to set batch quota in shared memory: " .. err
         end
     end
-    
+
     -- Add current timestamp to the batch
     local current_time = ngx.now() * 1000
     local length, err = shared_dict:rpush(redis_key .. ":timestamps", current_time)
     if not length then
         return nil, "Failed to update timestamps in shared memory: " .. err
     end
-    
+
     -- Decrement the batch quota
     local new_quota, err = shared_dict:incr(redis_key .. ":batch", -1, 0)
     if err then
         return nil, "Failed to decrement batch quota: " .. err
     end
-    
+
     -- If batch is exhausted, update Redis with all timestamps
     if new_quota == 0 then
         if length > 0 then
@@ -222,7 +222,7 @@ local function check_rate_limit(red, shared_dict, token)
             end
         end
     end
-    
+
     return true, "allowed"
 end
 
