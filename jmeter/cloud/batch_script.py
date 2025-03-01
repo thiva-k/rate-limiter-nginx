@@ -6,8 +6,8 @@ from datetime import datetime
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Set JMeter parameters
-LB_1_HOSTNAME = "34.123.91.22"
-LB_2_HOSTNAME = "35.224.254.232"
+LB_1_HOSTNAME = "104.155.182.254"
+LB_2_HOSTNAME = "35.246.73.6"
 LB_1_PORT = 8090
 LB_2_PORT = 8091
 
@@ -27,12 +27,12 @@ GROUP_3_REQUEST_RATE = 120
 # Define array of algorithms
 algorithms = [
     # no throttling
-#     "/base/base",
+    "/base/base",
 
 # #     # fixed_window_counter
-#     "fixed_window_counter/redis_script_rate_limit_100_window_size_60",
-#     "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
-#     "fixed_window_counter/mysql_script_rate_limit_100_window_size_60",
+    "fixed_window_counter/redis_script_rate_limit_100_window_size_60",
+    # "fixed_window_counter/redis_async_rate_limit_100_window_size_60_batch_percent_0.5",
+    # "fixed_window_counter/mysql_script_rate_limit_100_window_size_60",
 
 #     # GCRA
     "gcra/mysql_script_period_60_rate_100_burst_5",
