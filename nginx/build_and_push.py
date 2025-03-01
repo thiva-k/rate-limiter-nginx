@@ -4,10 +4,10 @@ import subprocess
 GCP_PROJECT_ID = "triple-throttlers-446213"  # Replace with your GCP project ID
 REGION = "us-central1"  # Replace with your desired region
 REPOSITORY = "nginx"  # Replace with your Artifact Registry repository name
-IMAGE_NAME = "crdt2"
+IMAGE_NAME = "crdt1"
 TAG = "latest"
 DOCKERFILE_PATH = "./nginx"  # Path to your Dockerfile and context directory
-DOCKERFILE_NAME = "Dockerfile.2"  # Specify the Dockerfile to use
+DOCKERFILE_NAME = "Dockerfile.1"  # Specify the Dockerfile to use
 
 # Full image name for Artifact Registry
 FULL_IMAGE_NAME = f"{REGION}-docker.pkg.dev/{GCP_PROJECT_ID}/{REPOSITORY}/{IMAGE_NAME}:{TAG}"
