@@ -1,0 +1,14 @@
+Algorithm,Database,Version,Config,Average Throughput (req/sec),Average Latency (ms),Avg Error Rate
+gcra,mysql,script,period_60_rate_100_burst_5,75.77590890757759,273.1580301763955,2.121489889553043
+gcra,redis,script,period_60_rate_100_burst_5,75.80300785215088,267.8067679588381,2.1413946074749064
+sliding_window_counter,mysql,script,rate_limit_100_window_size_60_sub_window_count_5,75.77416575421685,273.1668682780918,0.5894060466169481
+sliding_window_counter,redis,async,rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.5,75.8266429105964,266.4584240026376,1.4811242499957302
+sliding_window_counter,redis,script,rate_limit_100_window_size_60_sub_window_count_2,75.82803312132485,267.69867018353665,0.6987120802487036
+sliding_window_counter,redis,script,rate_limit_100_window_size_60_sub_window_count_5,75.82169053003851,267.5078032267991,0.5947329604327551
+sliding_window_logs,mysql,script,rate_limit_100_window_size_60,75.71696685434648,273.3669843925419,72.21781324777477
+sliding_window_logs,redis,async,rate_limit_100_window_size_60_batch_percent_0.5,75.82436813026558,266.5365204967579,0.0195726453393772
+sliding_window_logs,redis,script,rate_limit_100_window_size_60,75.82605855157678,267.3951469327648,0.0133486437222684
+token_bucket,mysql,script,bucket_capacity_5_refill_rate_1.67,75.6688649670255,277.2263336416898,2.048514366635228
+token_bucket,redis,async,bucket_capacity_100_refill_rate_1.67_batch_percent_0.5,75.77724849117203,266.9005146929439,3.398294025140388
+token_bucket,redis,async,bucket_capacity_5_refill_rate_1.67_batch_percent_0.5,75.63002801605965,277.19035236563167,2.164243938882027
+token_bucket,redis,script,bucket_capacity_5_refill_rate_1.67,75.15108887325869,289.1563574264233,2.2585251750592867
