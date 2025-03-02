@@ -89,7 +89,7 @@ for algo in algorithms:
         TEST_PLAN = os.path.join(current_dir, "teastore_performance.jmx")
 
     # Create log directory with date and time
-    log_dir = os.path.join(current_dir, f"{timestamp}_logs", algo_type, algo_version)
+    log_dir = os.path.join(current_dir, "logs", f"{timestamp}", algo_type, algo_version)
     result_file = os.path.join(log_dir, "jmeter_results.csv")
     jmeter_log = os.path.join(log_dir, "jmeter.log")
     log_file = os.path.join(log_dir, "warm_up_results.csv")

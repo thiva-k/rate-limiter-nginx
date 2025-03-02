@@ -85,7 +85,7 @@ def process_results(root_dir):
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    logs_directory = os.path.abspath(os.path.join(script_dir, "../cloud/logs/2025_03_01_03_07"))
+    logs_directory = os.path.abspath(os.path.join(script_dir, "../cloud/logs/2025_03_01_18_17"))
 
     # step 1
     error_analyzer_script = "error_rate_analyzer.py"

@@ -1,0 +1,18 @@
+Algorithm,Database,Version,Config,Average Throughput (req/sec),Average Latency (ms),Avg Error Rate
+base,,,,75.80731709755797,290.1057375247307,4.556987506071794
+fixed_window_counter,mysql,script,rate_limit_100_window_size_60,74.99229211629321,390.5271345393128,2.0658901630948
+fixed_window_counter,redis,async,rate_limit_100_window_size_60_batch_percent_0.5,75.90390560550635,293.58779229333624,2.121725867170591
+fixed_window_counter,redis,script,rate_limit_100_window_size_60,75.54040159116626,337.20185753049924,2.1812294340595755
+gcra,mysql,script,period_60_rate_100_burst_5,75.05228861649738,388.2006261935426,2.09699066510196
+gcra,redis,script,period_60_rate_100_burst_5,75.6132356911672,335.6312900879455,2.418879103868037
+sliding_window_counter,mysql,script,rate_limit_100_window_size_60_sub_window_count_5,75.06512076715013,388.6458416588961,0.4870788957504418
+sliding_window_counter,redis,async,rate_limit_100_window_size_60_sub_window_count_5_batch_percent_0.5,75.72676695789569,300.1108176515902,1.2986850246412782
+sliding_window_counter,redis,script,rate_limit_100_window_size_60_sub_window_count_2,75.59323615782299,336.29258989792095,0.6276992202405729
+sliding_window_counter,redis,script,rate_limit_100_window_size_60_sub_window_count_5,75.61605210050143,335.4629421487603,0.5686074481950684
+sliding_window_logs,mysql,script,rate_limit_100_window_size_60,75.06953969637526,388.4579623914926,0.0540662478598051
+sliding_window_logs,redis,async,rate_limit_100_window_size_60_batch_percent_0.5,75.76787827275304,297.9237841761432,0.3266155523240632
+sliding_window_logs,redis,script,rate_limit_100_window_size_60,75.57653144550324,336.64176405733184,0.0332684833481283
+token_bucket,mysql,script,bucket_capacity_5_refill_rate_1.67,75.05345485876751,388.4932830021095,2.139160468913309
+token_bucket,redis,async,bucket_capacity_100_refill_rate_1.67_batch_percent_0.5,75.64869594200484,299.90011675809046,3.434295369773241
+token_bucket,redis,async,bucket_capacity_5_refill_rate_1.67_batch_percent_0.5,75.39,342.9628597957289,2.0482976947653637
+token_bucket,redis,script,bucket_capacity_5_refill_rate_1.67,75.57462212688937,336.9864814202228,2.1674039116773844
