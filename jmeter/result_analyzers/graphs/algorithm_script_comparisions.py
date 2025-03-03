@@ -5,7 +5,7 @@ import os
 
 # Define file paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../../cloud/logs/2025_03_01_18_17"))
+ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../../cloud/logs/2025_02_28_05_12"))
 FILE_PATH = os.path.join(ROOT_DIR, "test_result_summary.csv")
 
 df = pd.read_csv(FILE_PATH)
@@ -38,7 +38,7 @@ script_df = pd.concat(filtered_rows)
 no_throttling_latency = df[df['Algorithm'] == 'base']['Average Latency (ms)'].mean()
 
 # Function to create and save plots
-def create_bar_plot(y_col, title, ylabel, output_filename):
+def create_bar_plot(y_col, title, ylabel, output_filename, file_format='eps'):
     plt.figure(figsize=(12, 8))  # Adjust figure size as needed
     bar_plot = sns.barplot(x='Algorithm', y=y_col, hue='Database', data=script_df)
     plt.title(title)
@@ -61,11 +61,24 @@ def create_bar_plot(y_col, title, ylabel, output_filename):
                     label=f'No Throttling Latency: {no_throttling_latency:.2f} ms')
         plt.legend()
 
+    # Add legend with custom labels and title
+    handles, labels = bar_plot.get_legend_handles_labels()
+    new_labels = ['Redis' if label == 'redis' else 'MySQL' if label == 'mysql' else 'CRDT' if label == 'crdt' else label for label in labels]
+    plt.legend(handles, new_labels, title='Data Stores')
+
+    # Convert x-axis labels to "Snake Case" and handle special case for GCRA
+    def format_label(label):
+        if label == 'gcra':
+            return 'GCRA'
+        return label.replace('_', ' ').title()
+
+    bar_plot.set_xticklabels([format_label(label.get_text()) for label in bar_plot.get_xticklabels()])
+
     # Save the plot
-    output_file_path = os.path.join(ROOT_DIR, output_filename)
-    plt.savefig(output_file_path)
+    output_file_path = os.path.join(ROOT_DIR, f"{output_filename}.{file_format}")
+    plt.savefig(output_file_path, format=file_format)
     plt.show()
 
 # Generate both plots
-create_bar_plot('Average Latency (ms)', 'Latency comparison by algorithm (script) and database', 'Latency (ms)', "algorithm_latency_by_database.png")
-create_bar_plot('Avg Error Rate', 'Throttling Deviation (%) comparison by algorithm (script) and database', 'Throttling Deviation (%)', "algorithm_throttling_deviation_by_database.png")
+create_bar_plot('Average Latency (ms)', 'Average Latency Comparison by Algorithms and Data Stores', 'Latency (ms)', "algorithm_latency_by_database", "eps")
+create_bar_plot('Avg Error Rate', 'Throttling Deviation (%) Comparison by Algorithms and Data Stores', 'Throttling Deviation (%)', "algorithm_throttling_deviation_by_database", "eps")

@@ -5,7 +5,7 @@ import os
 
 # Define file paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../../cloud/logs/2025_03_01_18_17"))
+ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "../../cloud/logs/2025_02_28_05_12"))
 FILE_PATH = os.path.join(ROOT_DIR, "test_result_summary.csv")
 
 df = pd.read_csv(FILE_PATH)
@@ -47,32 +47,48 @@ script_df = pd.concat(filtered_rows)
 # Determine the no throttling latency value
 no_throttling_latency = df[df['Algorithm'] == 'base']['Average Latency (ms)'].mean()
 
-# Create the plot
-plt.figure(figsize=(12, 8))  # Adjust figure size as needed
-bar_plot = sns.barplot(x='Algorithm', y='Average Latency (ms)', hue='Version', data=script_df)
-plt.title('Latency comparison of async (batch percent = 0.5) and script version for Redis')
-plt.xlabel('Algorithm')
-plt.ylabel('Average Latency (ms)')
-plt.xticks(rotation=45, ha='right')  # Rotate x-axis labels for readability
-plt.tight_layout()  # Adjust layout to fit everything nicely
+# Function to create and save plots
+def create_bar_plot(y_col, title, ylabel, output_filename, file_format='png'):
+    plt.figure(figsize=(12, 8))  # Adjust figure size as needed
+    bar_plot = sns.barplot(x='Algorithm', y=y_col, hue='Version', data=script_df)
+    plt.title(title)
+    plt.xlabel('Algorithm')
+    plt.ylabel(ylabel)
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
 
-# Annotate each bar with the latency value
-for p in bar_plot.patches:
-    bar_plot.annotate(format(p.get_height(), '.2f'),
-                      (p.get_x() + p.get_width() / 2., p.get_height()),
-                      ha='center', va='center',
-                      xytext=(0, 9),  # 9 points vertical offset
-                      textcoords='offset points')
+    # Annotate each bar with the value
+    for p in bar_plot.patches:
+        bar_plot.annotate(format(p.get_height(), '.2f'),
+                          (p.get_x() + p.get_width() / 2., p.get_height()),
+                          ha='center', va='center',
+                          xytext=(0, 9),
+                          textcoords='offset points')
 
-# Draw a horizontal line for the no throttling latency value
-plt.axhline(no_throttling_latency, color='red', linestyle='--', label=f'No Throttling Latency: {no_throttling_latency:.2f} ms')
+    # Draw a horizontal line for no throttling latency on latency plot
+    if y_col == 'Average Latency (ms)':
+        plt.axhline(no_throttling_latency, color='red', linestyle='--', 
+                    label=f'No Throttling Latency: {no_throttling_latency:.2f} ms')
+        plt.legend()
 
-# Add legend
-plt.legend()
+    # Add legend with custom labels
+    handles, labels = bar_plot.get_legend_handles_labels()
+    new_labels = ['Asynchronous' if label == 'async' else 'Normal' if label == 'script' else label for label in labels]
+    plt.legend(handles, new_labels)
 
-# Save the plot to the current directory
-output_file_path = os.path.join(ROOT_DIR, "async_script_redis_latency.png")
-plt.savefig(output_file_path)
+    # Convert x-axis labels to "Snake Case" and handle special case for GCRA
+    def format_label(label):
+        if label == 'gcra':
+            return 'GCRA'
+        return label.replace('_', ' ').title()
 
-# Show the plot (optional)
-plt.show()
+    bar_plot.set_xticklabels([format_label(label.get_text()) for label in bar_plot.get_xticklabels()])
+
+    # Save the plot
+    output_file_path = os.path.join(ROOT_DIR, f"{output_filename}.{file_format}")
+    plt.savefig(output_file_path, format=file_format)
+    plt.show()
+
+# Generate plots
+create_bar_plot('Average Latency (ms)', 'Average Latency Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Average Latency (ms)', "async_script_redis_latency", "eps")
+create_bar_plot('Avg Error Rate', 'Throttling Deviation (%) Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Throttling Deviation (%)', "async_script_redis_throttling_deviation", "eps")
