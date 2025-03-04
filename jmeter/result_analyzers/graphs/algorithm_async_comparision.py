@@ -49,13 +49,24 @@ no_throttling_latency = df[df['Algorithm'] == 'base']['Average Latency (ms)'].me
 
 # Function to create and save plots
 def create_bar_plot(y_col, title, ylabel, output_filename, file_format='png'):
-    plt.figure(figsize=(12, 8))  # Adjust figure size as needed
+    plt.figure(figsize=(12, 6))  # Adjust figure size as needed
+    
+    # Set font properties
+    plt.rcParams.update({
+        'font.size': 13,
+        'font.family': 'sans-serif',
+        'font.serif': ['Arial']
+    })
+
+    if y_col == 'Average Latency (ms)':
+        plt.ylim(250, 280)
+        
     bar_plot = sns.barplot(x='Algorithm', y=y_col, hue='Version', data=script_df)
-    plt.title(title)
+    # plt.title(title)
     plt.xlabel('Algorithm')
     plt.ylabel(ylabel)
-    plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
+
 
     # Annotate each bar with the value
     for p in bar_plot.patches:
@@ -90,5 +101,5 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='png'):
     plt.show()
 
 # Generate plots
-create_bar_plot('Average Latency (ms)', 'Average Latency Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Average Latency (ms)', "async_script_redis_latency", "eps")
-create_bar_plot('Avg Error Rate', 'Throttling Deviation (%) Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Throttling Deviation (%)', "async_script_redis_throttling_deviation", "eps")
+create_bar_plot('Average Latency (ms)', 'Average Latency Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Average Latency (ms)', "async_script_redis_latency", "svg")
+create_bar_plot('Avg Error Rate', 'Throttling Deviation (%) Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Throttling Deviation (%)', "async_script_redis_throttling_deviation", "svg")
