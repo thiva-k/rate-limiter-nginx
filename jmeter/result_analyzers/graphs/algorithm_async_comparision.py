@@ -48,7 +48,7 @@ script_df = pd.concat(filtered_rows)
 no_throttling_latency = df[df['Algorithm'] == 'base']['Average Latency (ms)'].mean()
 
 # Function to create and save plots
-def create_bar_plot(y_col, title, ylabel, output_filename, file_format='png'):
+def create_bar_plot(y_col, title, ylabel, output_filename, file_format='eps'):
     plt.figure(figsize=(12, 6))  # Adjust figure size as needed
     
     # Set font properties
@@ -60,7 +60,7 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='png'):
 
     if y_col == 'Average Latency (ms)':
         plt.ylim(250, 280)
-        
+
     bar_plot = sns.barplot(x='Algorithm', y=y_col, hue='Version', data=script_df)
     # plt.title(title)
     plt.xlabel('Algorithm')
@@ -70,6 +70,8 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='png'):
 
     # Annotate each bar with the value
     for p in bar_plot.patches:
+        if p.get_height() == 0:
+            continue
         bar_plot.annotate(format(p.get_height(), '.2f'),
                           (p.get_x() + p.get_width() / 2., p.get_height()),
                           ha='center', va='center',
@@ -85,7 +87,10 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='png'):
     # Add legend with custom labels
     handles, labels = bar_plot.get_legend_handles_labels()
     new_labels = ['Asynchronous' if label == 'async' else 'Normal' if label == 'script' else label for label in labels]
-    plt.legend(handles, new_labels)
+    if y_col == 'Average Latency (ms)':
+        plt.legend(handles, new_labels, loc='upper left')
+    else:
+        plt.legend(handles, new_labels, loc='upper center')
 
     # Convert x-axis labels to "Snake Case" and handle special case for GCRA
     def format_label(label):
@@ -93,6 +98,8 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='png'):
             return 'GCRA'
         return label.replace('_', ' ').title()
 
+    # Set the x-ticks and labels
+    bar_plot.set_xticks(range(len(bar_plot.get_xticklabels())))
     bar_plot.set_xticklabels([format_label(label.get_text()) for label in bar_plot.get_xticklabels()])
 
     # Save the plot
@@ -101,5 +108,5 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='png'):
     plt.show()
 
 # Generate plots
-create_bar_plot('Average Latency (ms)', 'Average Latency Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Average Latency (ms)', "async_script_redis_latency", "svg")
-create_bar_plot('Avg Error Rate', 'Throttling Deviation (%) Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Throttling Deviation (%)', "async_script_redis_throttling_deviation", "svg")
+create_bar_plot('Average Latency (ms)', 'Average Latency Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Average Latency (ms)', "async_script_redis_latency", "eps")
+create_bar_plot('Avg Error Rate', 'Throttling Deviation (%) Comparison: Asynchronous vs. Normal versions of Algorithms using Redis', 'Throttling Deviation (%)', "async_script_redis_throttling_deviation", "eps")
