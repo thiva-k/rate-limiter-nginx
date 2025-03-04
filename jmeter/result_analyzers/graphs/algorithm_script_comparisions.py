@@ -32,7 +32,7 @@ config_mapping = {
 # Filter the DataFrame based on the mapping
 filtered_rows = [script_df[(script_df['Algorithm'] == algo) & (script_df['Config'] == config)] for algo, config in config_mapping.items()]
 script_df = pd.concat(filtered_rows)
-print(script_df)
+
 # Determine the no throttling latency value
 no_throttling_latency = df[df['Algorithm'] == 'base']['Average Latency (ms)'].mean()
 
@@ -41,9 +41,10 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='eps'):
     plt.figure(figsize=(13, 6))  # Adjust figure size as needed
 
     plt.rcParams.update({
-        'font.size': 13,
+        'font.size': 12,
         'font.family': 'sans-serif',
-        'font.serif': ['Arial']
+        'font.serif': ['Arial'],
+        'font.weight': 560
     })
 
     if y_col == 'Average Latency (ms)':

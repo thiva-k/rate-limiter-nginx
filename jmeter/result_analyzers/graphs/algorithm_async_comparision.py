@@ -53,9 +53,10 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='eps'):
     
     # Set font properties
     plt.rcParams.update({
-        'font.size': 13,
+        'font.size': 12,
         'font.family': 'sans-serif',
-        'font.serif': ['Arial']
+        'font.serif': ['Arial'],
+        'font.weight': 560
     })
 
     if y_col == 'Average Latency (ms)':
