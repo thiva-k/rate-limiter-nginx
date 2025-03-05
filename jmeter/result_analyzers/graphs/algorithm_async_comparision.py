@@ -64,8 +64,8 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='eps'):
 
     bar_plot = sns.barplot(x='Algorithm', y=y_col, hue='Version', data=script_df)
     # plt.title(title)
-    plt.xlabel('Algorithm')
-    plt.ylabel(ylabel)
+    plt.xlabel('Algorithm', labelpad=15, fontsize=14, weight='bold')
+    plt.ylabel(ylabel, labelpad=15, fontsize=14, weight='bold')
     plt.tight_layout()
 
 
