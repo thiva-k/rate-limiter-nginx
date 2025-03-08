@@ -97,6 +97,8 @@ def create_bar_plot(y_col, title, ylabel, output_filename, file_format='eps'):
     def format_label(label):
         if label == 'gcra':
             return 'GCRA'
+        if label == 'sliding_window_logs':
+            return 'Sliding Window Log'
         return label.replace('_', ' ').title()
 
     # Set the x-ticks and labels
