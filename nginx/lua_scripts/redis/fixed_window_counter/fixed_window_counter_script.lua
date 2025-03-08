@@ -8,7 +8,7 @@ local max_idle_timeout = 10000 -- 10 seconds
 local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Fixed Window parameters
-local rate_limit = 10
+local rate_limit = 100
 local window_size = 60 -- 60-second window
 local fixed_window_script = [[
     local key = KEYS[1]
@@ -96,7 +96,7 @@ local function execute_rate_limit_script(red, token)
 
     local key = "rate_limit:" .. token
     local result, err = red:evalsha(sha, 1, key, window_size, rate_limit)
-    
+
     if err and err:find("NOSCRIPT", 1, true) then
         sha, err = load_script_to_redis(red, true)
         if not sha then

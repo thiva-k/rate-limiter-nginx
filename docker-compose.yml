@@ -45,12 +45,12 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: fixed_window_counter_db
     volumes:
-      - ./init/init_fixed_window_counter.sql:/docker-entrypoint-initdb.d/init_fixed_window_counter.sql
-      - ./init/init_sliding_window_counter.sql:/docker-entrypoint-initdb.d/init_sliding_window_counter.sql
-      - ./init/init_sliding_window_logs.sql:/docker-entrypoint-initdb.d/init_sliding_window_logs.sql
-      - ./init/init_token_bucket.sql:/docker-entrypoint-initdb.d/init_token_bucket.sql
-      - ./init/init_leaky_bucket.sql:/docker-entrypoint-initdb.d/init_leaky_bucket.sql
-      - ./init/init_gcra.sql:/docker-entrypoint-initdb.d/init_gcra.sql
+      - ./nginx/lua_scripts/mysql/init/init_fixed_window_counter.sql:/docker-entrypoint-initdb.d/init_fixed_window_counter.sql
+      - ./nginx/lua_scripts/mysql/init/init_sliding_window_counter.sql:/docker-entrypoint-initdb.d/init_sliding_window_counter.sql
+      - ./nginx/lua_scripts/mysql/init/init_sliding_window_logs.sql:/docker-entrypoint-initdb.d/init_sliding_window_logs.sql
+      - ./nginx/lua_scripts/mysql/init/init_token_bucket.sql:/docker-entrypoint-initdb.d/init_token_bucket.sql
+      - ./nginx/lua_scripts/mysql/init/init_leaky_bucket.sql:/docker-entrypoint-initdb.d/init_leaky_bucket.sql
+      - ./nginx/lua_scripts/mysql/init/init_gcra.sql:/docker-entrypoint-initdb.d/init_gcra.sql
 
   registry:
     image: descartesresearch/teastore-registry
