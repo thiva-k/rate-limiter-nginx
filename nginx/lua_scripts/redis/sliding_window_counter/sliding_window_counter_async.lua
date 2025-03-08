@@ -10,7 +10,7 @@ local pool_size = 100 -- Maximum number of idle connections in the pool
 
 -- Sliding window parameters
 local window_size = 60 -- Total window size in seconds
-local request_limit = 10 -- Max requests allowed in the window
+local request_limit = 100 -- Max requests allowed in the window
 local sub_window_count = 5 -- Number of subwindows
 local sub_window_size = window_size / sub_window_count -- Size of each subwindow
 local batch_percent = 0.5 -- Percentage of remaining quota to allocate for batch
@@ -166,17 +166,15 @@ local function fetch_batch_quota(red, key_prefix, current_window, now)
     if not sha then
         return 0, err
     end
-    
-    local total, err = red:evalsha(
-        sha,
-        1, -- number of keys
-        key_prefix, -- KEYS[1]
-        current_window, -- ARGV[1]
-        sub_window_count, -- ARGV[2]
-        sub_window_size, -- ARGV[3]
-        now -- ARGV[4]
+
+    local total, err = red:evalsha(sha, 1, -- number of keys
+    key_prefix, -- KEYS[1]
+    current_window, -- ARGV[1]
+    sub_window_count, -- ARGV[2]
+    sub_window_size, -- ARGV[3]
+    now -- ARGV[4]
     )
-    
+
     if err and err:find("NOSCRIPT", 1, true) then
         -- Script not found in Redis, reload it
         sha, err = load_script_to_redis(red, "fetch_counts_script_sha", fetch_counts_script, true)
@@ -185,11 +183,11 @@ local function fetch_batch_quota(red, key_prefix, current_window, now)
         end
         total, err = red:evalsha(sha, 1, key_prefix, current_window, sub_window_count, sub_window_size, now)
     end
-    
+
     if err then
         return 0, "Failed to execute fetch_counts script: " .. err
     end
-    
+
     -- Calculate batch quota from the total
     local remaining = math.max(0, request_limit - total)
     return math.ceil(remaining * batch_percent)
@@ -198,7 +196,7 @@ end
 -- Update Redis with accumulated counts using Lua script
 local function update_redis_counts(red, key_prefix, shared_dict, current_window)
     local updates = {}
-    
+
     -- Collect all non-zero counts
     for i = 0, sub_window_count do
         local window_key = key_prefix .. ":" .. (current_window - i * sub_window_size)
@@ -208,25 +206,23 @@ local function update_redis_counts(red, key_prefix, shared_dict, current_window)
             shared_dict:set(window_key .. ":local", 0)
         end
     end
-    
+
     -- Only make the Redis call if we have updates
     if next(updates) then
         local cjson = require "cjson"
-        
+
         local sha, err = load_script_to_redis(red, "update_counts_script_sha", update_counts_script, false)
         if not sha then
             return nil, err
         end
-        
-        local ok, err = red:evalsha(
-            sha,
-            1, -- number of keys
-            key_prefix, -- KEYS[1]
-            current_window, -- ARGV[1]
-            sub_window_size, -- ARGV[2]
-            cjson.encode(updates) -- ARGV[3]
+
+        local ok, err = red:evalsha(sha, 1, -- number of keys
+        key_prefix, -- KEYS[1]
+        current_window, -- ARGV[1]
+        sub_window_size, -- ARGV[2]
+        cjson.encode(updates) -- ARGV[3]
         )
-        
+
         if err and err:find("NOSCRIPT", 1, true) then
             -- Script not found in Redis, reload it
             sha, err = load_script_to_redis(red, "update_counts_script_sha", update_counts_script, true)
@@ -235,12 +231,12 @@ local function update_redis_counts(red, key_prefix, shared_dict, current_window)
             end
             ok, err = red:evalsha(sha, 1, key_prefix, current_window, sub_window_size, cjson.encode(updates))
         end
-        
+
         if err then
             return nil, "Failed to execute update_counts script: " .. err
         end
     end
-    
+
     return true
 end
 
@@ -248,11 +244,11 @@ end
 local function rate_limit(red, shared_dict, token)
     local current_window, now = get_current_window()
     local key_prefix = "rate_limit:" .. token
-    
+
     -- Integrated process_batch_quota logic
     local batch_key = key_prefix .. ":batch"
     local batch_quota = shared_dict:get(batch_key)
-    
+
     if not batch_quota or batch_quota <= 0 then
         local new_quota, err = fetch_batch_quota(red, key_prefix, current_window, now)
         if err then
@@ -265,7 +261,7 @@ local function rate_limit(red, shared_dict, token)
             batch_quota = 0
         end
     end
-    
+
     if batch_quota <= 0 then
         return true, "rejected"
     end
@@ -274,10 +270,10 @@ local function rate_limit(red, shared_dict, token)
     local window_key = key_prefix .. ":" .. current_window
     local local_key = window_key .. ":local"
     local new_count = shared_dict:incr(local_key, 1, 0)
-    
+
     -- Decrement batch quota
     local remaining_quota = shared_dict:incr(key_prefix .. ":batch", -1, 0)
-    
+
     -- If batch is exhausted, update Redis
     if remaining_quota <= 0 then
         local ok, err = update_redis_counts(red, key_prefix, shared_dict, current_window)
@@ -296,7 +292,7 @@ local function main()
         ngx.log(ngx.ERR, "Failed to get token: ", err)
         ngx.exit(ngx.HTTP_BAD_REQUEST)
     end
-    
+
     local shared_dict = init_shared_dict()
     if not shared_dict then
         ngx.log(ngx.ERR, "Failed to initialize shared dictionary")
