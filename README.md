@@ -123,7 +123,3 @@ This repository also includes **asynchronous versions** for four of the algorith
 
 The asynchronous implementations use a **batch-quota** concept, where instead of checking and updating the rate limit on every request, the limits are updated in bulk at regular intervals. This reduces Redis load and enhances performance, particularly for high-traffic APIs in multi-regional deployments. The `batch_quota` parameter in the Lua script determines how many requests are processed in a batch before updating to the datastore.
 
-## Conclusion
-
-This setup allows you to integrate distributed rate limiting into NGINX using Redis or MySQL. Modify configurations as needed to suit your application's needs.
-
