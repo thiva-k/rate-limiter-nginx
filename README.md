@@ -75,10 +75,8 @@ Replace the path with the correct algorithm based on your preferred data store a
 Rate-limiting parameters such as request rate, burst limit, expiration times, and batch quota can be modified within the selected Lua script. Example:
 
 ```lua
-local rate = 10  -- Requests per second
-local burst = 20 -- Maximum burst capacity
-local expire = 60 -- Expiry time for tokens (in seconds)
-local batch_quota = 5 -- Batch quota size for asynchronous updates
+local rate_limit = 100  -- Requests per second
+local window_size = 60  -- 60-second window
 ```
 
 ### Step 5: Configure Redis or MySQL Parameters
@@ -118,10 +116,10 @@ docker stack deploy -c docker-compose-swarm.yml rate-limiter
 ### Asynchronous Rate Limiting (Batch Quota)
 
 This repository also includes **asynchronous versions** for four of the algorithms: 
-- Fixed Window Counter 
+- Fixed Window Counter
+- Sliding Window Log 
 - Sliding Window Counter 
 - Token Bucket 
-- Leaky Bucket 
 
 The asynchronous implementations use a **batch-quota** concept, where instead of checking and updating the rate limit on every request, the limits are updated in bulk at regular intervals. This reduces Redis load and enhances performance, particularly for high-traffic APIs in multi-regional deployments. The `batch_quota` parameter in the Lua script determines how many requests are processed in a batch before updating to the datastore.
 
