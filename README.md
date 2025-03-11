@@ -15,11 +15,6 @@ This repository provides a distributed API rate-limiting solution for NGINX (Ope
 - **docker-compose.yml**: Configuration for running the system in a containerized environment.
 - **docker-compose-swarm.yml**: Configuration for deploying the system in Docker Swarm mode.
 
-## Authors
-
-- Thivaharan Kalyanasundaram
-- Kobinarth Panchalingam
-- Tharsigan Jegatheesan
 
 ## Integration Guide
 
